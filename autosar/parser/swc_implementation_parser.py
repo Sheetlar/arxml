@@ -1,207 +1,203 @@
 """
 Implements the class SwcImplementationParser
 """
-import sys
-from autosar.base import splitRef, hasAdminData, parseAdminDataNode
-import autosar.component
+from xml.etree.ElementTree import Element
+
+from autosar.ar_object import ArObject
+from autosar.component import SwcImplementation
 from autosar.parser.parser_base import ElementParser
+from autosar.swc_implementation import SwcImplementationCodeDescriptor, EngineeringObject, ResourceConsumption, MemorySection
+
 
 class SwcImplementationParser(ElementParser):
     """
     ComponentType parser
     """
 
-    def __init__(self,version=3.0):
-        super().__init__(version)
-        self.classTag = 'SWC-IMPLEMENTATION'
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.class_tag = 'SWC-IMPLEMENTATION'
 
-    def getSupportedTags(self):
-        return [self.classTag]
+    def get_supported_tags(self):
+        return [self.class_tag]
 
-    def parseElement(self, xmlElement, parent = None):
+    def parse_element(self, xml_element: Element, parent: ArObject | None = None) -> SwcImplementation:
         """
         parser for the class.
         """
-        assert (xmlElement.tag=='SWC-IMPLEMENTATION')
-        ws = parent.rootWS()
-        assert(ws is not None)
-        name = self.parseTextNode(xmlElement.find('SHORT-NAME'))
-        behaviorRef = self.parseTextNode(xmlElement.find('BEHAVIOR-REF'))
-        implementation = autosar.component.SwcImplementation(name, behaviorRef, parent=parent)
+        assert (xml_element.tag == 'SWC-IMPLEMENTATION')
+        ws = parent.root_ws()
+        assert (ws is not None)
+        name = self.parse_text_node(xml_element.find('SHORT-NAME'))
+        behavior_ref = self.parse_text_node(xml_element.find('BEHAVIOR-REF'))
+        implementation = SwcImplementation(name, behavior_ref, parent=parent)
         self.push()
-        for xmlElem in xmlElement.findall('./*'):
-            if xmlElem.tag   == 'SHORT-NAME':
+        for xml_elem in xml_element.findall('./*'):
+            if xml_elem.tag == 'SHORT-NAME':
                 continue
-            elif xmlElem.tag == 'BEHAVIOR-REF':
+            elif xml_elem.tag == 'BEHAVIOR-REF':
                 continue
-            elif xmlElem.tag == 'BUILD-ACTION-MANIFESTS':
-                #TODO: Implement later
+            elif xml_elem.tag == 'BUILD-ACTION-MANIFESTS':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'CODE-DESCRIPTORS':
+            elif xml_elem.tag == 'CODE-DESCRIPTORS':
                 # Create the list to indicate that the base element exists.
-                implementation.codeDescriptors = []
-                for codeElem in xmlElem.findall('./*'):
-                    if codeElem.tag  == 'CODE':
-                        implementation.codeDescriptors.append(self.parseCodeDescriptor(codeElem, parent=implementation))
-                    else:
-                        raise NotImplementedError(codeElem.tag)
-            elif xmlElem.tag == 'COMPILERS':
-                #TODO: Implement later
+                implementation.code_descriptors = []
+                for code_elem in xml_elem.findall('./*'):
+                    if code_elem.tag != 'CODE':
+                        self._logger.error(f'Unexpected tag: {code_elem.tag}')
+                        continue
+                    implementation.code_descriptors.append(self.parse_code_descriptor(code_elem, parent=implementation))
+            elif xml_elem.tag == 'COMPILERS':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'GENERATED-ARTIFACTS':
-                #TODO: Implement later
+            elif xml_elem.tag == 'GENERATED-ARTIFACTS':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'HW-ELEMENT-REFS':
-                #TODO: Implement later
+            elif xml_elem.tag == 'HW-ELEMENT-REFS':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'LINKERS':
-                #TODO: Implement later
+            elif xml_elem.tag == 'LINKERS':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'MC-SUPPORT':
-                #TODO: Implement later
+            elif xml_elem.tag == 'MC-SUPPORT':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'PROGRAMMING-LANGUAGE':
-                implementation.programmingLanguage = self.parseTextNode(xmlElem)
+            elif xml_elem.tag == 'PROGRAMMING-LANGUAGE':
+                implementation.programming_language = self.parse_text_node(xml_elem)
                 continue
-            elif xmlElem.tag == 'REQUIRED-ARTIFACTS':
-                #TODO: Implement later
+            elif xml_elem.tag == 'REQUIRED-ARTIFACTS':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'REQUIRED-GENERATOR-TOOLS':
-                #TODO: Implement later
+            elif xml_elem.tag == 'REQUIRED-GENERATOR-TOOLS':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'RESOURCE-CONSUMPTION':
-                implementation.resourceConsumption = self.parseResourceConsumption(xmlElem, parent=implementation)
+            elif xml_elem.tag == 'RESOURCE-CONSUMPTION':
+                implementation.resource_consumption = self.parse_resource_consumption(xml_elem, parent=implementation)
+            elif xml_elem.tag == 'SW-VERSION':
+                implementation.sw_version = self.parse_text_node(xml_elem)
+            elif xml_elem.tag == 'SWC-BSW-MAPPING-REF':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'SW-VERSION':
-                implementation.swVersion = self.parseTextNode(xmlElem)
-            elif xmlElem.tag == 'SWC-BSW-MAPPING-REF':
-                #TODO: Implement later
-                continue
-            elif xmlElem.tag == 'USED-CODE-GENERATOR':
-                implementation.useCodeGenerator = self.parseTextNode(xmlElem)
-            elif xmlElem.tag == 'VENDOR-ID':
-                implementation.vendorId = self.parseIntNode(xmlElem)
+            elif xml_elem.tag == 'USED-CODE-GENERATOR':
+                implementation.use_code_generator = self.parse_text_node(xml_elem)
+            elif xml_elem.tag == 'VENDOR-ID':
+                implementation.vendor_id = self.parse_int_node(xml_elem)
             else:
-                self.defaultHandler(xmlElem)
-
+                self.default_handler(xml_elem)
         self.pop(implementation)
-
         # Find the SWC and connect the swc to the implementation.
-        behavior = ws.find(behaviorRef)
+        behavior = ws.find(behavior_ref)
         if behavior is not None:
-            swc = ws.find(behavior.componentRef)
+            swc = ws.find(behavior.component_ref)
             if swc is not None:
                 swc.implementation = implementation
-
         return implementation
 
-    def parseCodeDescriptor(self, xmlElement, parent = None):
+    def parse_code_descriptor(self, xml_element: Element, parent: ArObject | None = None) -> SwcImplementationCodeDescriptor:
         """
         Parser for implementation code descriptor.
         """
-        assert (xmlElement.tag=='CODE')
-        name = self.parseTextNode(xmlElement.find('SHORT-NAME'))
-        code = autosar.component.SwcImplementationCodeDescriptor(name, parent=parent)
+        assert (xml_element.tag == 'CODE')
+        name = self.parse_text_node(xml_element.find('SHORT-NAME'))
+        code = SwcImplementationCodeDescriptor(name, parent=parent)
         self.push()
-        for xmlElem in xmlElement.findall('./*'):
-            if xmlElem.tag   == 'SHORT-NAME':
+        for xml_elem in xml_element.findall('./*'):
+            if xml_elem.tag == 'SHORT-NAME':
                 continue
-            elif xmlElem.tag == 'ARTIFACT-DESCRIPTORS':
-                code.artifactDescriptors = []
-                for descElem in xmlElem.findall('./*'):
-                    if descElem.tag  == 'AUTOSAR-ENGINEERING-OBJECT':
-                        engineeringObject = autosar.component.EngineeringObject(code)
-                        for elem in descElem.findall('./*'):
-                            if elem.tag  == 'SHORT-LABEL':
-                                engineeringObject.shortLabel = self.parseTextNode(elem)
-                            elif elem.tag  == 'CATEGORY':
-                                engineeringObject.category = self.parseTextNode(elem)
+            elif xml_elem.tag == 'ARTIFACT-DESCRIPTORS':
+                code.artifact_descriptors = []
+                for desc_elem in xml_elem.findall('./*'):
+                    if desc_elem.tag == 'AUTOSAR-ENGINEERING-OBJECT':
+                        engineering_object = EngineeringObject(code)
+                        for elem in desc_elem.findall('./*'):
+                            if elem.tag == 'SHORT-LABEL':
+                                engineering_object.short_label = self.parse_text_node(elem)
+                            elif elem.tag == 'CATEGORY':
+                                engineering_object.category = self.parse_text_node(elem)
                             elif elem.tag == 'REVISION-LABELS':
-                                engineeringObject.revisionLabels = []
-                                for labelElem in elem.findall('./*'):
-                                    if labelElem.tag  == 'REVISION-LABEL':
-                                        engineeringObject.revisionLabels.append(self.parseTextNode(labelElem))
-                            elif elem.tag  == 'DOMAIN':
-                                engineeringObject.domain = self.parseTextNode(elem)
-                        code.artifactDescriptors.append(engineeringObject)
-            elif xmlElem.tag == 'CALLBACK-HEADER-REFS':
-                #TODO: Implement later
+                                engineering_object.revision_labels = []
+                                for label_elem in elem.findall('./*'):
+                                    if label_elem.tag == 'REVISION-LABEL':
+                                        engineering_object.revision_labels.append(self.parse_text_node(label_elem))
+                            elif elem.tag == 'DOMAIN':
+                                engineering_object.domain = self.parse_text_node(elem)
+                        code.artifact_descriptors.append(engineering_object)
+            elif xml_elem.tag == 'CALLBACK-HEADER-REFS':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'TYPE':
+            elif xml_elem.tag == 'TYPE':
                 # Only valid in Autosar 3.
-                code.type = self.parseTextNode(xmlElem)
+                code.type = self.parse_text_node(xml_elem)
             else:
-                self.defaultHandler(xmlElem)
-
+                self.default_handler(xml_elem)
         self.pop(code)
         return code
 
-    def parseResourceConsumption(self, xmlElement, parent = None):
+    def parse_resource_consumption(self, xml_element: Element, parent: ArObject | None = None) -> ResourceConsumption:
         """
         Parser for implementation resource consumption.
         """
-        assert (xmlElement.tag=='RESOURCE-CONSUMPTION')
-        name = self.parseTextNode(xmlElement.find('SHORT-NAME'))
-        res = autosar.component.ResourceConsumption(name, parent=parent)
+        assert (xml_element.tag == 'RESOURCE-CONSUMPTION')
+        name = self.parse_text_node(xml_element.find('SHORT-NAME'))
+        res = ResourceConsumption(name, parent=parent)
         self.push()
-        for xmlElem in xmlElement.findall('./*'):
-            if xmlElem.tag   == 'SHORT-NAME':
+        for xml_elem in xml_element.findall('./*'):
+            if xml_elem.tag == 'SHORT-NAME':
                 continue
-            elif xmlElem.tag == 'EXECUTION-TIMES':
-                #TODO: Implement later
+            elif xml_elem.tag == 'EXECUTION-TIMES':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'HEAP-USAGES':
-                #TODO: Implement later
+            elif xml_elem.tag == 'HEAP-USAGES':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'MEMORY-SECTIONS':
-                res.memorySections = []
-                for xmlSection in xmlElem.findall('./*'):
-                    res.memorySections.append(self.parseMemorySection(xmlSection, res))
-            elif xmlElem.tag == 'SECTION-NAME-PREFIXS':
-                #TODO: Implement later
+            elif xml_elem.tag == 'MEMORY-SECTIONS':
+                res.memory_sections = []
+                for xml_section in xml_elem.findall('./*'):
+                    res.memory_sections.append(self.parse_memory_section(xml_section, res))
+            elif xml_elem.tag == 'SECTION-NAME-PREFIXS':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'STACK-USAGES':
-                #TODO: Implement later
+            elif xml_elem.tag == 'STACK-USAGES':
+                # TODO: Implement later
                 continue
             else:
-                self.defaultHandler(xmlElem)
-
+                self.default_handler(xml_elem)
         self.pop(res)
         return res
 
-    def parseMemorySection(self, xmlElement, parent = None):
+    def parse_memory_section(self, xml_element: Element, parent: ArObject | None = None) -> MemorySection:
         """
         Parser for memory section.
         """
-        assert (xmlElement.tag=='MEMORY-SECTION')
-        name = self.parseTextNode(xmlElement.find('SHORT-NAME'))
-        section = autosar.component.MemorySection(name, parent=parent)
+        assert (xml_element.tag == 'MEMORY-SECTION')
+        name = self.parse_text_node(xml_element.find('SHORT-NAME'))
+        section = MemorySection(name, parent=parent)
         self.push()
-        for xmlElem in xmlElement.findall('./*'):
-            if xmlElem.tag   == 'SHORT-NAME':
+        for xml_elem in xml_element.findall('./*'):
+            if xml_elem.tag == 'SHORT-NAME':
                 continue
-            elif xmlElem.tag == 'ALIGNMENT':
-                section.aligment = self.parseTextNode(xmlElem)
-            elif xmlElem.tag == 'EXECUTABLE-ENTITY-REFS':
-                #TODO: Implement later
+            elif xml_elem.tag == 'ALIGNMENT':
+                section.alignment = self.parse_text_node(xml_elem)
+            elif xml_elem.tag == 'EXECUTABLE-ENTITY-REFS':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'MEM-CLASS-SYMBOL':
-                section.memClassSymbol = self.parseTextNode(xmlElem)
-            elif xmlElem.tag == 'OPTIONS':
+            elif xml_elem.tag == 'MEM-CLASS-SYMBOL':
+                section.mem_class_symbol = self.parse_text_node(xml_elem)
+            elif xml_elem.tag == 'OPTIONS':
                 section.options = []
-                for xmlOption in xmlElem.findall('./*'):
-                    section.options.append(self.parseTextNode(xmlOption))
-            elif xmlElem.tag == 'PREFIX-REF':
-                #TODO: Implement later
+                for xml_option in xml_elem.findall('./*'):
+                    section.options.append(self.parse_text_node(xml_option))
+            elif xml_elem.tag == 'PREFIX-REF':
+                # TODO: Implement later
                 continue
-            elif xmlElem.tag == 'SIZE':
-                section.size = self.parseIntNode(xmlElem)
-            elif xmlElem.tag == 'SW-ADDRMETHOD-REF':
-                section.swAddrmethodRef = self.parseTextNode(xmlElem)
-            elif xmlElem.tag == 'SYMBOL':
-                section.symbol = self.parseTextNode(xmlElem)
+            elif xml_elem.tag == 'SIZE':
+                section.size = self.parse_int_node(xml_elem)
+            elif xml_elem.tag == 'SW-ADDRMETHOD-REF':
+                section.sw_addr_method_ref = self.parse_text_node(xml_elem)
+            elif xml_elem.tag == 'SYMBOL':
+                section.symbol = self.parse_text_node(xml_elem)
             else:
-                self.defaultHandler(xmlElem)
-
+                self.default_handler(xml_elem)
         self.pop(section)
         return section

@@ -1,6 +1,6 @@
-from autosar.element import (Element, DataElement)
-import collections
-import autosar.base
+from autosar.ar_object import ArObject
+from autosar.base import AdminData
+from autosar.element import (Element)
 
 
 class ModeGroup(Element):
@@ -10,23 +10,33 @@ class ModeGroup(Element):
 
     A ModeGroup inside a ModeSwitchInterface is what a DataElement is to a SenderReceiverInterface.
     """
-    def __init__(self, name, typeRef, parent=None, adminData=None):
-        super().__init__(name, parent, adminData)
-        self.typeRef=typeRef
 
-    def tag(self,version=None):
-        if version>=4.0:
+    def __init__(
+            self,
+            name: str,
+            type_ref: str,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
+        self.type_ref = type_ref
+
+    @staticmethod
+    def tag(version: int | float | None = None):
+        if version is not None and version >= 4.0:
             return "MODE-GROUP"
         else:
             return "MODE-DECLARATION-GROUP-PROTOTYPE"
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
-            if self.name == other.name and self.adminData == other.adminData and self.typeRef == other.typeRef: return True
+            if self.name == other.name and self.admin_data == other.admin_data and self.type_ref == other.type_ref:
+                return True
         return False
 
     def __ne__(self, other):
         return not (self == other)
+
 
 class ModeDeclarationGroup(Element):
     """
@@ -39,31 +49,41 @@ class ModeDeclarationGroup(Element):
     initialModeRef: Initial mode value
 
     """
-    def tag(self, version=None): return "MODE-DECLARATION-GROUP"
 
-    def __init__(self, name, initialModeRef=None, modeDeclarations=None, category=None, parent=None, adminData=None):
-        super().__init__(name, parent, adminData, category)
-        self.initialModeRef = initialModeRef
-        if modeDeclarations is None:
-            self.modeDeclarations = []
-        else:
-            self.modeDeclarations = list(modeDeclarations)
-        self.category=category
+    @staticmethod
+    def tag(*_):
+        return "MODE-DECLARATION-GROUP"
 
-    def find(self,ref):
+    def __init__(
+            self,
+            name: str,
+            initial_mode_ref: str | None = None,
+            mode_declarations: list['ModeDeclaration'] | None = None,
+            category: str | None = None,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data, category)
+        self.initial_mode_ref = initial_mode_ref
+        if mode_declarations is None:
+            mode_declarations = []
+        self.mode_declarations: list[ModeDeclaration] = mode_declarations
+        self.category = category
+
+    def find(self, ref: str, *_):
         ref = ref.partition('/')
         name = ref[0]
-        for elem in self.modeDeclarations:
-            if elem.name==name:
+        for elem in self.mode_declarations:
+            if elem.name == name:
                 return elem
         return None
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
-            if self.name == other.name and self.initialModeRef == other.initialModeRef and \
-            len(self.modeDeclarations) == len(other.modeDeclarations) and self.adminData == other.adminData:
-                for i,left in enumerate(self.modeDeclarations):
-                    right = other.modeDeclarations[i]
+            if self.name == other.name and self.initial_mode_ref == other.initial_mode_ref and \
+                    len(self.mode_declarations) == len(other.mode_declarations) and self.admin_data == other.admin_data:
+                for i, left in enumerate(self.mode_declarations):
+                    right = other.mode_declarations[i]
                     if left != right:
                         return False
                 return True
@@ -72,14 +92,24 @@ class ModeDeclarationGroup(Element):
     def __ne__(self, other):
         return not (self == other)
 
+
 class ModeDeclaration(Element):
     """
     Implements <MODE-DECLARATION> (AUTOSAR4)
     """
-    def tag(self,version=None): return "MODE-DECLARATION"
 
-    def __init__(self, name, value = None, parent=None, adminData=None):
-        super().__init__(name, parent, adminData)
+    @staticmethod
+    def tag(*_):
+        return "MODE-DECLARATION"
+
+    def __init__(
+            self,
+            name: str,
+            value: int | None = None,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
         self.value = int(value) if value is not None else None
 
     def __eq__(self, other):
@@ -92,4 +122,5 @@ class ModeDeclaration(Element):
                         return True
         return False
 
-    def __ne__(self, other): return not (self == other)
+    def __ne__(self, other):
+        return not (self == other)

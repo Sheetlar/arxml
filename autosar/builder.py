@@ -1,161 +1,193 @@
-import autosar.constant
-import autosar.datatype
-import collections
-import sys
+from typing import Mapping, Sequence
 
-class ValueBuilder:
+from autosar.ar_object import ArObject
+from autosar.base import InvalidDataTypeRef
+from autosar.constant import TextValue, NumericalValue, RecordValueAR4, ArrayValueAR4
+from autosar.datatype import ImplementationDataType, ApplicationPrimitiveDataType
+from autosar.has_logger import HasLogger
+
+
+class ValueBuilder(HasLogger):
     """
     Builds AUTOSAR 4 value specifications from python data
     """
-    def __init__(self):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.value = None
 
-    def buildFromDataType(self, dataType, rawValue, name = None, ws = None, parent = None):
-        assert(dataType is not None)
+    def build_from_data_type(
+            self,
+            data_type: ImplementationDataType | ApplicationPrimitiveDataType,
+            raw_value: str | int | float | Mapping | Sequence,
+            name: str | None = None,
+            ws=None,
+            parent: ArObject | None = None,
+    ):
+        assert (data_type is not None)
         if ws is None:
-            ws = dataType.rootWS()
-            assert(ws is not None)
-        return self._createFromDataTypeInternal(ws, name, dataType, rawValue, parent)
+            ws = data_type.root_ws()
+            assert (ws is not None)
+        return self._create_from_data_type_internal(ws, name, data_type, raw_value, parent)
 
-    def build(self, label, value):
-        return self._createValueInternal(label, value)
+    def build(self, label: str, value: str | int | float | Mapping | Sequence):
+        return self._create_value_internal(label, value)
 
-    def _createFromDataTypeInternal(self, ws, label, dataType, rawValue, parent = None):
-        if isinstance(dataType, (autosar.datatype.ImplementationDataType, autosar.datatype.ApplicationPrimitiveDataType)):
+    def _create_from_data_type_internal(
+            self,
+            ws,
+            label: str | None,
+            data_type: ImplementationDataType | ApplicationPrimitiveDataType,
+            raw_value: str | int | float | Mapping | Sequence,
+            parent: ArObject | None = None,
+    ):
+        if isinstance(data_type, (ImplementationDataType, ApplicationPrimitiveDataType)):
             value = None
-            dataConstraint = None
-            if isinstance(dataType, autosar.datatype.ImplementationDataType):
-                variantProps = dataType.variantProps[0]
-            if variantProps is not None:
-                if variantProps.dataConstraintRef is not None:
-                    dataConstraint = ws.find(variantProps.dataConstraintRef, role='DataConstraint')
-                    if dataConstraint is None:
-                        raise ValueError('{0.name}: Invalid DataConstraint reference: {1.dataConstraintRef}'.format(dataType, variantProps))
-                if variantProps.compuMethodRef is not None:
-                    compuMethod = ws.find(variantProps.compuMethodRef, role='CompuMethod')
-                    if compuMethod is None:
-                        raise ValueError('{0.name}: Invalid CompuMethod reference: {1.compuMethodRef}'.format(dataType, variantProps))
-                    if compuMethod.category == 'TEXTTABLE':
-                        #TODO: check textValue value here
-                        value = autosar.constant.TextValue(label, str(rawValue))
+            data_constraint = None
+            variant_props = data_type.variant_props[0]
+            if variant_props is not None:
+                if variant_props.data_constraint_ref is not None:
+                    data_constraint = ws.find(variant_props.data_constraint_ref)
+                    if data_constraint is None:
+                        raise ValueError(f'{data_type.name}: Invalid DataConstraint reference: {variant_props.data_constraint_ref}')
+                if variant_props.compu_method_ref is not None:
+                    compu_method = ws.find(variant_props.compu_method_ref)
+                    if compu_method is None:
+                        raise ValueError(f'{data_type.name}: Invalid CompuMethod reference: {variant_props.compu_method_ref}')
+                    if compu_method.category == 'TEXTTABLE':
+                        # TODO: check textValue value here
+                        value = TextValue(label, str(raw_value))
                     else:
-                        #TODO: check rawValue here
-                        value = autosar.constant.NumericalValue(label, rawValue)
+                        # TODO: check rawValue here
+                        value = NumericalValue(label, raw_value)
             if value is None:
-                if dataType.category == 'VALUE':
-                    if isinstance(rawValue, str):
-                        value = autosar.constant.TextValue(label, rawValue)
+                if data_type.category == 'VALUE':
+                    if isinstance(raw_value, str):
+                        value = TextValue(label, raw_value)
                     else:
-                        if dataConstraint is not None:
-                            dataConstraint.checkValue(rawValue)
-                        value = autosar.constant.NumericalValue(label, rawValue)
-                elif dataType.category == 'ARRAY':
-                    value = self._createArrayValueFromTypeInternal(ws, label, dataType, rawValue, parent)
-                elif dataType.category == 'STRUCTURE':
-                    value = self._createRecordValueFromTypeInternal(ws, label, dataType, rawValue, parent)
-                elif dataType.category == 'TYPE_REFERENCE':
-                    referencedTypeRef = dataType.getTypeReference()
-                    referencedType = ws.find(referencedTypeRef, role='DataType')
-                    if referencedType is None:
-                        raise ValueError('Invalid reference: '+str(referencedTypeRef))
-                    value = self._createFromDataTypeInternal(ws, label, referencedType, rawValue, parent)
+                        if data_constraint is not None:
+                            data_constraint.checkValue(raw_value)
+                        value = NumericalValue(label, raw_value)
+                elif data_type.category == 'ARRAY':
+                    value = self._create_array_value_from_type_internal(ws, label, data_type, raw_value, parent)
+                elif data_type.category == 'STRUCTURE':
+                    value = self._create_record_value_from_type_internal(ws, label, data_type, raw_value, parent)
+                elif data_type.category == 'TYPE_REFERENCE':
+                    referenced_type_ref = data_type.get_type_reference()
+                    referenced_type = ws.find(referenced_type_ref)
+                    if referenced_type is None:
+                        raise ValueError(f'Invalid reference: {referenced_type_ref}')
+                    value = self._create_from_data_type_internal(ws, label, referenced_type, raw_value, parent)
                 else:
-                    raise NotImplementedError(dataType.category)
+                    raise NotImplementedError(data_type.category)
         else:
-            raise NotImplementedError(type(dataType))
+            raise NotImplementedError(type(data_type))
         return value
 
-    def _createRecordValueFromTypeInternal(self, ws, label, dataType, initValue, parent=None):
-        value = autosar.constant.RecordValueAR4(label, dataType.ref, parent)
-        if isinstance(initValue, collections.abc.Mapping):
-            a = set() #datatype elements
-            b = set() #initvalue elements
-            for subElem in dataType.subElements:
-                a.add(subElem.name)
-            for key in initValue.keys():
+    def _create_record_value_from_type_internal(
+            self,
+            ws,
+            label: str | None,
+            data_type: ImplementationDataType | ApplicationPrimitiveDataType,
+            init_value: str | int | float | Mapping | Sequence,
+            parent: ArObject | None = None,
+    ):
+        value = RecordValueAR4(label, data_type.ref, parent)
+        if isinstance(init_value, Mapping):
+            a = set()  # datatype elements
+            b = set()  # initvalue elements
+            for sub_elem in data_type.sub_elements:
+                a.add(sub_elem.name)
+            for key in init_value.keys():
                 b.add(key)
-            extra_keys = b-a
+            extra_keys = b - a
             if len(extra_keys) > 0:
-                label_str = "" if label is None else "{}: ".format(label)
-                raise ValueError('{}Unknown items in initializer: {}'.format(label_str, ', '.join(extra_keys)))
+                label_str = f'{label}: ' if label is not None else ''
+                raise ValueError(f'{label_str}Unknown items in initializer: {", ".join(extra_keys)}')
 
-
-            for elem in dataType.subElements:
-                if elem.name in initValue:
-                    v = initValue[elem.name]
-                    childProps = elem.variantProps[0]
-                    if childProps.implementationTypeRef is not None:
-                        childTypeRef = childProps.implementationTypeRef
+            for elem in data_type.sub_elements:
+                if elem.name in init_value:
+                    v = init_value[elem.name]
+                    child_props = elem.variant_props[0]
+                    if child_props.implementation_type_ref is not None:
+                        child_type_ref = child_props.implementation_type_ref
                     else:
-                        raise NotImplementedError('could not deduce the type of element "%s"'%(elem.name))
-                    childType = ws.find(childTypeRef, role='DataType')
-                    if childType is None:
-                        raise autosar.base.InvalidDataTypeRef(str(childTypeRef))
-                    childValue = self._createFromDataTypeInternal(ws, elem.name, childType, v, value)
-                    assert(childValue is not None)
-                    value.elements.append(childValue)
+                        raise NotImplementedError(f'Could not deduce the type of element "{elem.name}"')
+                    child_type = ws.find(child_type_ref)
+                    if child_type is None:
+                        raise InvalidDataTypeRef(str(child_type_ref))
+                    child_value = self._create_from_data_type_internal(ws, elem.name, child_type, v, value)
+                    assert (child_value is not None)
+                    value.elements.append(child_value)
                 else:
-                    name_str = "" if elem.name is None else "{}: ".format(elem.name)
-                    raise ValueError('{}Missing initValue field: {}'.format(name_str, elem.name))
+                    name_str = f'{elem.name}: ' if elem.name is not None else ''
+                    raise ValueError(f'{name_str}Missing initValue field: {elem.name}')
         else:
             raise ValueError('initValue must be a dict')
         return value
 
-    def _createArrayValueFromTypeInternal(self, ws, label, dataType, initValue, parent=None):
-        value = autosar.constant.ArrayValueAR4(label, dataType.ref, None, parent)
-        typeArrayLength = dataType.subElements[0].arraySize
-        if not isinstance(typeArrayLength, int):
+    def _create_array_value_from_type_internal(
+            self,
+            ws,
+            label: str | None,
+            data_type: ImplementationDataType | ApplicationPrimitiveDataType,
+            init_value: str | int | float | Mapping | Sequence,
+            parent: ArObject | None = None,
+    ):
+        value = ArrayValueAR4(label, data_type.ref, None, parent)
+        type_array_length = data_type.sub_elements[0].array_size
+        if not isinstance(type_array_length, int):
             raise ValueError('dataType has no valid array length')
-        if isinstance(initValue, collections.abc.Sequence):
-            if isinstance(initValue, str):
-                initValue = list(initValue)
-                if len(initValue)<typeArrayLength:
-                    #pad with zeros until length matches
-                    initValue += [0]*(typeArrayLength-len(initValue))
-                    assert(len(initValue) == typeArrayLength)
-            if len(initValue) > typeArrayLength:
-                print("%s: Excess array init values detected. Expected length=%d, got %d items"%(label, typeArrayLength, len(initValue)), file=sys.stderr)
-            if len(initValue) < typeArrayLength:
-                print("%s: Not enough array init values. Expected length=%d, got %d items"%(label, typeArrayLength, len(initValue)), file=sys.stderr)
-            i=0
-            childTypeRef = dataType.subElements[0].variantProps[0].implementationTypeRef
-            childType = ws.find(childTypeRef, role='DataType')
-            if childType is None:
-                raise autosar.base.InvalidDataTypeRef(str(childTypeRef))
-            for v in initValue:
-                inner_value = self._createFromDataTypeInternal(ws, None, childType, v, None)
+        if isinstance(init_value, Sequence):
+            if isinstance(init_value, str):
+                init_value = list(init_value)
+                if len(init_value) < type_array_length:
+                    # pad with zeros until length matches
+                    init_value += [0] * (type_array_length - len(init_value))
+                    assert (len(init_value) == type_array_length)
+            if len(init_value) > type_array_length:
+                self._logger.warning(f'{label}: Excess array init values detected. Expected length={type_array_length}, got {len(init_value)} items')
+            if len(init_value) < type_array_length:
+                self._logger.warning(f'{label}: Not enough array init values. Expected length={type_array_length}, got {len(init_value)} items')
+            i = 0
+            child_type_ref = data_type.sub_elements[0].variant_props[0].implementation_type_ref
+            child_type = ws.find(child_type_ref)
+            if child_type is None:
+                raise InvalidDataTypeRef(str(child_type_ref))
+            for v in init_value:
+                inner_value = self._create_from_data_type_internal(ws, None, child_type, v, None)
                 if inner_value is not None:
                     value.elements.append(inner_value)
                 else:
-                    raise RuntimeError("Failed to build value for '{}'".format(v))
-                i+=1
-                if i>=typeArrayLength:
+                    raise RuntimeError(f'Failed to build value for "{v}"')
+                i += 1
+                if i >= type_array_length:
                     break
         return value
 
-    def _createValueInternal(self, label, value):
+    def _create_value_internal(self, label: str | None, value: str | int | float | Mapping | Sequence):
         if isinstance(value, str):
-            return autosar.constant.TextValue(label, value)
+            return TextValue(label, value)
         elif isinstance(value, (int, float)):
-            return autosar.constant.NumericalValue(label, value)
-        elif isinstance(value, collections.abc.Mapping):
-            record_value = autosar.constant.RecordValueAR4(label)
+            return NumericalValue(label, value)
+        elif isinstance(value, Mapping):
+            record_value = RecordValueAR4(label)
             for key in value.keys():
                 inner_value = value[key]
-                child_value = self._createValueInternal(key, inner_value)
+                child_value = self._create_value_internal(key, inner_value)
                 if child_value is not None:
                     record_value.elements.append(child_value)
                 else:
-                    raise RuntimeError('Failed to build init-value for "{}"'.format(str(inner_value)))
+                    raise RuntimeError(f'Failed to build init-value for "{inner_value}"')
             return record_value
-        elif isinstance(value, collections.abc.Sequence):
-            array_value = autosar.constant.ArrayValueAR4(label)
+        elif isinstance(value, Sequence):
+            array_value = ArrayValueAR4(label)
             for inner_value in value:
-                child_value = self._createValueInternal(None, inner_value)
+                child_value = self._create_value_internal(None, inner_value)
                 if child_value is not None:
                     array_value.elements.append(child_value)
                 else:
-                    raise RuntimeError('Failed to build init-value for "{}"'.format(str(inner_value)))
+                    raise RuntimeError(f'Failed to build init-value for "{inner_value}"')
             return array_value
         else:
             raise NotImplementedError(type(value))

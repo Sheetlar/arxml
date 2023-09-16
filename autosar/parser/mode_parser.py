@@ -1,55 +1,71 @@
-import sys
+from typing import Callable
+from xml.etree.ElementTree import Element
+
+from autosar.ar_object import ArObject
+from autosar.mode import ModeDeclaration, ModeDeclarationGroup
 from autosar.parser.parser_base import ElementParser
-import autosar.datatype
+
 
 class ModeDeclarationParser(ElementParser):
-    def __init__(self,version=3):
-        self.version=version
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        if self.version >= 3.0 and self.version < 4.0:
-            self.switcher = {'MODE-DECLARATION-GROUP': self.parseModeDeclarationGroup,
-                             'MODE-DECLARATIONS': self.parseModeDeclarations
+        if 3.0 <= self.version < 4.0:
+            self.switcher: dict[str, Callable[[Element, ArObject | None], ModeDeclarationGroup | list[ModeDeclaration]]] = {
+                'MODE-DECLARATION-GROUP': self.parse_mode_declaration_group,
+                'MODE-DECLARATIONS': self.parse_mode_declarations,
             }
         elif self.version >= 4.0:
-            self.switcher = {
-               'MODE-DECLARATION-GROUP': self.parseModeDeclarationGroup
+            self.switcher: dict[str, Callable[[Element, ArObject | None], ModeDeclarationGroup]] = {
+                'MODE-DECLARATION-GROUP': self.parse_mode_declaration_group,
             }
 
-    def getSupportedTags(self):
+    def get_supported_tags(self):
         return self.switcher.keys()
 
-    def parseElement(self, xmlElement, parent = None):
-        parseFunc = self.switcher.get(xmlElement.tag)
-        if parseFunc is not None:
-            return parseFunc(xmlElement,parent)
-        else:
-            return None
+    def parse_element(
+            self,
+            xml_element: Element,
+            parent: ArObject | None = None,
+    ) -> ModeDeclarationGroup | list[ModeDeclaration] | None:
+        parse_func = self.switcher.get(xml_element.tag)
+        if parse_func is not None:
+            return parse_func(xml_element, parent)
+        return None
 
-    def parseModeDeclarationGroup(self,xmlRoot,rootProject=None,parent=None):
-        assert(xmlRoot.tag == 'MODE-DECLARATION-GROUP')
-        name = self.parseTextNode(xmlRoot.find("./SHORT-NAME"))
-        category = self.parseTextNode(xmlRoot.find("./CATEGORY"))
-        initialModeRef = self.parseTextNode(xmlRoot.find('./INITIAL-MODE-REF'))
-        modeDclrGroup = autosar.mode.ModeDeclarationGroup(name,initialModeRef,None,parent)
-        if xmlRoot.find('./MODE-DECLARATIONS') is not None:
-            self.parseModeDeclarations(xmlRoot.find('./MODE-DECLARATIONS'), modeDclrGroup)
-        if self.hasAdminData(xmlRoot):
-            adminData = self.parseAdminDataNode(xmlRoot.find('ADMIN-DATA'))
-            modeDclrGroup.adminData = adminData
+    def parse_mode_declaration_group(self, xml_root: Element, parent: ArObject | None) -> ModeDeclarationGroup:
+        assert (xml_root.tag == 'MODE-DECLARATION-GROUP')
+        name = self.parse_text_node(xml_root.find('./SHORT-NAME'))
+        category = self.parse_text_node(xml_root.find('./CATEGORY'))
+        initial_mode_ref = self.parse_text_node(xml_root.find('./INITIAL-MODE-REF'))
+        mode_declaration_group = ModeDeclarationGroup(
+            name,
+            initial_mode_ref,
+            None,
+            parent=parent,
+        )
+        if xml_root.find('./MODE-DECLARATIONS') is not None:
+            self.parse_mode_declarations(xml_root.find('./MODE-DECLARATIONS'), mode_declaration_group)
+        if self.has_admin_data(xml_root):
+            admin_data = self.parse_admin_data_node(xml_root.find('ADMIN-DATA'))
+            mode_declaration_group.admin_data = admin_data
         if category is not None:
-            modeDclrGroup.category = category
-        return modeDclrGroup
+            mode_declaration_group.category = category
+        return mode_declaration_group
 
-    def parseModeDeclarations(self,xmlRoot,parent):
-        assert(xmlRoot.tag=="MODE-DECLARATIONS")
-        assert(isinstance(parent, autosar.mode.ModeDeclarationGroup))
+    def parse_mode_declarations(self, xml_root: Element, parent: ArObject | None) -> list[ModeDeclaration]:
+        assert (xml_root.tag == 'MODE-DECLARATIONS')
+        assert (isinstance(parent, ModeDeclarationGroup))
         result = []
-        for mode in xmlRoot.findall("./MODE-DECLARATION"):
-            declarationName = self.parseTextNode(mode.find("./SHORT-NAME"))
-            declarationValue = None
-            declarationValueXML = mode.find("./VALUE")
-            if declarationValueXML is not None:
-                declarationValue = self.parseTextNode(declarationValueXML)
-            parent.modeDeclarations.append(autosar.mode.ModeDeclaration(declarationName, declarationValue, parent = parent))
+        for mode in xml_root.findall('./MODE-DECLARATION'):
+            declaration_name = self.parse_text_node(mode.find('./SHORT-NAME'))
+            declaration_value = None
+            declaration_value_xml = mode.find('./VALUE')
+            if declaration_value_xml is not None:
+                declaration_value = self.parse_text_node(declaration_value_xml)
+            parent.mode_declarations.append(ModeDeclaration(
+                declaration_name,
+                declaration_value,
+                parent=parent,
+            ))
         return result
-

@@ -1,6 +1,12 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "arxml"
+version = "0.1.0"
+description = "Python AUTOSAR XML parser"
+
+requires-python = ">=3.11"
+readme = "README.rst"
+license = {file = "LICENSE"}

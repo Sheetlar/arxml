@@ -1,12 +1,7 @@
 AUTOSAR
 -------
 
-A set of Python modules for working with `AUTOSAR <https://www.autosar.org/>`_ XML files.
-
-* Allows individuals and teams to incrementally develop and maintain AUTOSAR SWC models using Python code.
-* Executing a Python script can quickly regenerate the same ARXML file(s) (no real need to store generated ARXML files in version control).
-
-It is recommended that you use a commercial AUTOSAR toolchain to integrate generated SWCs into your ECU.
+Python  `AUTOSAR <https://www.autosar.org/>`_ XML parser.
 
 AUTOSAR version support
 -----------------------
@@ -17,24 +12,20 @@ AUTOSAR version support
 Requirements
 ------------
 
-* `Python 3 <https://www.python.org/>`_
-* `cfile <https://github.com/cogu/cfile/>`_
+* `Python 3.11 <https://www.python.org/>`_
 
 Documentation
 -------------
 
-* `Documentation Root <https://autosar.readthedocs.io/en/latest/>`_
-* `Installation Guide <https://autosar.readthedocs.io/en/latest/start.html>`_
-* `AUTOSAR 4 API <https://autosar.readthedocs.io/en/latest/autosar4_api/>`_
+To parse ARXML file, use ``parse_arxml`` function
+from ``autosar.extractor.parse_arxml``
 
-Releases
---------
+Provide it with ``pathlib.Path`` to ARXML file you want to parse.
+You will receive a tuple of ``ExtractedSystem`` elements.
 
-Latest stable release is `v0.4.1 <https://github.com/cogu/autosar/releases/tag/v0.4.1>`_.
+``ExtractedSystem`` object consist of:
 
-Branches
---------
-
-Bug fixes to v0.4.x will be tracked on branch `maintenance/0.4 <https://github.com/cogu/autosar/tree/maintenance/0.4>`_.
-
-Research for future versions will be tracked on branch `research/0.5 <https://github.com/cogu/autosar/tree/research/0.5>`_.
+* ``System`` that was extracted
+* A tuple of FIBEX elements the system defines
+* SOME/IP service ID, method ID and interface version mapping to name/structure tuple
+* Source IP address and port to ECU mapping

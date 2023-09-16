@@ -1,161 +1,266 @@
+from __future__ import annotations
+
 import copy
-import autosar.component
-import autosar.portinterface
-import autosar.base
+from typing import Iterable
+
+from autosar.ar_object import ArObject
+from autosar.base import AdminData
+from autosar.base import (
+    find_unique_name_in_list,
+    split_ref,
+    InvalidRunnableRef,
+    InvalidDataElementRef,
+    InvalidPortRef,
+    InvalidPortInterfaceRef,
+    InvalidDataTypeRef,
+    InvalidInitValueRef,
+)
+from autosar.builder import ValueBuilder
+from autosar.component import NvBlockComponent
+from autosar.constant import Constant, Value, ValueAR4
 from autosar.element import Element, DataElement
-import collections
+from autosar.mode import ModeDeclarationGroup, ModeGroup
+from autosar.port import Port, RequirePort, ProvidePort
+from autosar.portinterface import SenderReceiverInterface, ParameterInterface, NvDataInterface, ModeSwitchInterface, ClientServerInterface, Operation
 
 
-###################################### Events ###########################################
+# --------------------------------------- Events --------------------------------------- #
 class Event(Element):
-    def __init__(self,name,startOnEventRef=None, parent=None):
-        super().__init__(name,parent)
-        self.startOnEventRef = startOnEventRef
-        self.modeDependency=None #for AUTOSAR3
-        self.disabledInModes=None #for AUTOSAR4
+    parent: InternalBehaviorCommon
+
+    def __init__(
+            self,
+            name: str,
+            start_on_event_ref: str | None = None,
+            parent: InternalBehaviorCommon | None = None,
+    ):
+        super().__init__(name, parent)
+        self.start_on_event_ref = start_on_event_ref
+        self.mode_dependency = None  # for AUTOSAR3
+        self.disabled_in_modes = None  # for AUTOSAR4
+
 
 class ModeSwitchEvent(Event):
-    def __init__(self,name,startOnEventRef=None, activationType='ENTRY', parent=None, version=3.0):
-        super().__init__(name, startOnEventRef, parent)
-        self.modeInstRef=None
+    def __init__(
+            self,
+            name: str,
+            start_on_event_ref: str | None = None,
+            activation_type: str = 'ENTRY',
+            parent: InternalBehaviorCommon | None = None,
+            version: float = 3.0,
+    ):
+        super().__init__(name, start_on_event_ref, parent)
+        self.mode_inst_ref: ModeInstanceRef | None = None
         if version < 4.0:
-            if (activationType!='ENTRY') and (activationType != 'EXIT'):
-                raise ValueError('activationType argument must be either "ENTRY" or "EXIT"')
+            if (activation_type != 'ENTRY') and (activation_type != 'EXIT'):
+                raise ValueError('ActivationType argument must be either "ENTRY" or "EXIT"')
         elif version >= 4.0:
-            if (activationType=='ENTRY'): activationType='ON-ENTRY'
-            if (activationType=='EXIT'): activationType='ON-EXIT'
-            if (activationType!='ON-ENTRY') and (activationType != 'ON-EXIT'):
-                raise ValueError('activationType argument must be either "ON-ENTRY" or "ON-EXIT"')
-        self.activationType = activationType
+            if activation_type == 'ENTRY':
+                activation_type = 'ON-ENTRY'
+            if activation_type == 'EXIT':
+                activation_type = 'ON-EXIT'
+            if (activation_type != 'ON-ENTRY') and (activation_type != 'ON-EXIT'):
+                raise ValueError('ActivationType argument must be either "ON-ENTRY" or "ON-EXIT"')
+        self.activation_type = activation_type
 
-    def tag(self,version): return 'SWC-MODE-SWITCH-EVENT' if version >= 4.0 else 'MODE-SWITCH-EVENT'
+    @staticmethod
+    def tag(version: float):
+        return 'SWC-MODE-SWITCH-EVENT' if version >= 4.0 else 'MODE-SWITCH-EVENT'
+
 
 class TimingEvent(Event):
-    def __init__(self,name,startOnEventRef=None, period=0, parent=None):
-        super().__init__(name, startOnEventRef, parent)
-        self.period=int(period)
+    def __init__(
+            self,
+            name: str,
+            start_on_event_ref: str | None = None,
+            period: int | float = 0,
+            parent: InternalBehaviorCommon | None = None,
+    ):
+        super().__init__(name, start_on_event_ref, parent)
+        self.period = int(period)
 
-    def tag(self, version=None):
+    @staticmethod
+    def tag(*_):
         return 'TIMING-EVENT'
 
 
 class DataReceivedEvent(Event):
-    def __init__(self, name, startOnEventRef=None, parent=None):
-        super().__init__(name, startOnEventRef, parent)
-        self.dataInstanceRef=None
-        self.swDataDefsProps=[]
-    def tag(self, version=None):
+    def __init__(
+            self,
+            name: str,
+            start_on_event_ref: str | None = None,
+            parent: InternalBehaviorCommon | None = None,
+    ):
+        super().__init__(name, start_on_event_ref, parent)
+        self.data_instance_ref: DataInstanceRef | None = None
+        self.sw_data_defs_props = []
+
+    @staticmethod
+    def tag(*_):
         return "DATA-RECEIVED-EVENT"
 
 
 class OperationInvokedEvent(Event):
-    def __init__(self, name, startOnEventRef=None, parent=None):
-        super().__init__(name, startOnEventRef, parent)
-        self.operationInstanceRef=None
-        self.swDataDefsProps=[]
+    def __init__(
+            self,
+            name: str,
+            start_on_event_ref: str | None = None,
+            parent: InternalBehaviorCommon | None = None,
+    ):
+        super().__init__(name, start_on_event_ref, parent)
+        self.operation_instance_ref: OperationInstanceRef | None = None
+        self.sw_data_defs_props = []
 
-    def tag(self, version=None):
+    @staticmethod
+    def tag(*_):
         return "OPERATION-INVOKED-EVENT"
 
-class InitEvent(Event):
-    def __init__(self,name,startOnEventRef=None, parent=None):
-        super().__init__(name, startOnEventRef, parent)
 
-    def tag(self, version=None):
+class InitEvent(Event):
+    def __init__(
+            self,
+            name: str,
+            start_on_event_ref: str | None = None,
+            parent: InternalBehaviorCommon | None = None,
+    ):
+        super().__init__(name, start_on_event_ref, parent)
+
+    @staticmethod
+    def tag(*_):
         return 'INIT-EVENT'
+
 
 class ModeSwitchAckEvent(Event):
     """
     Represents <MODE-SWITCHED-ACK-EVENT> (AUTOSAR 4)
     """
-    def __init__(self, name, startOnEventRef=None, eventSourceRef = None, parent=None):
-        super().__init__(name, startOnEventRef, parent)
-        self.eventSourceRef = eventSourceRef
 
-    def tag(self, version=None):
+    def __init__(
+            self,
+            name: str,
+            start_on_event_ref: str | None = None,
+            event_source_ref: str | None = None,
+            parent: InternalBehaviorCommon | None = None,
+    ):
+        super().__init__(name, start_on_event_ref, parent)
+        self.event_source_ref = event_source_ref
+
+    @staticmethod
+    def tag(*_):
         return 'MODE-SWITCHED-ACK-EVENT'
 
 
-####################################################################################################
+# -------------------------------------------------------------------------------------- #
+
 
 class ModeDependency(object):
     def __init__(self):
-        self.modeInstanceRefs=[]
-    def asdict(self):
-        data={'type': self.__class__.__name__,'modeInstanceRefs':[]}
-        for modeInstanceRef in self.modeInstanceRefs:
-            data['modeInstanceRefs'].append(modeInstanceRef.asdict())
-        if len(data['modeInstanceRefs'])==0: del data['modeInstanceRefs']
+        self.mode_instance_refs: list[ModeInstanceRef | ModeDependencyRef] = []
 
-    def append(self, item):
+    def asdict(self):
+        data = {'type': self.__class__.__name__, 'modeInstanceRefs': []}
+        for mode_instance_ref in self.mode_instance_refs:
+            data['modeInstanceRefs'].append(mode_instance_ref.asdict())
+        if len(data['modeInstanceRefs']) == 0:
+            del data['modeInstanceRefs']
+
+    def append(self, item: ModeInstanceRef | ModeDependencyRef):
         if isinstance(item, ModeInstanceRef) or isinstance(item, ModeDependencyRef):
-            self.modeInstanceRefs.append(item)
+            self.mode_instance_refs.append(item)
         else:
-            raise ValueError('invalid type: '+str(type(item)))
+            raise ValueError('invalid type: ' + str(type(item)))
+
 
 class ModeInstanceRef:
     """
     Implementation of MODE-IREF (AUTOSAR3, AUTOSAR4)
     """
-    def __init__(self,modeDeclarationRef,modeDeclarationGroupPrototypeRef=None,requirePortPrototypeRef=None):
-        self.modeDeclarationRef=modeDeclarationRef #MODE-DECLARATION-REF
-        self.modeDeclarationGroupPrototypeRef=modeDeclarationGroupPrototypeRef #MODE-DECLARATION-GROUP-PROTOTYPE-REF
-        self.requirePortPrototypeRef=requirePortPrototypeRef #R-PORT-PROTOTYPE-REF
+
+    def __init__(
+            self,
+            mode_declaration_ref: str,
+            mode_declaration_group_prototype_ref: str | None = None,
+            require_port_prototype_ref: str | None = None,
+    ):
+        self.mode_declaration_ref = mode_declaration_ref  # MODE-DECLARATION-REF
+        self.mode_declaration_group_prototype_ref = mode_declaration_group_prototype_ref  # MODE-DECLARATION-GROUP-PROTOTYPE-REF
+        self.require_port_prototype_ref = require_port_prototype_ref  # R-PORT-PROTOTYPE-REF
+
     def asdict(self):
-        data={'type': self.__class__.__name__}
+        data = {'type': self.__class__.__name__}
         for key, value in self.__dict__.items():
-            data[key]=value
+            data[key] = value
         return data
 
-    def tag(self,version=None):
+    @staticmethod
+    def tag(*_):
         return 'MODE-IREF'
 
+
 class ModeDependencyRef:
-    def __init__(self,modeDeclarationRef,modeDeclarationGroupPrototypeRef=None,requirePortPrototypeRef=None):
-        self.modeDeclarationRef=modeDeclarationRef #MODE-DECLARATION-REF
-        self.modeDeclarationGroupPrototypeRef=modeDeclarationGroupPrototypeRef #MODE-DECLARATION-GROUP-PROTOTYPE-REF
-        self.requirePortPrototypeRef=requirePortPrototypeRef #R-PORT-PROTOTYPE-REF
+    def __init__(
+            self,
+            mode_declaration_ref: str,
+            mode_declaration_group_prototype_ref: str | None = None,
+            require_port_prototype_ref: str | None = None,
+    ):
+        self.mode_declaration_ref = mode_declaration_ref  # MODE-DECLARATION-REF
+        self.mode_declaration_group_prototype_ref = mode_declaration_group_prototype_ref  # MODE-DECLARATION-GROUP-PROTOTYPE-REF
+        self.require_port_prototype_ref = require_port_prototype_ref  # R-PORT-PROTOTYPE-REF
+
     def asdict(self):
-        data={'type': self.__class__.__name__}
+        data = {'type': self.__class__.__name__}
         for key, value in self.__dict__.items():
-            data[key]=value
+            data[key] = value
         return data
 
-    def tag(self,version=None):
+    @staticmethod
+    def tag(*_):
         return 'DEPENDENT-ON-MODE-IREF'
 
-class DisabledModeInstanceRef(object):
-    def __init__(self,modeDeclarationRef,modeDeclarationGroupPrototypeRef=None,requirePortPrototypeRef=None):
-        self.modeDeclarationRef=modeDeclarationRef #MODE-DECLARATION-REF
-        self.modeDeclarationGroupPrototypeRef=modeDeclarationGroupPrototypeRef #MODE-DECLARATION-GROUP-PROTOTYPE-REF
-        self.requirePortPrototypeRef=requirePortPrototypeRef #R-PORT-PROTOTYPE-REF
+
+class DisabledModeInstanceRef:
+    def __init__(
+            self,
+            mode_declaration_ref: str,
+            mode_declaration_group_prototype_ref: str | None = None,
+            require_port_prototype_ref: str | None = None,
+    ):
+        self.mode_declaration_ref = mode_declaration_ref  # MODE-DECLARATION-REF
+        self.mode_declaration_group_prototype_ref = mode_declaration_group_prototype_ref  # MODE-DECLARATION-GROUP-PROTOTYPE-REF
+        self.require_port_prototype_ref = require_port_prototype_ref  # R-PORT-PROTOTYPE-REF
+
     def asdict(self):
-        data={'type': self.__class__.__name__}
+        data = {'type': self.__class__.__name__}
         for key, value in self.__dict__.items():
-            data[key]=value
+            data[key] = value
         return data
 
-    def tag(self,version=None):
+    @staticmethod
+    def tag(*_):
         return 'DISABLED-MODE-IREF'
+
 
 class ModeGroupInstanceRef:
     """
     Base class for RequireModeGroupInstanceRef and ProvideModeGroupInstanceRef
     """
-    def __init__(self, modeGroupRef, parent = None):
+
+    def __init__(self, mode_group_ref: str, parent: ArObject | None = None):
         """
         This is a very sneaky XML element. Depending on where it is used in the XML schema (XSD)
         it needs to use different XML tags. We solve this by looking at the parent object.
         """
-        self.modeGroupRef = modeGroupRef
+        self.mode_group_ref = mode_group_ref
         self.parent = parent
 
-class RequireModeGroupInstanceRef(ModeGroupInstanceRef):
-    def __init__(self, requirePortRef, modeGroupRef):
-        super().__init__(modeGroupRef)
-        self.requirePortRef = requirePortRef
 
-    def tag(self, version):
+class RequireModeGroupInstanceRef(ModeGroupInstanceRef):
+    def __init__(self, require_port_ref: str, mode_group_ref: str):
+        super().__init__(mode_group_ref)
+        self.require_port_ref = require_port_ref
+
+    def tag(self, version: float):
         if self.parent is None:
             raise RuntimeError("self.parent cannot be None")
         if version >= 4.0:
@@ -164,14 +269,15 @@ class RequireModeGroupInstanceRef(ModeGroupInstanceRef):
             else:
                 return 'MODE-GROUP-IREF'
         else:
-            raise RuntimeError('Not supported in v%.1f'%version)
+            raise RuntimeError(f'Not supported in v{version:.1f}')
+
 
 class ProvideModeGroupInstanceRef(ModeGroupInstanceRef):
-    def __init__(self, providePortRef, modeGroupRef):
-        super().__init__(modeGroupRef)
-        self.providePortRef = providePortRef
+    def __init__(self, provide_port_ref: str, mode_group_ref: str):
+        super().__init__(mode_group_ref)
+        self.provide_port_ref = provide_port_ref
 
-    def tag(self, version):
+    def tag(self, version: float):
         if self.parent is None:
             raise RuntimeError("self.parent cannot be None")
         if version >= 4.0:
@@ -180,200 +286,241 @@ class ProvideModeGroupInstanceRef(ModeGroupInstanceRef):
             else:
                 return 'MODE-GROUP-IREF'
         else:
-            raise RuntimeError('Not supported in v%.1f'%version)
+            raise RuntimeError(f'Not supported in v{version:.1f}')
 
-class PortAPIOption():
-    def __init__(self,portRef,takeAddress=False,indirectAPI=False):
-        self.portRef = portRef
-        self.takeAddress = bool(takeAddress)
-        self.indirectAPI = bool(indirectAPI)
+
+class PortAPIOption:
+    def __init__(self, port_ref: str, take_address: bool = False, indirect_api: bool = False):
+        self.port_ref = port_ref
+        self.take_address = take_address
+        self.indirect_api = indirect_api
+
     def asdict(self):
-        data={'type': self.__class__.__name__,'takeAddress':self.takeAddress, 'indirectAPI':self.indirectAPI, 'portRef':self.portRef}
+        data = {
+            'type': self.__class__.__name__,
+            'takeAddress': self.take_address,
+            'indirectAPI': self.indirect_api,
+            'portRef': self.port_ref,
+        }
         return data
 
-    def tag(self,version=None): return "PORT-API-OPTION"
+    @staticmethod
+    def tag(*_):
+        return "PORT-API-OPTION"
+
 
 class DataReceivePoint:
-    def __init__(self,portRef,dataElemRef=None,name=None,parent=None):
-        self.portRef=portRef
-        self.dataElemRef=dataElemRef
-        self.name=name
-        self.parent=parent
+    def __init__(
+            self,
+            port_ref: str,
+            data_elem_ref: str | None = None,
+            name: str | None = None,
+            parent: ArObject | None = None,
+    ):
+        self.port_ref = port_ref
+        self.data_elem_ref = data_elem_ref
+        self.name = name
+        self.parent = parent
 
-    def tag(self,version): return "VARIABLE-ACCESS" if version >= 4.0 else "DATA-RECEIVE-POINT"
+    @staticmethod
+    def tag(version: float):
+        return "VARIABLE-ACCESS" if version >= 4.0 else "DATA-RECEIVE-POINT"
+
 
 class DataSendPoint:
-    def __init__(self,portRef,dataElemRef=None,name=None,parent=None):
-        self.portRef=portRef
-        self.dataElemRef=dataElemRef
-        self.name=name
-        self.parent=parent
+    def __init__(
+            self,
+            port_ref: str,
+            data_elem_ref: str | None = None,
+            name: str | None = None,
+            parent: ArObject | None = None,
+    ):
+        self.port_ref = port_ref
+        self.data_elem_ref = data_elem_ref
+        self.name = name
+        self.parent = parent
 
-    def tag(self,version): return "VARIABLE-ACCESS" if version >= 4.0 else "DATA-SEND-POINT"
+    @staticmethod
+    def tag(version: float): return "VARIABLE-ACCESS" if version >= 4.0 else "DATA-SEND-POINT"
+
 
 class RunnableEntity(Element):
-    def __init__(self, name, invokeConcurrently=False, symbol=None, parent=None, adminData=None):
-        super().__init__(name,parent,adminData)
-        self.invokeConcurrently = invokeConcurrently
-        self.minStartInterval = None
+    def __init__(
+            self,
+            name: str,
+            invoke_concurrently: bool = False,
+            symbol: str | None = None,
+            parent: Element | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
+        self.invoke_concurrently = invoke_concurrently
+        self.min_start_interval: int | None = None
         if symbol is None:
-            self.symbol=name
-        else:
-            self.symbol = symbol
-        self.dataReceivePoints=[]
-        self.dataSendPoints=[]
-        self.serverCallPoints=[]
-        self.exclusiveAreaRefs=[]
-        self.modeAccessPoints=[] #AUTOSAR4 only
-        self.modeSwitchPoints=[] #AUTOSAR4 only
-        self.parameterAccessPoints = [] #AUTOSAR4 only
+            symbol = name
+        self.symbol = symbol
+        self.data_receive_points: list[DataReceivePoint] = []
+        self.data_send_points: list[DataSendPoint] = []
+        self.server_call_points: list[SyncServerCallPoint] = []
+        self.exclusive_area_refs: list[str] = []
+        self.mode_access_points: list[ModeAccessPoint] = []  # AUTOSAR4 only
+        self.mode_switch_points: list[ModeSwitchPoint] = []  # AUTOSAR4 only
+        self.parameter_access_points: list[ParameterAccessPoint] = []  # AUTOSAR4 only
 
-    def tag(self,version=None):
+    @staticmethod
+    def tag(*_):
         return 'RUNNABLE-ENTITY'
 
-    def find(self, ref):
-        if ref is None: return None
-        if ref[0]=='/': ref=ref[1:] #removes initial '/' if it exists
-        ref=ref.partition('/')
-        name=ref[0]
-        foundElem = None
-        for elem in self.modeAccessPoints + self.modeSwitchPoints + self.parameterAccessPoints:
+    def find(self, ref: str | None, *args, **kwargs):
+        if ref is None:
+            return None
+        if ref[0] == '/':
+            ref = ref[1:]  # removes initial '/' if it exists
+        ref = ref.partition('/')
+        name = ref[0]
+        found_elem = None
+        all_iterables = [*self.mode_access_points, *self.mode_switch_points, *self.parameter_access_points]
+        for elem in all_iterables:
             if elem.name == name:
-                foundElem = elem
+                found_elem = elem
                 break
-        if foundElem is not None:
-            if len(ref[2])>0:
-                return foundElem.find(ref[2])
+        if found_elem is not None:
+            if len(ref[2]) > 0:
+                return found_elem.find(ref[2])
             else:
-                return foundElem
+                return found_elem
         return None
 
-
-    def append(self,elem):
-        if isinstance(elem, autosar.behavior.DataReceivePoint):
-            dataReceivePoint=self._verifyDataReceivePoint(copy.copy(elem))
-            self.dataReceivePoints.append(dataReceivePoint)
-            dataReceivePoint.parent=self
-        elif isinstance(elem, autosar.behavior.DataSendPoint):
-            dataSendPoint=self._verifyDataSendPoint(copy.copy(elem))
-            self.dataSendPoints.append(dataSendPoint)
-            dataSendPoint.parent=self
+    def append(self, elem: DataReceivePoint | DataSendPoint):
+        if isinstance(elem, DataReceivePoint):
+            data_receive_point = self._verify_data_receive_point(copy.copy(elem))
+            self.data_receive_points.append(data_receive_point)
+            data_receive_point.parent = self
+        elif isinstance(elem, DataSendPoint):
+            data_send_point = self._verify_data_send_point(copy.copy(elem))
+            self.data_send_points.append(data_send_point)
+            data_send_point.parent = self
         else:
             raise NotImplementedError(str(type(elem)))
 
-    def _verifyDataReceivePoint(self,dataReceivePoint):
-        ws=self.rootWS()
-        assert(ws is not None)
-        assert(dataReceivePoint.portRef is not None)
-        if isinstance(dataReceivePoint.portRef,autosar.port.Port):
-            dataReceivePoint.portRef=dataReceivePoint.portRef.ref
-        if isinstance(dataReceivePoint.portRef,str):
-            port=ws.find(dataReceivePoint.portRef)
-            if dataReceivePoint.dataElemRef is None:
-                #default rule: set dataElemRef to ref of first dataElement in the portinterface
-                portInterface=ws.find(port.portInterfaceRef)
-                assert(portInterface is not None)
-                if isinstance(portInterface,(autosar.portinterface.SenderReceiverInterface,autosar.portinterface.ParameterInterface)):
-                    dataReceivePoint.dataElemRef=portInterface.dataElements[0].ref
+    def _verify_data_receive_point(self, data_receive_point: DataReceivePoint):
+        ws = self.root_ws()
+        assert (ws is not None)
+        assert (data_receive_point.port_ref is not None)
+        if isinstance(data_receive_point.port_ref, Port):
+            data_receive_point.port_ref = data_receive_point.port_ref.ref
+        if isinstance(data_receive_point.port_ref, str):
+            port = ws.find(data_receive_point.port_ref)
+            if data_receive_point.data_elem_ref is None:
+                # default rule: set dataElemRef to ref of first dataElement in the portinterface
+                port_interface = ws.find(port.port_interface_ref)
+                assert (port_interface is not None)
+                if isinstance(port_interface, (SenderReceiverInterface, ParameterInterface)):
+                    data_receive_point.data_elem_ref = port_interface.data_elements[0].ref
                 else:
-                    raise ValueError('invalid interface type:%s'%(str(type(portInterface))))
-            assert(isinstance(dataReceivePoint.dataElemRef,str))
-            dataElement = ws.find(dataReceivePoint.dataElemRef)
-            if dataReceivePoint.name is None:
-                #default rule: set the name to REC_<port.name>_<dataElement.name>
-                dataReceivePoint.name="REC_{0.name}_{1.name}".format(port,dataElement)
+                    raise ValueError(f'Invalid interface type: {type(port_interface)}')
+            assert (isinstance(data_receive_point.data_elem_ref, str))
+            data_element = ws.find(data_receive_point.data_elem_ref)
+            if data_receive_point.name is None:
+                # default rule: set the name to REC_<port.name>_<dataElement.name>
+                data_receive_point.name = f'REC_{port.name}_{data_element.name}'
         else:
-            raise ValueError('%s: portRef must be of type string'%self.ref)
-        return dataReceivePoint
+            raise ValueError(f'{self.ref}: portRef must be of type string')
+        return data_receive_point
 
-    def _verifyDataSendPoint(self,dataSendPoint):
-        ws=self.rootWS()
-        assert(ws is not None)
-        assert(dataSendPoint.portRef is not None)
-        if isinstance(dataSendPoint.portRef,autosar.port.Port):
-            dataSendPoint.portRef=dataSendPoint.portRef.ref
-        if isinstance(dataSendPoint.portRef,str):
-            port=ws.find(dataSendPoint.portRef)
-            if dataSendPoint.dataElemRef is None:
-                #default rule: set dataElemRef to ref of first dataElement in the portinterface
-                portInterface=ws.find(port.portInterfaceRef)
-                assert(portInterface is not None)
-                if isinstance(portInterface,(autosar.portinterface.SenderReceiverInterface,autosar.portinterface.ParameterInterface)):
-                    dataSendPoint.dataElemRef=portInterface.dataElements[0].ref
+    def _verify_data_send_point(self, data_send_point: DataSendPoint):
+        ws = self.root_ws()
+        assert (ws is not None)
+        assert (data_send_point.port_ref is not None)
+        if isinstance(data_send_point.port_ref, Port):
+            data_send_point.port_ref = data_send_point.port_ref.ref
+        if isinstance(data_send_point.port_ref, str):
+            port = ws.find(data_send_point.port_ref)
+            if data_send_point.data_elem_ref is None:
+                # default rule: set dataElemRef to ref of first dataElement in the portinterface
+                port_interface = ws.find(port.port_interface_ref)
+                assert (port_interface is not None)
+                if isinstance(port_interface, (SenderReceiverInterface, ParameterInterface)):
+                    data_send_point.data_elem_ref = port_interface.data_elements[0].ref
                 else:
-                    raise ValueError('invalid interface type:%s'%(str(type(portInterface))))
-            assert(isinstance(dataSendPoint.dataElemRef,str))
-            dataElement = ws.find(dataSendPoint.dataElemRef)
-            if dataSendPoint.name is None:
-                #default rule: set the name to SEND_<port.name>_<dataElement.name>
-                dataSendPoint.name="SEND_{0.name}_{1.name}".format(port,dataElement)
+                    raise ValueError(f'Invalid interface type: {type(port_interface)}')
+            assert (isinstance(data_send_point.data_elem_ref, str))
+            data_element = ws.find(data_send_point.data_elem_ref)
+            if data_send_point.name is None:
+                # default rule: set the name to SEND_<port.name>_<dataElement.name>
+                data_send_point.name = f'SEND_{port.name}_{data_element.name}'
         else:
-            raise ValueError('%s: portRef must be of type string'%self.ref)
-        return dataSendPoint
+            raise ValueError(f'{self.ref}: portRef must be of type string')
+        return data_send_point
 
-
-    def rootWS(self):
+    def root_ws(self):
         if self.parent is None:
-            return autosar.getCurrentWS()
-        else:
-            return self.parent.rootWS()
+            return None
+        return self.parent.root_ws()
 
     @property
     def ref(self):
         if self.parent is not None:
-            return self.parent.ref+'/%s'%self.name
+            return self.parent.ref + '/%s' % self.name
         else:
             return None
 
-class DataElementInstanceRef(object):
+
+class DataElementInstanceRef:
     """
     <DATA-ELEMENT-IREF>
     Note: This object seems to be identical to an <DATA-IREF>
     Note 2: Observe that there are multiple <DATA-ELEMENT-IREF> definitions in the AUTOSAR XSD (used for different purposes)
     """
-    def __init__(self,portRef,dataElemRef):
-        self.portRef = portRef
-        self.dataElemRef = dataElemRef
-    def asdict(self):
-        data={'type': self.__class__.__name__,'portRef':self.portRef, 'dataElemRef':self.dataElemRef}
-        return data
-    def tag(self, version=None):
+
+    @staticmethod
+    def tag(*_):
         return 'DATA-ELEMENT-IREF'
 
+    def __init__(self, port_ref: str, data_elem_ref: str):
+        self.port_ref = port_ref
+        self.data_elem_ref = data_elem_ref
+
+    def asdict(self):
+        data = {'type': self.__class__.__name__, 'portRef': self.port_ref, 'dataElemRef': self.data_elem_ref}
+        return data
 
 
-class DataInstanceRef(object):
+class DataInstanceRef:
     """
     <DATA-IREF>
     Note: This object seems to be identical to an <DATA-ELEMENT-IREF>
     """
-    def __init__(self,portRef,dataElemRef):
-        self.portRef = portRef
-        self.dataElemRef = dataElemRef
-    def asdict(self):
-        data={'type': self.__class__.__name__,'portRef':self.portRef, 'dataElemRef':self.dataElemRef}
-        return data
 
-    def tag(self, version=None):
+    @staticmethod
+    def tag(*_):
         return 'DATA-IREF'
 
+    def __init__(self, port_ref: str, data_elem_ref: str):
+        self.port_ref = port_ref
+        self.data_elem_ref = data_elem_ref
 
-class OperationInstanceRef(object):
+    def asdict(self):
+        data = {'type': self.__class__.__name__, 'portRef': self.port_ref, 'dataElemRef': self.data_elem_ref}
+        return data
+
+
+class OperationInstanceRef:
     """
     <OBJECT-IREF>
     """
-    def __init__(self,portRef,operationRef):
-        self.portRef = portRef
-        self.operationRef = operationRef
 
-    def asdict(self):
-        data={'type': self.__class__.__name__,'portRef':self.portRef, 'operationRef':self.operationRef}
-        return data
-
-    def tag(self, version=None):
+    @staticmethod
+    def tag(*_):
         return 'OPERATION-IREF'
 
+    def __init__(self, port_ref: str, operation_ref: str):
+        self.port_ref = port_ref
+        self.operation_ref = operation_ref
 
+    def asdict(self):
+        data = {'type': self.__class__.__name__, 'portRef': self.port_ref, 'operationRef': self.operation_ref}
+        return data
 
 
 class PerInstanceMemory(Element):
@@ -382,52 +529,73 @@ class PerInstanceMemory(Element):
     Note: I don't know why this XML object has both <TYPE> and <TYPE-DEFINITION> where a simple TYPE-TREF should suffice.
     Internally use a typeRef for PerInstanceMemory. We can transform it back to <TYPE> and <TYPE-DEFINITION> when serializing to XML
     """
-    def __init__(self, name, typeRef, parent=None):
+
+    def __init__(self, name: str, type_ref: str, parent: ArObject | None = None):
         super().__init__(name, parent)
-        self.typeRef=typeRef
+        self.type_ref = type_ref
+
     def asdict(self):
-        data={'type': self.__class__.__name__,'name':self.name, 'typeRef':self.typeRef}
+        data = {'type': self.__class__.__name__, 'name': self.name, 'typeRef': self.type_ref}
         return data
 
-    def tag(self, version = None):
+    @staticmethod
+    def tag(*_):
         return 'PER-INSTANCE-MEMORY'
 
 
-class SwcNvBlockNeeds(object):
+class SwcNvBlockNeeds(ArObject):
     """
     AUTOSAR 3 representation of SWC-NV-BLOCK-NEEDS
     """
-    def __init__(self,name,numberOfDataSets,readOnly,reliability,resistantToChangedSW,
-                 restoreAtStart,writeOnlyOnce,writingFrequency,writingPriority,
-                 defaultBlockRef,mirrorBlockRef):
-        self.name=name
-        self.numberOfDataSets=numberOfDataSets
-        assert(isinstance(readOnly,bool))
-        self.readOnly=readOnly
-        self.reliability=reliability
-        assert(isinstance(resistantToChangedSW,bool))
-        self.resistantToChangedSW=resistantToChangedSW
-        assert(isinstance(restoreAtStart,bool))
-        self.restoreAtStart=restoreAtStart
-        assert(isinstance(writeOnlyOnce,bool))
-        self.writeOnlyOnce=writeOnlyOnce
-        self.writingFrequency=writingFrequency
-        self.writingPriority=writingPriority
-        self.defaultBlockRef=defaultBlockRef
-        self.mirrorBlockRef=mirrorBlockRef
-        self.serviceCallPorts=[]
+
+    def __init__(
+            self,
+            name: str,
+            number_of_data_sets: int,
+            read_only: bool,
+            reliability: str,
+            resistant_to_changed_sw: bool,
+            restore_at_start: bool,
+            write_only_once: bool,
+            writing_frequency: int | str | None,
+            writing_priority: str | None,
+            default_block_ref: str | None,
+            mirror_block_ref: str | None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.name = name
+        self.number_of_data_sets = number_of_data_sets
+        assert (isinstance(read_only, bool))
+        self.read_only = read_only
+        self.reliability = reliability
+        assert (isinstance(resistant_to_changed_sw, bool))
+        self.resistant_to_changed_sw = resistant_to_changed_sw
+        assert (isinstance(restore_at_start, bool))
+        self.restore_at_start = restore_at_start
+        assert (isinstance(write_only_once, bool))
+        self.write_only_once = write_only_once
+        self.writing_frequency = writing_frequency
+        self.writing_priority = writing_priority
+        self.default_block_ref = default_block_ref
+        self.mirror_block_ref = mirror_block_ref
+        self.service_call_ports: list[RoleBasedRPortAssignment] = []
+
     def asdict(self):
-        data={'type': self.__class__.__name__,'serviceCallPorts':[]}
+        data = {'type': self.__class__.__name__, 'serviceCallPorts': []}
         for key, value in self.__dict__.items():
-            if 'key'=='serviceCallPorts':
+            if 'key' == 'serviceCallPorts':
                 pass
             else:
-                data[key]=value
-        if len(data['serviceCallPorts'])==0: del data['serviceCallPorts']
+                data[key] = value
+        if len(data['serviceCallPorts']) == 0:
+            del data['serviceCallPorts']
         return data
 
-    def tag(self, version=None):
+    @staticmethod
+    def tag(*_):
         return 'SWC-NV-BLOCK-NEEDS'
+
 
 class NvmBlockConfig:
     """
@@ -458,95 +626,96 @@ class NvmBlockConfig:
 
     """
 
-    def __init__(self, numberOfDataSets = None,
-                 numberOfRomBlocks = None,
-                 ramBlockStatusControl = None,
-                 reliability = None,
-                 writingPriority = None,
-                 writingFrequency = None,
-                 calcRamBlockCrc = None,
-                 checkStaticBlockId = None,
-                 readOnly = None,
-                 resistantToChangedSw = None,
-                 restoreAtStartup = None,
-                 storeAtShutdown = None,
-                 writeVerification = None,
-                 writeOnlyOnce = None,
-                 autoValidationAtShutdown = None,
-                 useCrcCompMechanism = None,
-                 storeEmergency = None,
-                 storeImmediate = None,
-                 storeCyclic = None,
-                 cyclicWritePeriod = None,
-                 check_input = True):
-
-        self.numberOfDataSets = numberOfDataSets
-        self.numberOfRomBlocks = numberOfRomBlocks
-        self.ramBlockStatusControl = ramBlockStatusControl
+    def __init__(
+            self,
+            number_of_data_sets: int | None = None,
+            number_of_rom_blocks: int | None = None,
+            ram_block_status_control: str | None = None,
+            reliability: str | None = None,
+            writing_priority: str | None = None,
+            writing_frequency: int | None = None,
+            calc_ram_block_crc: bool = False,
+            check_static_block_id: bool = False,
+            read_only: bool = False,
+            resistant_to_changed_sw: bool = False,
+            restore_at_startup: bool = False,
+            store_at_shutdown: bool = False,
+            write_verification: bool = False,
+            write_only_once: bool = False,
+            auto_validation_at_shutdown: bool = False,
+            use_crc_comp_mechanism: bool = False,
+            store_emergency: bool = False,
+            store_immediate: bool = False,
+            store_cyclic: bool = False,
+            cyclic_write_period: int | float | None = None,
+            check_input: bool = True,
+    ):
+        self.number_of_data_sets = number_of_data_sets
+        self.number_of_rom_blocks = number_of_rom_blocks
+        self.ram_block_status_control = ram_block_status_control
         self.reliability = reliability
-        self.writingPriority = writingPriority
-        self.writingFrequency = writingFrequency
-        self.calcRamBlockCrc = calcRamBlockCrc
-        self.checkStaticBlockId = checkStaticBlockId
-        self.readOnly = readOnly
-        self.resistantToChangedSw = resistantToChangedSw
-        self.restoreAtStartup = restoreAtStartup
-        self.storeAtShutdown = storeAtShutdown
-        self.writeVerification = writeVerification
-        self.writeOnlyOnce = writeOnlyOnce
-        self.autoValidationAtShutdown = autoValidationAtShutdown
-        self.useCrcCompMechanism = useCrcCompMechanism
-        self.storeEmergency = storeEmergency
-        self.storeImmediate = storeImmediate
-        self.storeCyclic = storeCyclic
-        self.cyclicWritePeriod = cyclicWritePeriod
-
-        if isinstance(self.cyclicWritePeriod, int):
-            self.cyclicWritePeriod = float(self.cyclicWritePeriod)
+        self.writing_priority = writing_priority
+        self.writing_frequency = writing_frequency
+        self.calc_ram_block_crc = calc_ram_block_crc
+        self.check_static_block_id = check_static_block_id
+        self.read_only = read_only
+        self.resistant_to_changed_sw = resistant_to_changed_sw
+        self.restore_at_startup = restore_at_startup
+        self.store_at_shutdown = store_at_shutdown
+        self.write_verification = write_verification
+        self.write_only_once = write_only_once
+        self.auto_validation_at_shutdown = auto_validation_at_shutdown
+        self.use_crc_comp_mechanism = use_crc_comp_mechanism
+        self.store_emergency = store_emergency
+        self.store_immediate = store_immediate
+        self.store_cyclic = store_cyclic
+        if isinstance(cyclic_write_period, int):
+            cyclic_write_period = float(cyclic_write_period)
+        self.cyclic_write_period = cyclic_write_period
 
         if check_input:
             self.check()
 
     def check(self):
-        if not (self.numberOfDataSets is None or isinstance(self.numberOfDataSets, int) ):
+        if not (self.number_of_data_sets is None or isinstance(self.number_of_data_sets, int)):
             raise ValueError('numberOfDataSets is incorrectly formatted (None or int expected)')
-        if not (self.numberOfRomBlocks is None or isinstance(self.numberOfRomBlocks, int) ):
+        if not (self.number_of_rom_blocks is None or isinstance(self.number_of_rom_blocks, int)):
             raise ValueError('numberOfRomBlocks is incorrectly formatted (None or int expected)')
-        if not (self.ramBlockStatusControl is None or isinstance(self.ramBlockStatusControl, str) ):
+        if not (self.ram_block_status_control is None or isinstance(self.ram_block_status_control, str)):
             raise ValueError('ramBlockStatusControl is incorrectly formatted (None or str expected)')
-        if not (self.reliability is None or isinstance(self.reliability, str) ):
+        if not (self.reliability is None or isinstance(self.reliability, str)):
             raise ValueError('reliability is incorrectly formatted (None or str expected)')
-        if not (self.writingPriority is None or isinstance(self.writingPriority, str) ):
+        if not (self.writing_priority is None or isinstance(self.writing_priority, str)):
             raise ValueError('writingPriority is incorrectly formatted (None or str expected)')
-        if not (self.writingFrequency is None or isinstance(self.writingFrequency, int) ):
+        if not (self.writing_frequency is None or isinstance(self.writing_frequency, int)):
             raise ValueError('writingFrequency is incorrectly formatted (None or int expected)')
-        if not (self.calcRamBlockCrc is None or isinstance(self.calcRamBlockCrc, bool) ):
+        if not (self.calc_ram_block_crc is None or isinstance(self.calc_ram_block_crc, bool)):
             raise ValueError('calcRamBlockCrc is incorrectly formatted (None or bool expected)')
-        if not (self.checkStaticBlockId is None or isinstance(self.checkStaticBlockId, bool) ):
+        if not (self.check_static_block_id is None or isinstance(self.check_static_block_id, bool)):
             raise ValueError('checkStaticBlockId is incorrectly formatted (None or bool expected)')
-        if not (self.readOnly is None or isinstance(self.readOnly, bool) ):
+        if not (self.read_only is None or isinstance(self.read_only, bool)):
             raise ValueError('readOnly is incorrectly formatted (None or bool expected)')
-        if not (self.resistantToChangedSw is None or isinstance(self.resistantToChangedSw, bool) ):
+        if not (self.resistant_to_changed_sw is None or isinstance(self.resistant_to_changed_sw, bool)):
             raise ValueError('resistantToChangedSw is incorrectly formatted (None or bool expected)')
-        if not (self.restoreAtStartup is None or isinstance(self.restoreAtStartup, bool) ):
+        if not (self.restore_at_startup is None or isinstance(self.restore_at_startup, bool)):
             raise ValueError('restoreAtStartup is incorrectly formatted (None or bool expected)')
-        if not (self.storeAtShutdown is None or isinstance(self.storeAtShutdown, bool) ):
+        if not (self.store_at_shutdown is None or isinstance(self.store_at_shutdown, bool)):
             raise ValueError('storeAtShutdown is incorrectly formatted (None or bool expected)')
-        if not (self.writeVerification is None or isinstance(self.writeVerification, bool) ):
+        if not (self.write_verification is None or isinstance(self.write_verification, bool)):
             raise ValueError('writeVerification is incorrectly formatted (None or bool expected)')
-        if not (self.writeOnlyOnce is None or isinstance(self.writeOnlyOnce, bool) ):
+        if not (self.write_only_once is None or isinstance(self.write_only_once, bool)):
             raise ValueError('writeOnlyOnce is incorrectly formatted (None or bool expected)')
-        if not (self.autoValidationAtShutdown is None or isinstance(self.autoValidationAtShutdown, bool) ):
+        if not (self.auto_validation_at_shutdown is None or isinstance(self.auto_validation_at_shutdown, bool)):
             raise ValueError('autoValidationAtShutdown is incorrectly formatted (None or bool expected)')
-        if not (self.useCrcCompMechanism is None or isinstance(self.useCrcCompMechanism, bool) ):
+        if not (self.use_crc_comp_mechanism is None or isinstance(self.use_crc_comp_mechanism, bool)):
             raise ValueError('useCrcCompMechanism is incorrectly formatted (None or bool expected)')
-        if not (self.storeEmergency is None or isinstance(self.storeEmergency, bool) ):
+        if not (self.store_emergency is None or isinstance(self.store_emergency, bool)):
             raise ValueError('storeEmergency is incorrectly formatted (None or bool expected)')
-        if not (self.storeImmediate is None or isinstance(self.storeImmediate, bool) ):
+        if not (self.store_immediate is None or isinstance(self.store_immediate, bool)):
             raise ValueError('storeImmediate is incorrectly formatted (None or bool expected)')
-        if not (self.storeCyclic is None or isinstance(self.storeCyclic, bool) ):
+        if not (self.store_cyclic is None or isinstance(self.store_cyclic, bool)):
             raise ValueError('storeCyclic is incorrectly formatted (None or bool expected)')
-        if not (self.cyclicWritePeriod is None or isinstance(self.cyclicWritePeriod, float) ):
+        if not (self.cyclic_write_period is None or isinstance(self.cyclic_write_period, float)):
             raise ValueError('cyclicWritePeriod is incorrectly formatted (None or float expected)')
 
 
@@ -557,25 +726,38 @@ class NvmBlockNeeds(Element):
     second argument to the init function should be an instance of (a previously configured) NvmBlockConfig
 
     """
-    def __init__(self, name, blockConfig = None, parent=None, adminData=None):
-        super().__init__(name, parent, adminData)
-        assert(blockConfig is None or isinstance(blockConfig, NvmBlockConfig))
-        if blockConfig is None:
-            blockConfig = NvmBlockConfig() #create a default configuration
-        self.cfg = blockConfig
-    def tag(self, version): return 'NV-BLOCK-NEEDS'
 
-class RoleBasedRPortAssignment(object):
-    def __init__(self,portRef,role):
-        self.portRef=portRef
-        self.role=role
+    def __init__(
+            self,
+            name: str,
+            block_config: NvmBlockConfig | None = None,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
+        assert (block_config is None or isinstance(block_config, NvmBlockConfig))
+        if block_config is None:
+            block_config = NvmBlockConfig()  # create a default configuration
+        self.cfg = block_config
+
+    @staticmethod
+    def tag(*_):
+        return 'NV-BLOCK-NEEDS'
+
+
+class RoleBasedRPortAssignment:
+    def __init__(self, port_ref: str, role: str):
+        self.port_ref = port_ref
+        self.role = role
+
     def asdict(self):
-        data={'type': self.__class__.__name__}
+        data = {'type': self.__class__.__name__}
         for key, value in self.__dict__.items():
-            data[key]=value
+            data[key] = value
         return data
 
-    def tag(self, version=None):
+    @staticmethod
+    def tag(*_):
         return 'ROLE-BASED-R-PORT-ASSIGNMENT'
 
 
@@ -583,108 +765,143 @@ class CalPrmElemPrototype(Element):
     """
     <CALPRM-ELEMENT-PROTOTYPE>
     """
-    def __init__(self,name, typeRef, parent=None, adminData=None):
-        super().__init__(name, parent, adminData)
-        self.typeRef=typeRef
-        self.swDataDefsProps=[]
+
+    def __init__(
+            self,
+            name: str,
+            type_ref: str,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
+        self.type_ref = type_ref
+        self.sw_data_def_props: list[str] = []
+
     def asdict(self):
-        data={'type': self.__class__.__name__,'name':self.name,'typeRef':self.typeRef,'swDataDefsProps':[]}
-        if self.adminData is not None:
-            data['adminData']=self.adminData.asdict()
-        for elem in self.swDataDefsProps:
+        data = {'type': self.__class__.__name__, 'name': self.name, 'typeRef': self.type_ref, 'swDataDefsProps': []}
+        if self.admin_data is not None:
+            data['adminData'] = self.admin_data.asdict()
+        for elem in self.sw_data_def_props:
             data['swDataDefsProps'].append(elem)
         return data
 
-    def tag(self, version=None):
+    @staticmethod
+    def tag(*_):
         return 'CALPRM-ELEMENT-PROTOTYPE'
 
 
 class ExclusiveArea(Element):
-    def __init__(self, name, parent=None, adminData=None):
-        super().__init__(name,parent,adminData)
+    def __init__(self, name: str, parent: ArObject | None = None, admin_data: AdminData | None = None):
+        super().__init__(name, parent, admin_data)
 
     def asdict(self):
-        data={'type': self.__class__.__name__,'name':self.name}
+        data = {'type': self.__class__.__name__, 'name': self.name}
         return data
 
-    def tag(self, version=None):
+    @staticmethod
+    def tag(*_):
         return 'EXCLUSIVE-AREA'
 
 
-
-class SyncServerCallPoint(object):
+class SyncServerCallPoint:
     """
     <SYNCHRONOUS-SERVER-CALL-POINT>
     """
-    def __init__(self, name, timeout=0.0):
-        self.name=name
-        self.timeout=timeout
-        self.operationInstanceRefs=[]
+
+    def __init__(self, name: str, timeout: float = 0.0):
+        self.name = name
+        self.timeout = timeout
+        self.operation_instance_refs: list[OperationInstanceRef] = []
 
     def asdict(self):
-        data={'type': self.__class__.__name__,'name':self.name,'timeout':self.timeout}
-        data['operationInstanceRefs'] = [x.asdict() for x in self.operationInstanceRefs]
-        if len(data['operationInstanceRefs'])==0: del data['operationInstanceRefs']
+        data = {
+            'type': self.__class__.__name__,
+            'name': self.name,
+            'timeout': self.timeout,
+            'operationInstanceRefs': [x.asdict() for x in self.operation_instance_refs],
+        }
+        if len(data['operationInstanceRefs']) == 0:
+            del data['operationInstanceRefs']
         return data
+
 
 class InternalBehaviorCommon(Element):
     """
     Base class for InternalBehavior (AUTOSAR 3) and SwcInternalBehavior (AUTOSAR 4)
     """
-    def __init__(self, name, componentRef, multipleInstance=False, parent=None, adminData=None):
-        super().__init__(name, parent, adminData)
-        if not isinstance(componentRef,str): #this is a helper, in case the user called the function with obj instead of obj.ref
-            if hasattr(componentRef,'ref'):
-                componentRef=componentRef.ref
-        if (componentRef is None) or (not isinstance(componentRef,str)):
+
+    def __init__(
+            self,
+            name: str,
+            component_ref: str,
+            multiple_instance: bool = False,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
+        if not isinstance(component_ref, str):  # this is a helper, in case the user called the function with obj instead of obj.ref
+            if hasattr(component_ref, 'ref'):
+                component_ref = component_ref.ref
+        if (component_ref is None) or (not isinstance(component_ref, str)):
             raise ValueError('componentRef: invalid reference')
-        self.componentRef=str(componentRef)
-        self.multipleInstance = bool(multipleInstance)
-        self.events = []
-        self.portAPIOptions = []
-        self.autoCreatePortAPIOptions = False
-        self.runnables = []
-        self.exclusiveAreas=[]
-        self.perInstanceMemories = []
+        self.component_ref = component_ref
+        self.multiple_instance = multiple_instance
+        self.events: list[Event] = []
+        self.port_api_options: list[PortAPIOption] = []
+        self.auto_create_port_api_options = False
+        self.runnables: list[RunnableEntity] = []
+        self.exclusive_areas: list[ExclusiveArea] = []
+        self.per_instance_memories: list[PerInstanceMemory] = []
         self.swc = None
 
+    def create_port_api_option_defaults(self):
+        self.port_api_options = []
+        self._init_swc()
+        tmp = self.swc.provide_ports + self.swc.require_ports
+        for port in sorted(tmp, key=lambda x: x.name.lower()):
+            self.port_api_options.append(PortAPIOption(port.ref))
 
-    def createPortAPIOptionDefaults(self):
-        self.portAPIOptions = []
-        self._initSWC()
-        ws = self.rootWS()
-        tmp = self.swc.providePorts+self.swc.requirePorts
-        for port in sorted(tmp,key=lambda x: x.name.lower()):
-            self.portAPIOptions.append(PortAPIOption(port.ref))
-
-    def _initSWC(self):
+    def _init_swc(self):
         """
         sets up self.swc if not already setup
         """
         if self.swc is None:
-            ws = self.rootWS()
-            assert(ws is not None)
-            self.swc = ws.find(self.componentRef)
-        assert(self.swc is not None)
+            ws = self.root_ws()
+            assert (ws is not None)
+            self.swc = ws.find(self.component_ref)
+        assert (self.swc is not None)
 
-    def find(self,ref):
-        if ref is None: return None
-        if ref[0]=='/': ref=ref[1:] #removes initial '/' if it exists
-        ref=ref.partition('/')
-        name=ref[0]
-        foundElem = None
-        for elem in self.runnables + self.perInstanceMemories + self.exclusiveAreas + self.events:
+    def find(self, ref: str, *args, **kwargs):
+        if ref is None:
+            return None
+        if ref[0] == '/':
+            ref = ref[1:]  # removes initial '/' if it exists
+        ref = ref.partition('/')
+        name = ref[0]
+        found_elem = None
+        all_iterables = [*self.per_instance_memories, *self.exclusive_areas, *self.events]
+        for elem in all_iterables:
             if elem.name == name:
-                foundElem = elem
+                found_elem = elem
                 break
-        if foundElem is not None:
-            if len(ref[2])>0:
-                return foundElem.find(ref[2])
+        if found_elem is not None:
+            if len(ref[2]) > 0:
+                return found_elem.find(ref[2])
             else:
-                return foundElem
+                return found_elem
         return None
 
-    def createRunnable(self, name, portAccess=None, symbol=None, concurrent=False, exclusiveAreas=None, modeSwitchPoint = None, minStartInterval = 0, adminData=None):
+    def create_runnable(
+            self,
+            name: str,
+            port_access: str | list[str] | None = None,
+            symbol: str | None = None,
+            concurrent: bool = False,
+            exclusive_areas: str | Iterable[str] | None = None,
+            mode_switch_point: str | list[str] | None = None,
+            min_start_interval: int = 0,
+            admin_data: AdminData | None = None,
+    ):
         """
         Creates a new runnable and appends it to this InternalBehavior instance
         Parameters:
@@ -698,503 +915,548 @@ class InternalBehaviorCommon(Element):
         * minStartInterval: Specifies the time in milliseconds by which two consecutive starts of an ExecutableEntity are guaranteed to be separated.
         * adminData: Optional adminData
         """
-        runnable = RunnableEntity(name, concurrent, symbol, self, adminData)
-        runnable.minStartInterval = minStartInterval
+        runnable = RunnableEntity(name, concurrent, symbol, self, admin_data)
+        runnable.min_start_interval = min_start_interval
         self.runnables.append(runnable)
-        self._initSWC()
-        ws = self.rootWS()
-        if portAccess is not None:
-            if isinstance(portAccess, str):
-                portAccess = [portAccess]
+        self._init_swc()
+        ws = self.root_ws()
+        if port_access is not None:
+            if isinstance(port_access, str):
+                port_access = [port_access]
             assert (ws is not None)
-            for elem in portAccess:
+            for elem in port_access:
                 ref = elem.partition('/')
-                if len(ref[1])==0:
-                    #this section is for portAccess where only the port name is mentioned.
-                    #This method only works if the port interface has only 1 data element,
+                if len(ref[1]) == 0:
+                    # this section is for portAccess where only the port name is mentioned.
+                    # This method only works if the port interface has only 1 data element,
                     # i.e. no ambiguity as to what data element is meant
                     port = self.swc.find(ref[0])
                     if port is None:
-                        raise ValueError('invalid port reference: '+str(elem))
-                    portInterface = ws.find(port.portInterfaceRef, role='PortInterface')
-                    if portInterface is None:
-                        raise ValueError('invalid portinterface reference: '+str(port.portInterfaceRef))
-                    if isinstance(portInterface, (autosar.portinterface.SenderReceiverInterface, autosar.portinterface.NvDataInterface)):
-                        if len(portInterface.dataElements)==0:
+                        raise ValueError(f'Invalid port reference: {elem}')
+                    port_interface = ws.find(port.port_interface_ref)
+                    if port_interface is None:
+                        raise ValueError(f'Invalid port interface reference: {port.port_interface_ref}')
+                    if isinstance(port_interface, (SenderReceiverInterface, NvDataInterface)):
+                        if len(port_interface.data_elements) == 0:
                             continue
-                        elif len(portInterface.dataElements)==1:
-                            dataElem=portInterface.dataElements[0]
-                            self._createSendReceivePoint(port,dataElem,runnable)
+                        elif len(port_interface.data_elements) == 1:
+                            data_elem = port_interface.data_elements[0]
+                            self._create_send_receive_point(port, data_elem, runnable)
                         else:
-                            raise NotImplementedError('port interfaces with multiple data elements not supported')
-                    elif isinstance(portInterface, autosar.portinterface.ModeSwitchInterface):
-                        modeGroup = portInterface.modeGroup
-                        self._createModeAccessPoint(port, modeGroup, runnable)
+                            raise NotImplementedError('Port interfaces with multiple data elements not supported')
+                    elif isinstance(port_interface, ModeSwitchInterface):
+                        mode_group = port_interface.mode_group
+                        self._create_mode_access_point(port, mode_group, runnable)
                     else:
-                        raise NotImplementedError(type(portInterface))
+                        raise NotImplementedError(type(port_interface))
                 else:
-                    #this section is for portAccess where both port name and dataelement is represented as "portName/dataElementName"
+                    # this section is for portAccess where both port name and dataelement is represented as "portName/dataElementName"
                     port = self.swc.find(ref[0])
                     if port is None:
-                        raise ValueError('invalid port reference: '+str(elem))
-                    portInterface = ws.find(port.portInterfaceRef)
-                    if portInterface is None:
-                        raise ValueError('invalid portinterface reference: '+str(port.portInterfaceRef))
-                    if isinstance(portInterface, (autosar.portinterface.SenderReceiverInterface, autosar.portinterface.NvDataInterface)):
-                        dataElem=portInterface.find(ref[2])
-                        if dataElem is None:
-                            raise ValueError('invalid data element reference: '+str(elem))
-                        self._createSendReceivePoint(port,dataElem,runnable)
-                    elif isinstance(portInterface, autosar.portinterface.ClientServerInterface):
-                        operation=portInterface.find(ref[2])
+                        raise ValueError(f'Invalid port reference: {elem}')
+                    port_interface = ws.find(port.port_interface_ref)
+                    if port_interface is None:
+                        raise ValueError(f'Invalid port interface reference: {port.port_interface_ref}')
+                    if isinstance(port_interface, (SenderReceiverInterface, NvDataInterface)):
+                        data_elem = port_interface.find(ref[2])
+                        if data_elem is None:
+                            raise ValueError(f'Invalid data element reference: {elem}')
+                        self._create_send_receive_point(port, data_elem, runnable)
+                    elif isinstance(port_interface, ClientServerInterface):
+                        operation = port_interface.find(ref[2])
                         if operation is None:
-                            raise ValueError('invalid operation reference: '+str(elem))
-                        self._createSyncServerCallPoint(port,operation,runnable)
+                            raise ValueError(f'Invalid operation reference: {elem}')
+                        self._create_sync_server_call_point(port, operation, runnable)
                     else:
-                        raise NotImplementedError(type(portInterface))
-        if exclusiveAreas is not None:
-            if isinstance(exclusiveAreas, str):
-                exclusiveAreas =[exclusiveAreas]
-            if isinstance(exclusiveAreas, collections.abc.Iterable):
-                for exclusiveAreaName in exclusiveAreas:
+                        raise NotImplementedError(type(port_interface))
+        if exclusive_areas is not None:
+            if isinstance(exclusive_areas, str):
+                exclusive_areas = [exclusive_areas]
+            if isinstance(exclusive_areas, Iterable):
+                for exclusive_area_name in exclusive_areas:
                     found = False
-                    for exclusiveArea in self.exclusiveAreas:
-                        if exclusiveArea.name == exclusiveAreaName:
+                    for exclusive_area in self.exclusive_areas:
+                        if exclusive_area.name == exclusive_area_name:
                             found = True
-                            runnable.exclusiveAreaRefs.append(exclusiveArea.ref)
+                            runnable.exclusive_area_refs.append(exclusive_area.ref)
                             break
                     if not found:
-                        raise ValueError('invalid exclusive area name: '+exclusiveAreaName)
+                        raise ValueError(f'Invalid exclusive area name: {exclusive_area_name}')
             else:
                 raise ValueError('exclusiveAreas must be either string or list')
-        if modeSwitchPoint is not None:
-            if isinstance(modeSwitchPoint, str):
-                modeSwitchPoint = [modeSwitchPoint]
+        if mode_switch_point is not None:
+            if isinstance(mode_switch_point, str):
+                mode_switch_point = [mode_switch_point]
             assert (ws is not None)
-            for portName in modeSwitchPoint:
-                port = self.swc.find(portName)
+            for port_name in mode_switch_point:
+                port = self.swc.find(port_name)
                 if port is None:
-                    raise ValueError('invalid port reference: '+str(portName))
-                portInterface = ws.find(port.portInterfaceRef, role='PortInterface')
-                if portInterface is None:
-                    raise ValueError('invalid portinterface reference: '+str(port.portInterfaceRef))
-                if isinstance(portInterface, autosar.portinterface.ModeSwitchInterface):
-                    modeGroup = portInterface.modeGroup
-                    self._createModeSwitchPoint(port, modeGroup, runnable)
+                    raise ValueError(f'Invalid port reference: {port_name}')
+                port_interface = ws.find(port.port_interface_ref)
+                if port_interface is None:
+                    raise ValueError(f'Invalid port interface reference: {port.port_interface_ref}')
+                if isinstance(port_interface, ModeSwitchInterface):
+                    mode_group = port_interface.mode_group
+                    self._create_mode_switch_point(port, mode_group, runnable)
                 else:
-                    raise NotImplementedError(str(type(portInterface)))
+                    raise NotImplementedError(str(type(port_interface)))
         return runnable
 
-    def _createSendReceivePoint(self,port,dataElement,runnable):
+    @staticmethod
+    def _create_send_receive_point(port: Port, data_element: DataElement, runnable: RunnableEntity):
         """
         internal function that create a DataReceivePoint of the the port is a require port or
         a DataSendPoint if the port is a provide port
         """
-        if isinstance(port,autosar.port.RequirePort):
-            receivePoint=DataReceivePoint(port.ref,dataElement.ref,'REC_{0.name}_{1.name}'.format(port,dataElement),runnable)
-            runnable.dataReceivePoints.append(receivePoint)
-        elif isinstance(port,autosar.port.ProvidePort):
-            sendPoint=DataSendPoint(port.ref,dataElement.ref,'SEND_{0.name}_{1.name}'.format(port,dataElement),runnable)
-            runnable.dataSendPoints.append(sendPoint)
+        if isinstance(port, RequirePort):
+            receive_point = DataReceivePoint(port.ref, data_element.ref, f'REC_{port.name}_{data_element.name}', runnable)
+            runnable.data_receive_points.append(receive_point)
+        elif isinstance(port, ProvidePort):
+            send_point = DataSendPoint(port.ref, data_element.ref, f'SEND_{port.name}_{data_element.name}', runnable)
+            runnable.data_send_points.append(send_point)
         else:
-            raise ValueError('unexpected type: '+str(type(port)))
+            raise ValueError(f'Unexpected type: {type(port)}')
 
-    def _createSyncServerCallPoint(self,port,operation,runnable):
+    @staticmethod
+    def _create_sync_server_call_point(port: Port, operation: Operation, runnable: RunnableEntity):
         """
         internal function that create a SyncServerCallPoint of the the port is a require port or
         a DataSendPoint if the port is a provide port
         """
-        if isinstance(port,autosar.port.RequirePort):
-            callPoint=SyncServerCallPoint('SC_{0.name}_{1.name}'.format(port,operation))
-            callPoint.operationInstanceRefs.append(OperationInstanceRef(port.ref, operation.ref))
-            runnable.serverCallPoints.append(callPoint)
+        if isinstance(port, RequirePort):
+            call_point = SyncServerCallPoint(f'SC_{port.name}_{operation.name}')
+            call_point.operation_instance_refs.append(OperationInstanceRef(port.ref, operation.ref))
+            runnable.server_call_points.append(call_point)
         else:
-            raise ValueError('unexpected type: '+str(type(port)))
+            raise ValueError(f'Unexpected type: {type(port)}')
 
-    def _calcModeInstanceComponentsForRequirePort(self, portName, modeValue):
-        self._initSWC()
-        ws = self.rootWS()
-        port = self.swc.find(portName)
+    def _calc_mode_instance_components_for_require_port(self, port_name: str, mode_value: str):
+        self._init_swc()
+        ws = self.root_ws()
+        port = self.swc.find(port_name)
         if port is None:
-            raise ValueError('%s: Invalid port name: %s'%(self.swc.name, portName))
-        if not isinstance(port, autosar.port.RequirePort):
-            raise ValueError('%s: port must be a require-port: %s'%(self.swc.name, portName))
-        portInterface = ws.find(port.portInterfaceRef, role='PortInterface')
-        if (portInterface is None):
-            raise ValueError('invalid port interface reference: '+port.portInterfaceRef)
-        if isinstance(portInterface, autosar.portinterface.SenderReceiverInterface):
-            if (portInterface.modeGroups is None) or (len(portInterface.modeGroups)==0):
-                raise ValueError('port interface %s has no valid mode groups'%portInterface.name)
-            if len(portInterface.modeGroups)>1:
-                raise NotImplementedError('port interfaces with only one mode group is currently supported')
-            modeGroup = portInterface.modeGroups[0]
-        elif isinstance(portInterface, autosar.portinterface.ModeSwitchInterface):
-            modeGroup = portInterface.modeGroup
+            raise ValueError(f'{self.swc.name}: Invalid port name: {port_name}')
+        if not isinstance(port, RequirePort):
+            raise ValueError(f'{self.swc.name}: port must be a require-port: {port_name}')
+        port_interface = ws.find(port.port_interface_ref)
+        if port_interface is None:
+            raise ValueError(f'Invalid port interface reference: {port.port_interface_ref}')
+        if isinstance(port_interface, SenderReceiverInterface):
+            if (port_interface.mode_groups is None) or (len(port_interface.mode_groups) == 0):
+                raise ValueError(f'Port interface {port_interface.name} has no valid mode groups')
+            if len(port_interface.mode_groups) > 1:
+                raise NotImplementedError('Pport interfaces with only one mode group is currently supported')
+            mode_group = port_interface.mode_groups[0]
+        elif isinstance(port_interface, ModeSwitchInterface):
+            mode_group = port_interface.mode_group
         else:
-            raise NotImplementedError(type(portInterface))
-        assert(modeGroup is not None)
-        dataType = ws.find(modeGroup.typeRef)
-        if (dataType is None):
-            raise ValueError('%s has invalid typeRef: %s'%(modeGroup.name, modeGroup.typeRef))
-        assert(isinstance(dataType,autosar.mode.ModeDeclarationGroup))
-        modeDeclarationRef = None
-        modeDeclarationGroupRef = modeGroup.ref
-        for modeDeclaration in dataType.modeDeclarations:
-            if modeDeclaration.name == modeValue:
-                modeDeclarationRef = modeDeclaration.ref
-                return (modeDeclarationRef,modeDeclarationGroupRef,port.ref)
-        raise ValueError('"%s" did not match any of the mode declarations in %s'%(modeValue,dataType.ref))
+            raise NotImplementedError(type(port_interface))
+        assert (mode_group is not None)
+        data_type = ws.find(mode_group.type_ref)
+        if data_type is None:
+            raise ValueError(f'{mode_group.name} has invalid typeRef: {mode_group.type_ref}')
+        assert (isinstance(data_type, ModeDeclarationGroup))
+        mode_declaration_group_ref = mode_group.ref
+        for mode_declaration in data_type.mode_declarations:
+            if mode_declaration.name == mode_value:
+                mode_declaration_ref = mode_declaration.ref
+                return mode_declaration_ref, mode_declaration_group_ref, port.ref
+        raise ValueError(f'"{mode_value}" did not match any of the mode declarations in {data_type.ref}')
 
-    def _createModeAccessPoint(self, port, modeGroup, runnable):
-        if isinstance(port, autosar.port.ProvidePort):
-            modeGroupInstanceRef = ProvideModeGroupInstanceRef(port.ref, modeGroup.ref)
+    @staticmethod
+    def _create_mode_access_point(port, mode_group: ModeGroup, runnable: RunnableEntity):
+        if isinstance(port, ProvidePort):
+            mode_group_instance_ref = ProvideModeGroupInstanceRef(port.ref, mode_group.ref)
         else:
-            assert isinstance(port, autosar.port.RequirePort)
-            modeGroupInstanceRef = RequireModeGroupInstanceRef(port.ref, modeGroup.ref)
-        name = None #TODO: support user-controlled name?
-        modeAccessPoint = ModeAccessPoint(name, modeGroupInstanceRef)
-        runnable.modeAccessPoints.append(modeAccessPoint)
+            assert isinstance(port, RequirePort)
+            mode_group_instance_ref = RequireModeGroupInstanceRef(port.ref, mode_group.ref)
+        name = None  # TODO: support user-controlled name?
+        mode_access_point = ModeAccessPoint(name, mode_group_instance_ref)
+        runnable.mode_access_points.append(mode_access_point)
 
-    def _createModeSwitchPoint(self, port, modeGroup, runnable):
-        if isinstance(port, autosar.port.ProvidePort):
-            modeGroupInstanceRef = ProvideModeGroupInstanceRef(port.ref, modeGroup.ref)
+    @staticmethod
+    def _create_mode_switch_point(port: Port, mode_group: ModeGroup, runnable: RunnableEntity):
+        if isinstance(port, ProvidePort):
+            mode_group_instance_ref = ProvideModeGroupInstanceRef(port.ref, mode_group.ref)
         else:
-            assert isinstance(port, autosar.port.RequirePort)
-            modeGroupInstanceRef = RequireModeGroupInstanceRef(port.ref, modeGroup.ref)
-        baseName='SWITCH_{0.name}_{1.name}'.format(port, modeGroup)
-        name = autosar.base.findUniqueNameInList(runnable.modeSwitchPoints, baseName)
-        modeSwitchPoint = ModeSwitchPoint(name, modeGroupInstanceRef, runnable)
-        runnable.modeSwitchPoints.append(modeSwitchPoint)
+            assert isinstance(port, RequirePort)
+            mode_group_instance_ref = RequireModeGroupInstanceRef(port.ref, mode_group.ref)
+        base_name = f'SWITCH_{port.name}_{mode_group.name}'
+        name = find_unique_name_in_list(runnable.mode_switch_points, base_name)
+        mode_switch_point = ModeSwitchPoint(name, mode_group_instance_ref, runnable)
+        runnable.mode_switch_points.append(mode_switch_point)
 
-    def createModeSwitchEvent(self, runnableName, modeRef, activationType='ENTRY', name=None):
-        self._initSWC()
-        ws = self.rootWS()
-        runnable=self.find(runnableName)
+    def create_mode_switch_event(
+            self,
+            runnable_name: str,
+            mode_ref: str,
+            activation_type: str = 'ENTRY',
+            name: str | None = None,
+    ):
+        self._init_swc()
+        ws = self.root_ws()
+        runnable = self.find(runnable_name)
         if runnable is None:
-            raise ValueError('invalid runnable name: '+runnableName)
-        assert(isinstance(runnable, autosar.behavior.RunnableEntity))
+            raise ValueError(f'Invalid runnable name: {runnable_name}')
+        assert (isinstance(runnable, RunnableEntity))
 
-        eventName=name
-        if eventName is None:
-            baseName = "MST_"+runnable.name
-            eventName = self._findEventName(baseName)
+        event_name = name
+        if event_name is None:
+            base_name = f'MST_{runnable.name}'
+            event_name = self._find_event_name(base_name)
 
-        result = modeRef.partition('/')
-        if result[1]!='/':
-            raise ValueError('invalid modeRef, expected "portName/modeValue", got "%s"'%modeRef)
-        portName = result[0]
-        modeValue = result[2]
-        event = autosar.behavior.ModeSwitchEvent(eventName,runnable.ref, activationType, version=ws.version)
-        (modeDeclarationRef,modeDeclarationGroupRef,portRef) = self._calcModeInstanceComponentsForRequirePort(portName,modeValue)
-        event.modeInstRef = ModeInstanceRef(modeDeclarationRef, modeDeclarationGroupRef, portRef)
-        assert(isinstance(event.modeInstRef, autosar.behavior.ModeInstanceRef))
+        result = mode_ref.partition('/')
+        if result[1] != '/':
+            raise ValueError(f'Invalid modeRef, expected "portName/modeValue", got "{mode_ref}"')
+        port_name = result[0]
+        mode_value = result[2]
+        event = ModeSwitchEvent(event_name, runnable.ref, activation_type, version=ws.version)
+        mode_declaration_ref, mode_declaration_group_ref, port_ref = self._calc_mode_instance_components_for_require_port(port_name, mode_value)
+        event.mode_inst_ref = ModeInstanceRef(mode_declaration_ref, mode_declaration_group_ref, port_ref)
+        assert (isinstance(event.mode_inst_ref, ModeInstanceRef))
         self.events.append(event)
         return event
 
-    def createTimerEvent(self, runnableName, period, modeDependency=None, name=None ):
-        self._initSWC()
-        ws = self.rootWS()
+    def create_timer_event(
+            self,
+            runnable_name: str,
+            period: int | float,
+            mode_dependency: Iterable[str] | None = None,
+            name: str | None = None,
+    ):
+        self._init_swc()
+        ws = self.root_ws()
 
-        runnable=self.find(runnableName)
+        runnable = self.find(runnable_name)
         if runnable is None:
-            raise ValueError('invalid runnable name: '+runnableName)
-        assert(isinstance(runnable, autosar.behavior.RunnableEntity))
-        eventName=name
-        if eventName is None:
-            #try to find a suitable name for the event
-            baseName = "TMT_"+runnable.name
-            eventName = self._findEventName(baseName)
+            raise ValueError(f'Invalid runnable name: {runnable_name}')
+        assert (isinstance(runnable, RunnableEntity))
+        event_name = name
+        if event_name is None:
+            # try to find a suitable name for the event
+            base_name = f'TMT_{runnable.name}'
+            event_name = self._find_event_name(base_name)
 
-        event = autosar.behavior.TimingEvent(eventName,runnable.ref,period,self)
+        event = TimingEvent(event_name, runnable.ref, period, self)
 
-        if modeDependency is not None:
-            self._processModeDependency(event, modeDependency, ws.version)
+        if mode_dependency is not None:
+            self._process_mode_dependency(event, mode_dependency, ws.version)
         self.events.append(event)
         return event
 
-    def createTimingEvent(self, runnableName, period, modeDependency=None, name=None):
+    def create_timing_event(
+            self,
+            runnable_name: str,
+            period: int | float,
+            mode_dependency: Iterable[str] | None = None,
+            name: str | None = None,
+    ):
         """
         alias for createTimerEvent
         """
-        return self.createTimerEvent(runnableName, period, modeDependency, name)
+        return self.create_timer_event(runnable_name, period, mode_dependency, name)
 
-    def createOperationInvokedEvent(self, runnableName, operationRef, modeDependency=None, name=None ):
+    def create_operation_invoked_event(
+            self,
+            runnable_name: str,
+            operation_ref: str,
+            mode_dependency: Iterable[str] | None = None,
+            name: str | None = None,
+    ):
         """
         creates a new OperationInvokedEvent
         runnableName: name of the runnable to call (runnable must already exist)
         operationRef: string using the format 'portName/operationName'
         name: optional event name, used to override only
         """
-        self._initSWC()
-        ws = self.rootWS()
+        self._init_swc()
+        ws = self.root_ws()
 
-        runnable=self.find(runnableName)
+        runnable = self.find(runnable_name)
         if runnable is None:
-            raise ValueError('invalid runnable name: '+runnableName)
-        assert(isinstance(runnable, autosar.behavior.RunnableEntity))
+            raise ValueError(f'Invalid runnable name: {runnable_name}')
+        assert (isinstance(runnable, RunnableEntity))
 
-        if not isinstance(operationRef, str):
-            raise ValueError("expected operationRef to be string of the format 'portName/operationName' ")
-        parts = autosar.base.splitRef(operationRef)
-        if len(parts)!=2:
-            raise ValueError("expected operationRef to be string of the format 'portName/operationName' ")
-        portName,operationName=parts[0],parts[1]
-        eventName=name
-        port = self.swc.find(portName)
-        if (port is None) or not isinstance(port, autosar.port.Port):
-            raise ValueError('invalid port name: '+portName)
-        portInterface = ws.find(port.portInterfaceRef)
-        if portInterface is None:
-            raise ValueError('invalid reference: '+port.portInterface)
-        if not isinstance(portInterface, autosar.portinterface.ClientServerInterface):
-            raise ValueError('The referenced port "%s" does not have a ClientServerInterface'%(port.name))
-        operation = portInterface.find(operationName)
-        if (operation is None) or not isinstance(operation, autosar.portinterface.Operation):
-            raise ValueError('invalid operation name: '+operationName)
-        if eventName is None:
-            eventName=self._findEventName('OIT_%s_%s_%s'%(runnable.name, port.name, operation.name))
-        event = OperationInvokedEvent(eventName, runnable.ref, self)
-        event.operationInstanceRef=OperationInstanceRef(port.ref, operation.ref)
+        if not isinstance(operation_ref, str):
+            raise ValueError('expected operationRef to be string of the format "portName/operationName"')
+        parts = split_ref(operation_ref)
+        if len(parts) != 2:
+            raise ValueError('"Expected operationRef to be string of the format "portName/operationName""')
+        port_name, operation_name = parts[0], parts[1]
+        event_name = name
+        port = self.swc.find(port_name)
+        if (port is None) or not isinstance(port, Port):
+            raise ValueError(f'Invalid port name: {port_name}')
+        port_interface = ws.find(port.port_interface_ref)
+        if port_interface is None:
+            raise ValueError(f'Invalid reference: {port.port_interface_ref}')
+        if not isinstance(port_interface, ClientServerInterface):
+            raise ValueError(f'The referenced port "{port.name}" does not have a ClientServerInterface')
+        operation = port_interface.find(operation_name)
+        if (operation is None) or not isinstance(operation, Operation):
+            raise ValueError(f'Invalid operation name: {operation_name}')
+        if event_name is None:
+            event_name = self._find_event_name(f'OIT_{runnable.name}_{port.name}_{operation.name}')
+        event = OperationInvokedEvent(event_name, runnable.ref, self)
+        event.operation_instance_ref = OperationInstanceRef(port.ref, operation.ref)
 
-        if modeDependency is not None:
-            self._processModeDependency(event, modeDependency, ws.version)
+        if mode_dependency is not None:
+            self._process_mode_dependency(event, mode_dependency, ws.version)
 
         self.events.append(event)
         return event
 
-    def createDataReceivedEvent(self, runnableName, dataElementRef, modeDependency=None, name=None ):
+    def create_data_received_event(
+            self,
+            runnable_name: str,
+            data_element_ref: str,
+            mode_dependency: Iterable[str] | None = None,
+            name: str | None = None,
+    ):
         """
         creates a new DataReceivedEvent
         runnableName: name of the runnable to call (runnable must already exist)
         dataElementRef: string using the format 'portName/dataElementName'. Using 'portName' only is also OK as long as the interface only has one element
         name: optional event name, used to override only
         """
-        self._initSWC()
-        ws = self.rootWS()
+        self._init_swc()
+        ws = self.root_ws()
 
-        runnable=self.find(runnableName)
+        runnable = self.find(runnable_name)
         if runnable is None:
-            raise autosar.base.InvalidRunnableRef(runnableName)
-        assert(isinstance(runnable, autosar.behavior.RunnableEntity))
+            raise InvalidRunnableRef(runnable_name)
+        assert (isinstance(runnable, RunnableEntity))
 
-        if not isinstance(dataElementRef, str):
-            raise autosar.base.InvalidDataElementRef("expected dataElementRef to be string of the format 'portName' or 'portName/dataElementName' ")
+        if not isinstance(data_element_ref, str):
+            raise InvalidDataElementRef('Expected dataElementRef to be string of the format "portName" or "portName/dataElementName"')
 
-        parts = autosar.base.splitRef(dataElementRef)
-        if len(parts)==2:
-            portName, dataElementName = parts[0], parts[1]
-        elif len(parts)==1:
-            portName, dataElementName = parts[0], None
+        parts = split_ref(data_element_ref)
+        if len(parts) == 2:
+            port_name, data_element_name = parts[0], parts[1]
+        elif len(parts) == 1:
+            port_name, data_element_name = parts[0], None
         else:
-            raise autosar.base.InvalidDataElementRef("expected dataElementRef to be string of the format 'portName' or 'portName/dataElementName' ")
+            raise InvalidDataElementRef('Expected dataElementRef to be string of the format "portName" or "portName/dataElementName"')
 
-        eventName=name
-        port = self.swc.find(portName)
-        if (port is None) or not isinstance(port, autosar.port.Port):
-            raise autosar.base.InvalidPortRef(portName)
-        portInterface = ws.find(port.portInterfaceRef)
-        if portInterface is None:
-            raise autosar.base.InvalidPortInterfaceRef('invalid reference: {}'.format(port.portInterface))
-        if isinstance(portInterface, autosar.portinterface.SenderReceiverInterface):
-            if dataElementName is None:
-                if len(portInterface.dataElements) == 1:
-                    dataElement = portInterface.dataElements[0]
-                elif len(portInterface.dataElements) > 1:
-                    raise autosar.base.InvalidDataElementRef("expected dataElementRef to be string of the format 'portName/dataElementName' ")
+        event_name = name
+        port = self.swc.find(port_name)
+        if (port is None) or not isinstance(port, Port):
+            raise InvalidPortRef(port_name)
+        port_interface = ws.find(port.port_interface_ref)
+        if port_interface is None:
+            raise InvalidPortInterfaceRef(f'Invalid reference: {port.port_interface_ref}')
+        if isinstance(port_interface, SenderReceiverInterface):
+            if data_element_name is None:
+                if len(port_interface.data_elements) == 1:
+                    data_element = port_interface.data_elements[0]
+                elif len(port_interface.data_elements) > 1:
+                    raise InvalidDataElementRef('Expected dataElementRef to be string of the format "portName/dataElementName"')
                 else:
-                    raise autosar.base.InvalidDataElementRef('portInterface "{}" has no data elements'.format(portInterface.name))
+                    raise InvalidDataElementRef(f'portInterface "{port_interface.name}" has no data elements')
             else:
-                dataElement = portInterface.find(dataElementName)
-                if not isinstance(dataElement, autosar.element.DataElement):
-                    raise autosar.base.InvalidDataElementRef(dataElementName)
-                elif dataElement is None:
-                    raise autosar.base.InvalidDataElementRef('portInterface "{}" has no operation {}'.format(portInterface.name, dataElementName))
-        elif isinstance(portInterface, autosar.portinterface.NvDataInterface):
-            if dataElementName is None:
-                if len(portInterface.nvDatas) == 1:
-                    dataElement = portInterface.nvDatas[0]
-                elif len(portInterface.nvDatas) > 1:
-                    raise autosar.base.InvalidDataElementRef("expected dataElementRef to be string of the format 'portName/dataElementName' ")
+                data_element = port_interface.find(data_element_name)
+                if not isinstance(data_element, DataElement):
+                    raise InvalidDataElementRef(data_element_name)
+                elif data_element is None:
+                    raise InvalidDataElementRef(f'portInterface "{port_interface.name}" has no operation {data_element_name}')
+        elif isinstance(port_interface, NvDataInterface):
+            if data_element_name is None:
+                if len(port_interface.nv_data) == 1:
+                    data_element = port_interface.nv_data[0]
+                elif len(port_interface.nv_data) > 1:
+                    raise InvalidDataElementRef('Expected dataElementRef to be string of the format "portName/dataElementName"')
                 else:
-                    raise autosar.base.InvalidDataElementRef('portInterface "{}" has no nvdata elements'.format(portInterface.name))
+                    raise InvalidDataElementRef(f'portInterface "{port_interface.name}" has no nvdata elements')
             else:
-                dataElement = portInterface.find(dataElementName)
-                if not isinstance(dataElement, autosar.element.DataElement):
-                    raise autosar.base.InvalidDataElementRef(dataElementName)
-                elif dataElement is None:
-                    raise autosar.base.InvalidDataElementRef('portInterface "{}" has no nvdata {}'.format(portInterface.name, dataElementName))
+                data_element = port_interface.find(data_element_name)
+                if not isinstance(data_element, DataElement):
+                    raise InvalidDataElementRef(data_element_name)
+                elif data_element is None:
+                    raise InvalidDataElementRef(f'portInterface "{port_interface.name}" has no nvdata {data_element_name}')
         else:
-            raise autosar.base.InvalidPortRef('The referenced port "{}" does not have a SenderReceiverInterface or NvDataInterface'.format(port.name))
-        if eventName is None:
-            eventName=self._findEventName('DRT_{}_{}_{}'.format(runnable.name, port.name, dataElement.name))
-        event = DataReceivedEvent(eventName, runnable.ref, self)
-        event.dataInstanceRef = DataInstanceRef(port.ref, dataElement.ref)
+            raise InvalidPortRef(f'The referenced port "{port.name}" does not have a SenderReceiverInterface or NvDataInterface')
+        if event_name is None:
+            event_name = self._find_event_name(f'DRT_{runnable.name}_{port.name}_{data_element.name}')
+        event = DataReceivedEvent(event_name, runnable.ref, self)
+        event.data_instance_ref = DataInstanceRef(port.ref, data_element.ref)
 
-        if modeDependency is not None:
-            self._processModeDependency(event, modeDependency, ws.version)
+        if mode_dependency is not None:
+            self._process_mode_dependency(event, mode_dependency, ws.version)
 
         self.events.append(event)
         return event
 
-    def _findEventName(self, baseName):
-        return autosar.base.findUniqueNameInList(self.events, baseName)
+    def _find_event_name(self, base_name: str):
+        return find_unique_name_in_list(self.events, base_name)
 
-
-
-
-    def _processModeDependency(self, event, modeDependencyList, version):
-        for dependency in list(modeDependencyList):
+    def _process_mode_dependency(self, event: Event, mode_dependency_list: Iterable[str], version: float):
+        for dependency in list(mode_dependency_list):
             result = dependency.partition('/')
-            if result[1]=='/':
-                portName=result[0]
-                modeValue=result[2]
-                (modeDeclarationRef,modeDeclarationGroupPrototypeRef,portRef) = self._calcModeInstanceComponentsForRequirePort(portName,modeValue)
+            if result[1] == '/':
+                port_name = result[0]
+                mode_value = result[2]
+                (
+                    mode_declaration_ref,
+                    mode_declaration_group_prototype_ref,
+                    port_ref,
+                ) = self._calc_mode_instance_components_for_require_port(port_name, mode_value)
             else:
-                raise ValueError('invalid modeRef, expected "portName/modeValue", got "%s"'%dependency)
+                raise ValueError(f'Invalid modeRef, expected "portName/modeValue", got "{dependency}"')
             if version >= 4.0:
-                if event.disabledInModes is None:
-                    event.disabledInModes = []
-                event.disabledInModes.append(DisabledModeInstanceRef(modeDeclarationRef, modeDeclarationGroupPrototypeRef, portRef))
+                if event.disabled_in_modes is None:
+                    event.disabled_in_modes = []
+                event.disabled_in_modes.append(DisabledModeInstanceRef(mode_declaration_ref, mode_declaration_group_prototype_ref, port_ref))
             else:
-                if event.modeDependency is None:
-                    event.modeDependency = ModeDependency()
-                event.modeDependency.append(ModeDependencyRef(modeDeclarationRef, modeDeclarationGroupPrototypeRef, portRef))
+                if event.mode_dependency is None:
+                    event.mode_dependency = ModeDependency()
+                event.mode_dependency.append(ModeDependencyRef(mode_declaration_ref, mode_declaration_group_prototype_ref, port_ref))
 
-    def createExclusiveArea(self, name):
+    def create_exclusive_area(self, name: str):
         """
         creates a new ExclusiveArea
         """
-        self._initSWC()
-        ws = self.rootWS()
-        exclusiveArea = ExclusiveArea(str(name), self)
-        self.exclusiveAreas.append(exclusiveArea)
-        return exclusiveArea
+        self._init_swc()
+        exclusive_area = ExclusiveArea(str(name), self)
+        self.exclusive_areas.append(exclusive_area)
+        return exclusive_area
 
 
 class InternalBehavior(InternalBehaviorCommon):
     """ InternalBehavior class (AUTOSAR 3)"""
-    def __init__(self,name, componentRef, multipleInstance=False,parent=None):
-        super().__init__(name, componentRef,multipleInstance, parent)
 
-        self.swcNvBlockNeeds = []
-        self.sharedCalParams=[]
+    def __init__(self, name: str, component_ref: str, multiple_instance: bool = False, parent: ArObject | None = None):
+        super().__init__(name, component_ref, multiple_instance, parent)
 
+        self.swc_nv_block_needs: list[SwcNvBlockNeeds] = []
+        self.shared_cal_params: list[CalPrmElemPrototype] = []
 
-    def tag(self, version): return 'INTERNAL-BEHAVIOR'
+    @staticmethod
+    def tag(*_):
+        return 'INTERNAL-BEHAVIOR'
 
-    def append(self,elem):
-        if isinstance(elem,RunnableEntity):
+    def append(self, elem: RunnableEntity):
+        if isinstance(elem, RunnableEntity):
             self.runnables.append(elem)
-            elem.parent=self
+            elem.parent = self
         else:
             raise NotImplementedError(str(type(elem)))
 
-    def find(self, ref):
-        if ref is None: return None
+    def find(self, ref: str | None, *args, **kwargs):
+        if ref is None:
+            return None
         result = super().find(ref)
         if result is None:
-            if ref[0]=='/': ref=ref[1:] #removes initial '/' if it exists
-            ref=ref.partition('/')
-            name=ref[0]
-            for elem in self.sharedCalParams:
-                if elem.name == name: return elem
+            if ref[0] == '/':
+                ref = ref[1:]  # removes initial '/' if it exists
+            ref = ref.partition('/')
+            name = ref[0]
+            for elem in self.shared_cal_params:
+                if elem.name == name:
+                    return elem
         else:
             return result
         return None
 
-
-
-    def __getitem__(self,key):
+    def __getitem__(self, key):
         return self.find(key)
 
-
-    def createPerInstanceMemory(self, name, typeRef):
+    def create_per_instance_memory(self, name: str, type_ref: str):
         """
         creates a new PerInstanceMemory object
         name: name of the object (str)
         typeRef: dataType reference (str)
         """
-        self._initSWC()
-        ws = self.rootWS()
-        dataType = ws.find(typeRef, role='DataType')
-        if dataType is None:
-            raise ValueError('invalid reference: '+typeRef)
-        perInstanceMemory = PerInstanceMemory(name, dataType.ref, self)
-        self.perInstanceMemories.append(perInstanceMemory)
-        return perInstanceMemory
+        self._init_swc()
+        ws = self.root_ws()
+        data_type = ws.find(type_ref)
+        if data_type is None:
+            raise ValueError('invalid reference: ' + type_ref)
+        per_instance_memory = PerInstanceMemory(name, data_type.ref, self)
+        self.per_instance_memories.append(per_instance_memory)
+        return per_instance_memory
 
-    def createSharedCalParam(self, name, typeRef, SwAddrMethodRef, adminData=None):
-        self._initSWC()
-        ws = self.rootWS()
-        dataType = ws.find(typeRef, role='DataType')
-        if dataType is None:
-            raise ValueError('invalid reference: '+typeRef)
-        elem = CalPrmElemPrototype(name, dataType.ref, self, adminData)
-        elem.swDataDefsProps.append(SwAddrMethodRef)
-        self.sharedCalParams.append(elem)
+    def create_shared_cal_param(self, name: str, type_ref: str, sw_addr_method_ref: str, admin_data: AdminData | None = None):
+        self._init_swc()
+        ws = self.root_ws()
+        data_type = ws.find(type_ref)
+        if data_type is None:
+            raise ValueError('invalid reference: ' + type_ref)
+        elem = CalPrmElemPrototype(name, data_type.ref, self, admin_data)
+        elem.sw_data_def_props.append(sw_addr_method_ref)
+        self.shared_cal_params.append(elem)
         return elem
 
-    def createNvmBlock(self, name, blockParams):
+    def create_nvm_block(self, name: str, block_params: dict[str, ...]):
         """
         creates a new SwcNvBlockNeeds object
         name: name of the object (str)
         blockParams: dict containing additional parameters
         """
-        self._initSWC()
-        ws = self.rootWS()
-        numberOfDataSets= int(blockParams['numberOfDataSets'])
-        readOnly= bool(blockParams['readOnly'])
-        reliability= str(blockParams['reliability'])
-        resistantToChangedSW= bool(blockParams['resistantToChangedSW'])
-        restoreAtStart= bool(blockParams['restoreAtStart'])
-        writeOnlyOnce= bool(blockParams['writeOnlyOnce'])
-        writingFrequency= str(blockParams['writingFrequency'])
-        writingPriority= str(blockParams['writingPriority'])
-        defaultBlockRef=None
-        mirrorBlockRef=None
-        #defaultBlockRef
-        defaultBlock = blockParams['defaultBlock']
-        if '/' in defaultBlock:
-            defaultBlockRef = defaultBlock #use as is
+        self._init_swc()
+        number_of_data_sets = int(block_params['numberOfDataSets'])
+        read_only = bool(block_params['readOnly'])
+        reliability = str(block_params['reliability'])
+        resistant_to_changed_sw = bool(block_params['resistantToChangedSW'])
+        restore_at_start = bool(block_params['restoreAtStart'])
+        write_only_once = bool(block_params['writeOnlyOnce'])
+        writing_frequency = str(block_params['writingFrequency'])
+        writing_priority = str(block_params['writingPriority'])
+        default_block_ref = None
+        mirror_block_ref = None
+        # defaultBlockRef
+        default_block = block_params['defaultBlock']
+        if '/' in default_block:
+            default_block_ref = default_block  # use as is
         else:
-            for sharedCalParam in self.sharedCalParams:
-                if sharedCalParam.name == defaultBlock:
-                    defaultBlockRef=sharedCalParam.ref
+            for shared_cal_param in self.shared_cal_params:
+                if shared_cal_param.name == default_block:
+                    default_block_ref = shared_cal_param.ref
                     break
-        if defaultBlockRef is None:
-            raise ValueError('no SharedCalParam found with name: ' +defaultBlock)
-        #mirrorBlockref
-        mirrorBlock = blockParams['mirrorBlock']
-        if '/' in mirrorBlock:
-            mirrorBlockRef = mirrorBlock #use as is
+        if default_block_ref is None:
+            raise ValueError(f'No SharedCalParam found with name: {default_block}')
+        # mirrorBlockref
+        mirror_block = block_params['mirrorBlock']
+        if '/' in mirror_block:
+            mirror_block_ref = mirror_block  # use as is
         else:
-            for perInstanceMemory in self.perInstanceMemories:
-                if perInstanceMemory.name == mirrorBlock:
-                    mirrorBlockRef=perInstanceMemory.ref
+            for per_instance_memory in self.per_instance_memories:
+                if per_instance_memory.name == mirror_block:
+                    mirror_block_ref = per_instance_memory.ref
                     break
-        if mirrorBlockRef is None:
-            raise ValueError('no PerInstanceMemory found with name: ' +mirrorBlock)
-        elem = SwcNvBlockNeeds(name, numberOfDataSets, readOnly, reliability, resistantToChangedSW, restoreAtStart,
-                                          writeOnlyOnce, writingFrequency, writingPriority, defaultBlockRef, mirrorBlockRef)
-        #serviceCallPorts
-        if isinstance(blockParams['serviceCallPorts'],str):
-            serviceCallPorts=[blockParams['serviceCallPorts']]
+        if mirror_block_ref is None:
+            raise ValueError(f'No PerInstanceMemory found with name: {mirror_block}')
+        elem = SwcNvBlockNeeds(
+            name,
+            number_of_data_sets,
+            read_only,
+            reliability,
+            resistant_to_changed_sw,
+            restore_at_start,
+            write_only_once,
+            writing_frequency,
+            writing_priority,
+            default_block_ref,
+            mirror_block_ref,
+        )
+        # serviceCallPorts
+        if isinstance(block_params['serviceCallPorts'], str):
+            service_call_ports = [block_params['serviceCallPorts']]
         else:
-            serviceCallPorts = blockParams['serviceCallPorts']
-        if isinstance(serviceCallPorts, collections.abc.Iterable):
-            for data in serviceCallPorts:
-                parts = autosar.base.splitRef(data)
-                if len(parts)!=2:
+            service_call_ports = block_params['serviceCallPorts']
+        if isinstance(service_call_ports, Iterable):
+            for data in service_call_ports:
+                parts = split_ref(data)
+                if len(parts) != 2:
                     raise ValueError('serviceCallPorts must be either string or list of string of the format "portName/operationName"')
-                portName,operationName = parts[0],parts[1]
-                port = self.swc.find(portName)
-                if not isinstance(port, autosar.port.Port):
-                    raise ValueError("'%s' is not a valid port name"%portName)
-                elem.serviceCallPorts.append(RoleBasedRPortAssignment(port.ref,operationName))
+                port_name, operation_name = parts[0], parts[1]
+                port = self.swc.find(port_name)
+                if not isinstance(port, Port):
+                    raise ValueError(f'"{port_name}" is not a valid port name')
+                elem.service_call_ports.append(RoleBasedRPortAssignment(port.ref, operation_name))
         else:
             raise ValueError('serviceCallPorts must be either string or list of string of format the "portName/operationName"')
 
-        self.swcNvBlockNeeds.append(elem)
+        self.swc_nv_block_needs.append(elem)
         return elem
 
 
@@ -1202,126 +1464,164 @@ class SwcInternalBehavior(InternalBehaviorCommon):
     """
     AUTOSAR 4 Internal Behavior
     """
-    def __init__(self,name, componentRef, multipleInstance=False,parent=None):
-        super().__init__(name, componentRef, multipleInstance, parent)
-        self.serviceDependencies = [] #list of SwcServiceDependency objects
-        self.parameterDataPrototype = [] #list of ParameterDataPrototye objects
-        self.dataTypeMappingRefs = [] #list of strings
 
-    def tag(self, version): return "SWC-INTERNAL-BEHAVIOR"
+    def __init__(self, name: str, component_ref: str, multiple_instance: bool = False, parent: ArObject | None = None):
+        super().__init__(name, component_ref, multiple_instance, parent)
+        self.service_dependencies: list[SwcServiceDependency] = []
+        self.parameter_data_prototype: list[ParameterDataPrototype] = []
+        self.data_type_mapping_refs: list[str] = []
 
-    def find(self, ref):
-        if ref is None: return None
+    @staticmethod
+    def tag(*_):
+        return "SWC-INTERNAL-BEHAVIOR"
+
+    def find(self, ref: str | None, *args, **kwargs):
+        if ref is None:
+            return None
         result = super().find(ref)
         if result is None:
-            if ref[0]=='/': ref=ref[1:] #removes initial '/' if it exists
-            ref=ref.partition('/')
-            name=ref[0]
-            foundElem = None
-            for elem in self.parameterDataPrototype:
+            if ref[0] == '/':
+                ref = ref[1:]  # removes initial '/' if it exists
+            ref = ref.partition('/')
+            name = ref[0]
+            found_elem = None
+            for elem in self.parameter_data_prototype:
                 if elem.name == name:
-                    foundElem = elem
+                    found_elem = elem
                     break
-            if foundElem is not None:
-                if len(ref[2])>0:
-                    return foundElem.find(ref[2])
+            if found_elem is not None:
+                if len(ref[2]) > 0:
+                    return found_elem.find(ref[2])
                 else:
-                    return foundElem
+                    return found_elem
         else:
             return result
 
-    def createPerInstanceMemory(self, name, implementationTypeRef, swAddressMethodRef = None, swCalibrationAccess = None):
+    def create_per_instance_memory(
+            self,
+            name: str,
+            implementation_type_ref: str,
+    ):
         """
-        AUTOSAR4: Creates a DataElement object and appends to to the internal perInstanceMemories list
+        AUTOSAR4: Creates a DataElement object and appends to the internal perInstanceMemories list
         name: name of the object (str)
         implementationTypeRef: dataType reference (str)
         swAddressMethodRef: Software address method reference (str)
         swCalibrationAccess: software calibration access (str)
         """
-        self._initSWC()
-        ws = self.rootWS()
-        dataType = ws.find(implementationTypeRef, role='DataType')
-        if dataType is None:
-            raise ValueError('invalid reference: '+implementationTypeRef)
-        dataElement = DataElement(name, dataType.ref, swAddressMethodRef = swAddressMethodRef, swCalibrationAccess=swCalibrationAccess, parent=self)
-        self.perInstanceMemories.append(dataElement)
-        return dataElement
+        self._init_swc()
+        ws = self.root_ws()
+        data_type = ws.find(implementation_type_ref)
+        if data_type is None:
+            raise ValueError(f'Invalid reference: {implementation_type_ref}')
+        data_element = PerInstanceMemory(name, data_type.ref, parent=self)
+        self.per_instance_memories.append(data_element)
+        return data_element
 
-    def createSharedDataParameter(self, name, implementationTypeRef, swAddressMethodRef = None, swCalibrationAccess = None, initValue = None):
+    def create_shared_data_parameter(
+            self,
+            name: str,
+            implementation_type_ref: str,
+            sw_address_method_ref: str | None = None,
+            sw_calibration_access: str | None = None,
+            init_value: str | None = None,
+    ):
         """
         AUTOSAR4: Creates a ParameterDataPrototype object and appends it to the internal parameterDataPrototype list
         """
-        self._initSWC()
-        ws = self.rootWS()
-        dataType = ws.find(implementationTypeRef, role='DataType')
-        if dataType is None:
-            raise ValueError('invalid reference: '+implementationTypeRef)
-        parameter = autosar.element.ParameterDataPrototype(name, dataType.ref, swAddressMethodRef = swAddressMethodRef, swCalibrationAccess=swCalibrationAccess, initValue=initValue, parent=self)
-        self.parameterDataPrototype.append(parameter)
+        self._init_swc()
+        ws = self.root_ws()
+        data_type = ws.find(implementation_type_ref)
+        if data_type is None:
+            raise ValueError(f'Invalid reference: {implementation_type_ref}')
+        parameter = ParameterDataPrototype(
+            name,
+            data_type.ref,
+            sw_address_method_ref=sw_address_method_ref,
+            sw_calibration_access=sw_calibration_access,
+            init_value=init_value,
+            parent=self,
+        )
+        self.parameter_data_prototype.append(parameter)
         return parameter
 
-    def createNvmBlock(self, name, portName, perInstanceMemoryName, nvmBlockConfig = None, defaultValueName = None, perInstanceMemoryRole='ramBlock', defaultValueRole = 'defaultValue', blockAdminData = None):
+    def create_nvm_block(
+            self,
+            name: str,
+            port_name: str,
+            per_instance_memory_name: str,
+            nvm_block_config: NvmBlockConfig | None = None,
+            default_value_name: str | None = None,
+            per_instance_memory_role: str = 'ramBlock',
+            default_value_role: str = 'defaultValue',
+            block_admin_data: AdminData | None = None,
+    ):
         """
         AUTOSAR 4: Creates a ServiceNeeds object and appends it to the internal serviceDependencies list
         This assumes the service needed is related to NVM
         """
-        self._initSWC()
-        ws = self.rootWS()
-        if nvmBlockConfig is None:
-            nvmBlockConfig = NvmBlockConfig()
-        else:
-            assert(isinstance(nvmBlockConfig, NvmBlockConfig))
+        self._init_swc()
+        if nvm_block_config is None:
+            nvm_block_config = NvmBlockConfig()
+        assert (isinstance(nvm_block_config, NvmBlockConfig))
 
-        nvmBlockNeeds = NvmBlockNeeds(name, nvmBlockConfig, adminData = blockAdminData)
-        nvmBlockServiceNeeds = NvmBlockServiceNeeds(name, nvmBlockNeeds)
-        serviceDependency = SwcServiceDependency(name, nvmBlockServiceNeeds)
+        nvm_block_needs = NvmBlockNeeds(name, nvm_block_config, admin_data=block_admin_data)
+        nvm_block_service_needs = NvmBlockServiceNeeds(name, nvm_block_needs)
+        service_dependency = SwcServiceDependency(name, nvm_block_service_needs)
 
-        for port in self.swc.requirePorts:
-            if port.name == portName:
-                serviceDependency.roleBasedPortAssignments.append(RoleBasedPortAssignment(port.ref))
+        for port in self.swc.require_ports:
+            if port.name == port_name:
+                service_dependency.role_based_port_assignments.append(RoleBasedPortAssignment(port.ref))
                 break
         else:
-            raise ValueError('%s: No require port found with name "%s"'%(self.swc.name, portName))
+            raise ValueError(f'{self.swc.name}: No require port found with name "{port_name}"')
 
-        for pim in self.perInstanceMemories:
-            if pim.name == perInstanceMemoryName:
-                serviceDependency.roleBasedDataAssignments.append(RoleBasedDataAssignment(perInstanceMemoryRole, localVariableRef = pim.ref))
+        for pim in self.per_instance_memories:
+            if pim.name == per_instance_memory_name:
+                service_dependency.role_based_data_assignments.append(
+                    RoleBasedDataAssignment(per_instance_memory_role, local_variable_ref=pim.ref))
                 break
         else:
-            raise ValueError('%s: No per-instance-memory found with name "%s"'%(self.swc.name, perInstanceMemoryName))
-        if defaultValueName is not None:
-            for param in self.parameterDataPrototype:
-                if param.name == defaultValueName:
-                    serviceDependency.roleBasedDataAssignments.append(RoleBasedDataAssignment(defaultValueRole, localParameterRef = param.ref))
+            raise ValueError(f'{self.swc.name}: No per-instance-memory found with name "{per_instance_memory_name}"')
+        if default_value_name is not None:
+            for param in self.parameter_data_prototype:
+                if param.name == default_value_name:
+                    service_dependency.role_based_data_assignments.append(
+                        RoleBasedDataAssignment(default_value_role, local_parameter_ref=param.ref))
                     break
             else:
-                raise ValueError('%s: No shared data parameter found with name "%s"'%(self.swc.name, defaultValueName))
+                raise ValueError(f'{self.swc.name}: No shared data parameter found with name "{default_value_name}"')
 
-        self.serviceDependencies.append(serviceDependency)
-        return serviceDependency
+        self.service_dependencies.append(service_dependency)
+        return service_dependency
 
-    def createInitEvent(self, runnableName, modeDependency=None, name=None ):
-        self._initSWC()
-        ws = self.rootWS()
+    def create_init_event(self, runnable_name: str, mode_dependency: Iterable[str] | None = None, name: str | None = None):
+        self._init_swc()
+        ws = self.root_ws()
 
-        runnable=self.find(runnableName)
+        runnable = self.find(runnable_name)
         if runnable is None:
-            raise ValueError('invalid runnable name: '+runnableName)
-        assert(isinstance(runnable, autosar.behavior.RunnableEntity))
+            raise ValueError(f'Invalid runnable name: {runnable_name}')
+        assert (isinstance(runnable, RunnableEntity))
 
-        eventName=name
-        if eventName is None:
-            baseName = "IT_"+runnable.name
-            eventName = self._findEventName(baseName)
+        event_name = name
+        if event_name is None:
+            base_name = f'IT_{runnable.name}'
+            event_name = self._find_event_name(base_name)
 
-        event = autosar.behavior.InitEvent(eventName, runnable.ref)
+        event = InitEvent(event_name, runnable.ref)
 
-        if modeDependency is not None:
-            self._processModeDependency(event, modeDependency, ws.version)
+        if mode_dependency is not None:
+            self._process_mode_dependency(event, mode_dependency, ws.version)
         self.events.append(event)
         return event
 
-    def createModeSwitchAckEvent(self, runnableName, modeSwitchSource, modeDependency=None, name=None ):
+    def create_mode_switch_ack_event(
+            self,
+            runnable_name: str,
+            mode_switch_source: str,
+            mode_dependency: Iterable[str] | None = None,
+    ):
         """
         Creates a new ModeSwitchAckEvent or <MODE-SWITCHED-ACK-EVENT> (AUTOSAR 4)
         Parameters:
@@ -1332,177 +1632,257 @@ class SwcInternalBehavior(InternalBehaviorCommon):
         * modeDependency: Modes this runnable shall be disabled in (list(str))
         * name: Event name override (str). Default is to create a name automatically.
         """
-        self._initSWC()
-        ws = self.rootWS()
+        self._init_swc()
+        ws = self.root_ws()
 
-        triggerRunnable = self.find(runnableName)
-        if triggerRunnable is None:
-            raise ValueError('Invalid runnable name: '+triggerRunnable)
-        if not isinstance(triggerRunnable, autosar.behavior.RunnableEntity):
-            raise ValueError('Element with name {} is not a runnable'.format(runnableName))
+        trigger_runnable = self.find(runnable_name)
+        if trigger_runnable is None:
+            raise ValueError(f'Invalid runnable name: {runnable_name}')
+        if not isinstance(trigger_runnable, RunnableEntity):
+            raise ValueError(f'Element with name {runnable_name} is not a runnable')
 
-        baseName = 'MSAT_'+triggerRunnable.name
-        eventName = autosar.base.findUniqueNameInList(self.events, baseName)
-        ref = modeSwitchSource.partition('/')
-        sourceRunnableName = ref[0]
-        sourceModeSwitchPoint = None
-        sourceRunnable = self.find(sourceRunnableName)
-        if sourceRunnable is None:
-            raise ValueError('Invalid runnable name: '+triggerRunnable)
-        if not isinstance(sourceRunnable, autosar.behavior.RunnableEntity):
-            raise ValueError('Element with name {} is not a runnable'.format(sourceRunnableName))
-        if len(sourceRunnable.modeSwitchPoints) == 0:
-            raise RuntimeError('Runnable {0.name} must have at least one mode switch point'.format(sourceRunnable))
-        if len(ref[1])==0:
-            #No '/' delimiter was used. This is OK only when the source runnable has only one modeSwitchPoint (no ambiguity)
-                if len(sourceRunnable.modeSwitchPoints) > 1:
-                    raise ValueError('Ambiguous use of modeSwitchSource "{}". Please use pattern "RunnableName/PortName" in modeSwitchSource argument')
-                sourceModeSwitchPoint = sourceRunnable.modeSwitchPoints[0]
+        base_name = f'MSAT_{trigger_runnable.name}'
+        event_name = find_unique_name_in_list(self.events, base_name)
+        ref = mode_switch_source.partition('/')
+        source_runnable_name = ref[0]
+        source_runnable = self.find(source_runnable_name)
+        if source_runnable is None:
+            raise ValueError(f'Invalid runnable name: {source_runnable_name}')
+        if not isinstance(source_runnable, RunnableEntity):
+            raise ValueError(f'Element with name {source_runnable_name} is not a runnable')
+        if len(source_runnable.mode_switch_points) == 0:
+            raise RuntimeError(f'Runnable {source_runnable.name} must have at least one mode switch point')
+        if len(ref[1]) == 0:
+            # No '/' delimiter was used. This is OK only when the source runnable has only one modeSwitchPoint (no ambiguity)
+            if len(source_runnable.mode_switch_points) > 1:
+                raise ValueError('Ambiguous use of modeSwitchSource. Please use pattern "RunnableName/PortName" in modeSwitchSource argument')
+            source_mode_switch_point = source_runnable.mode_switch_points[0]
         else:
-            #Search through all modeSwitchPoints to find port name that matches second half of the partition split
-            modePortName = ref[2]
-            for elem in sourceRunnable.modeSwitchPoints[0]:
-                port = ws.find(elem.modeGroupInstanceRef.providePortRef)
+            # Search through all modeSwitchPoints to find port name that matches second half of the partition split
+            mode_port_name = ref[2]
+            for elem in source_runnable.mode_switch_points:
+                if not isinstance(elem.mode_group_instance_ref, ProvideModeGroupInstanceRef):
+                    continue
+                # noinspection PyUnresolvedReferences
+                port = ws.find(elem.mode_group_instance_ref.provide_port_ref)
                 if port is None:
-                    raise autosar.base.InvalidPortRef(elem.modeGroupInstanceRef.providePortRef)
-                if port.name == modePortName:
-                    sourceModeSwitchPoint = elem
+                    # noinspection PyUnresolvedReferences
+                    raise InvalidPortRef(elem.mode_group_instance_ref.provide_port_ref)
+                if port.name == mode_port_name:
+                    source_mode_switch_point = elem
                     break
             else:
-                raise ValueError('Invalid modeSwitchSource argument "{0}": Unable to find a ModeSwitchPoint containing the port name in that runnable'.format(modeSwitchSource))
-        assert(sourceModeSwitchPoint is not None)
-        #Now that we have collected all the pieces we need we can finally create the event
-        assert (triggerRunnable.ref is not None) and (sourceModeSwitchPoint.ref is not None)
-        event = ModeSwitchAckEvent(eventName, triggerRunnable.ref, sourceModeSwitchPoint.ref)
-        if modeDependency is not None:
-            self._processModeDependency(event, modeDependency, ws.version)
+                raise ValueError(f'Invalid modeSwitchSource argument "{mode_switch_source}": '
+                                 f'Unable to find a ModeSwitchPoint containing the port name in that runnable')
+        assert (source_mode_switch_point is not None)
+        # Now that we have collected all the pieces we need we can finally create the event
+        assert (trigger_runnable.ref is not None) and (source_mode_switch_point.ref is not None)
+        event = ModeSwitchAckEvent(event_name, trigger_runnable.ref, source_mode_switch_point.ref)
+        if mode_dependency is not None:
+            self._process_mode_dependency(event, mode_dependency, ws.version)
         self.events.append(event)
         return event
 
-    def appendDataTypeMappingRef(self, dataTypeMappingRef):
+    def append_data_type_mapping_ref(self, data_type_mapping_ref: str):
         """
         Adds dataTypeMappingRef to the internal dataTypeMappingRefs list
         """
-        self.dataTypeMappingRefs.append(str(dataTypeMappingRef))
+        self.data_type_mapping_refs.append(data_type_mapping_ref)
+
 
 class VariableAccess(Element):
-    def __init__(self, name, portPrototypeRef, targetDataPrototypeRef, parent=None):
+    def __init__(
+            self,
+            name: str,
+            port_prototype_ref: str,
+            target_data_prototype_ref: str,
+            parent: ArObject | None = None,
+    ):
         super().__init__(name, parent)
-        self.portPrototypeRef=portPrototypeRef
-        self.targetDataPrototypeRef = targetDataPrototypeRef
+        self.port_prototype_ref = port_prototype_ref
+        self.target_data_prototype_ref = target_data_prototype_ref
 
-    def tag(self, version=None):
+    @staticmethod
+    def tag(*_):
         return 'VARIABLE-ACCESS'
+
 
 class ServiceNeeds(Element):
     """
     Represents <SERVICE-NEEDS> (AUTOSAR 4)
     This is a base class, it is expected that different service needs derive from this class
     """
-    def tag(self, version): return 'SERVICE-NEEDS'
 
-    def __init__(self, name = None, nvmBlockNeeds = None, parent=None, adminData = None):
-        super().__init__(name, parent, adminData)
-        self.nvmBlockNeeds = nvmBlockNeeds
+    def __init__(
+            self,
+            name: str | None = None,
+            nvm_block_needs: NvmBlockNeeds | None = None,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
+        self.nvm_block_needs = nvm_block_needs
+
+    @staticmethod
+    def tag(*_):
+        return 'SERVICE-NEEDS'
+
 
 class NvmBlockServiceNeeds(ServiceNeeds):
-    def __init__(self, name, nvmBlockNeeds = None, parent=None, adminData = None):
-        super().__init__(name, parent, adminData)
-        assert(nvmBlockNeeds is None or isinstance(nvmBlockNeeds, NvmBlockNeeds))
-        self.nvmBlockNeeds = nvmBlockNeeds
+    def __init__(
+            self,
+            name: str,
+            nvm_block_needs: NvmBlockNeeds | None = None,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
+        assert (nvm_block_needs is None or isinstance(nvm_block_needs, NvmBlockNeeds))
+        self.nvmBlockNeeds = nvm_block_needs
+
 
 class SwcServiceDependency(Element):
     """
     Represents <SWC-SERVICE-DEPENDENCY> (AUTODSAR 4)
     """
-    def tag(self, version): return 'SWC-SERVICE-DEPENDENCY'
 
-    def __init__(self, name=None, serviceNeeds = None, parent=None, adminData = None):
-        super().__init__(name, parent, adminData)
-        self._serviceNeeds = None #None or ServiceNeeds object
-        self.roleBasedDataAssignments = []
-        self.roleBasedPortAssignments = []
-        if serviceNeeds is not None:
-            assert(isinstance(serviceNeeds, ServiceNeeds))
-            self.serviceNeeds = serviceNeeds #this uses the setter method
+    def __init__(
+            self,
+            name: str | None = None,
+            service_needs: ServiceNeeds | None = None,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
+        self.role_based_data_assignments: list[RoleBasedDataAssignment] = []
+        self.role_based_port_assignments: list[RoleBasedPortAssignment] = []
+        self._service_needs = service_needs
 
     @property
-    def serviceNeeds(self):
-        return self._serviceNeeds
+    def service_needs(self):
+        return self._service_needs
 
-    @serviceNeeds.setter
-    def serviceNeeds(self, elem):
+    @service_needs.setter
+    def service_needs(self, elem: ServiceNeeds):
         elem.parent = self
-        self._serviceNeeds = elem
+        self._service_needs = elem
+
+    @staticmethod
+    def tag(*_):
+        return 'SWC-SERVICE-DEPENDENCY'
+
 
 class RoleBasedDataAssignment:
     """
     Represents <ROLE-BASED-DATA-ASSIGNMENT> (AUTOSAR 4)
     """
-    def __init__(self, role, localVariableRef=None, localParameterRef=None):
-        assert(isinstance(role, str))
-        assert(localVariableRef is None or isinstance(localVariableRef, str))
-        assert(localParameterRef is None or isinstance(localParameterRef, autosar.behavior.LocalParameterRef) or isinstance(localParameterRef, str))
-        self.role = role
-        self.localVariableRef = localVariableRef
-        self.localParameterRef = localParameterRef
 
-    def tag(self, version): return 'ROLE-BASED-DATA-ASSIGNMENT'
+    def __init__(
+            self,
+            role: str,
+            local_variable_ref: str | None = None,
+            local_parameter_ref: str | LocalParameterRef | None = None,
+    ):
+        assert (isinstance(role, str))
+        assert (local_variable_ref is None or isinstance(local_variable_ref, str))
+        assert (local_parameter_ref is None or isinstance(local_parameter_ref, LocalParameterRef) or isinstance(local_parameter_ref, str))
+        self.role = role
+        self.local_variable_ref = local_variable_ref
+        self.local_parameter_ref = local_parameter_ref
+
+    @staticmethod
+    def tag(*_):
+        return 'ROLE-BASED-DATA-ASSIGNMENT'
+
 
 class RoleBasedPortAssignment:
     """
     Represents <ROLE-BASED-PORT-ASSIGNMENT> (AUTOSAR 4)
     """
-    def __init__(self, portRef, role = None):
-        assert(isinstance(portRef, str))
-        self.portRef = portRef
+
+    def __init__(self, port_ref: str, role: str | None = None):
+        assert (isinstance(port_ref, str))
+        self.portRef = port_ref
         self.role = role
 
-    def tag(self, version): return 'ROLE-BASED-PORT-ASSIGNMENT'
+    @staticmethod
+    def tag(*_):
+        return 'ROLE-BASED-PORT-ASSIGNMENT'
+
 
 class ParameterDataPrototype(Element):
     """
     Represents <PARAMETER-DATA-PROTOTYPE> (AUTOSAR 4)
     """
-    def __init__(self, name, typeRef, swAddressMethodRef=None, swCalibrationAccess=None, initValue = None, initValueRef = None, parent=None, adminData=None):
-        super().__init__(name, parent, adminData)
-        self.typeRef = typeRef
-        self.swAddressMethodRef = swAddressMethodRef
-        self.swCalibrationAccess = swCalibrationAccess
-        self.initValue = initValue
-        self.initValueRef = initValueRef
 
-    def tag(self, version): return 'PARAMETER-DATA-PROTOTYPE'
+    def __init__(
+            self,
+            name: str,
+            type_ref: str,
+            sw_address_method_ref: str | None = None,
+            sw_calibration_access: str | None = None,
+            init_value: str | None = None,
+            init_value_ref: str | None = None,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
+        self.type_ref = type_ref
+        self.sw_address_method_ref = sw_address_method_ref
+        self.sw_calibration_access = sw_calibration_access
+        self.init_value = init_value
+        self.init_value_ref = init_value_ref
+
+    def tag(self, *_):
+        return 'PARAMETER-DATA-PROTOTYPE'
+
 
 class ParameterInstanceRef:
     """
     Represents <AUTOSAR-PARAMETER-IREF> (AUTOSAR 4)
     """
-    def __init__(self, portRef, parameterDataRef):
-        self.portRef = portRef
-        self.parameterDataRef = parameterDataRef
 
-    def tag(self, version): return 'AUTOSAR-PARAMETER-IREF'
+    def __init__(self, port_ref: str, parameter_data_ref: str):
+        self.port_ref = port_ref
+        self.parameter_data_ref = parameter_data_ref
+
+    @staticmethod
+    def tag(*_):
+        return 'AUTOSAR-PARAMETER-IREF'
+
 
 class LocalParameterRef:
     """
     Represents <LOCAL-PARAMETER-REF> (AUTOSAR 4)
     """
-    def __init__(self, parameterDataRef):
-        self.parameterDataRef = parameterDataRef
 
-    def tag(self, version): return 'LOCAL-PARAMETER-REF'
+    def __init__(self, parameter_data_ref: str):
+        self.parameter_data_ref = parameter_data_ref
+
+    @staticmethod
+    def tag(*_):
+        return 'LOCAL-PARAMETER-REF'
+
 
 class ParameterAccessPoint(Element):
     """
     Represents <PARAMETER-ACCESS> (AUTOSAR 4)
     """
 
-    def __init__(self, name, accessedParameter = None, parent = None, adminData = None):
-        super().__init__(name, parent, adminData)
-        self.accessedParameter = accessedParameter #this can be NoneType or LocalParameterRef or ParameterInstanceRef
+    def __init__(
+            self,
+            name: str,
+            accessed_parameter: LocalParameterRef | ParameterInstanceRef | None = None,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
+        self.accessed_parameter = accessed_parameter
 
-    def tag(self, version): return 'PARAMETER-ACCESS'
+    @staticmethod
+    def tag(*_):
+        return 'PARAMETER-ACCESS'
+
 
 class ModeAccessPoint:
     """
@@ -1510,331 +1890,449 @@ class ModeAccessPoint:
     In the XSD this is not a first-class element.
     Therefore we do not inherit from Element but instead allow <SHORT-NAME> only as (optional) identifier
     """
-    def __init__(self, name = None, modeGroupInstanceRef = None):
+
+    def __init__(self, name: str | None = None, mode_group_instance_ref: ModeGroupInstanceRef | None = None):
         """
         Arguments:
         * name: <SHORT-NAME> (None or str)
         * modeGroupInstanceRef: <MODE-GROUP-IREF> (None or (class derived from) ModeGroupInstanceRef)
         """
-        self.name = str(name) if name is not None else None
-        self.modeGroupInstanceRef = modeGroupInstanceRef
-
-    def tag(self, version):
-        return 'MODE-ACCESS-POINT'
+        self.name = name
+        self._mode_group_instance_ref = mode_group_instance_ref
 
     @property
-    def modeGroupInstanceRef(self):
-        return self._modeGroupInstanceRef
+    def mode_group_instance_ref(self):
+        return self._mode_group_instance_ref
 
-    @modeGroupInstanceRef.setter
-    def modeGroupInstanceRef(self, value):
+    @mode_group_instance_ref.setter
+    def mode_group_instance_ref(self, value: ModeGroupInstanceRef | None):
         if value is not None:
             if not isinstance(value, ModeGroupInstanceRef):
                 raise ValueError("Value must be None or an instance of ModeGroupInstanceRef")
-            self._modeGroupInstanceRef = value
+            self._mode_group_instance_ref = value
             value.parent = self
         else:
-            self._modeGroupInstanceRef = None
+            self._mode_group_instance_ref = None
+
+    @staticmethod
+    def tag(*_):
+        return 'MODE-ACCESS-POINT'
+
 
 class ModeSwitchPoint(Element):
     """
     Represents <MODE-SWITCH-POINT> (AUTOSAR 4)
     """
-    def __init__(self, name, modeGroupInstanceRef = None, parent=None, adminData=None):
-        super().__init__(name, parent, adminData)
-        self.modeGroupInstanceRef = modeGroupInstanceRef
 
-    def tag(self, version):
-        return 'MODE-SWITCH-POINT'
+    def __init__(
+            self,
+            name: str,
+            mode_group_instance_ref: ModeGroupInstanceRef | None = None,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, parent, admin_data)
+        self._mode_group_instance_ref = mode_group_instance_ref
 
     @property
-    def modeGroupInstanceRef(self):
-        return self._modeGroupInstanceRef
+    def mode_group_instance_ref(self):
+        return self._mode_group_instance_ref
 
-    @modeGroupInstanceRef.setter
-    def modeGroupInstanceRef(self, value):
+    @mode_group_instance_ref.setter
+    def mode_group_instance_ref(self, value):
         if value is not None:
             if not isinstance(value, ModeGroupInstanceRef):
-                raise ValueError("Value must be None or an instance of ModeGroupInstanceRef")
-            self._modeGroupInstanceRef = value
+                raise ValueError('Value must be None or an instance of ModeGroupInstanceRef')
+            self._mode_group_instance_ref = value
             value.parent = self
         else:
-            self._modeGroupInstanceRef = None
+            self._mode_group_instance_ref = None
+
+    @staticmethod
+    def tag(*_):
+        return 'MODE-SWITCH-POINT'
+
 
 # Behavior parts of NvBlockComponent.
-
-def createNvBlockDescriptor(parent, portAccess, **kwargs):
+def create_nv_block_descriptor(parent: NvBlockComponent, port_access: str, **kwargs):
     """
     Creates a new NvBlockDescriptor object.
     * parent: NvBlockComponent to create descriptor in.
     * portAccess: String containing port names or "port-name/element" where element is Nvdata (str)
-    * baseName: overide of the default baseName of the object (str).
+    * base_name: override of the default base_name of the object (str).
     """
-    descriptor = None
-    nvData = None
-    ws = parent.rootWS()
+    descriptor: NvBlockDescriptor | None = None
+    nv_data = None
+    ws = parent.root_ws()
     assert (ws is not None)
-    assert (isinstance(portAccess, str))
+    assert (isinstance(port_access, str))
 
-    adminData = kwargs.get('adminData', None)
-    baseName = kwargs.get('baseName', None)
-    if baseName is None:
-        baseName = 'NvBlckDescr'
+    admin_data = kwargs.get('admin_data', None)
+    base_name = kwargs.get('base_name', None)
+    if base_name is None:
+        base_name = 'NvBlckDescr'
 
-    ref = portAccess.partition('/')
+    ref = port_access.partition('/')
     port = parent.find(ref[0])
     if port is None:
-        raise ValueError('invalid port reference: '+str(portAccess))
-    portInterface = ws.find(port.portInterfaceRef)
-    if portInterface is None:
-        raise ValueError('invalid portinterface reference: '+str(port.portInterfaceRef))
+        raise ValueError(f'Invalid port reference: {port_access}')
+    port_interface = ws.find(port.port_interface_ref)
+    if port_interface is None:
+        raise ValueError(f'Invalid port interface reference: {port.port_interface_ref}')
 
-    if isinstance(portInterface, autosar.portinterface.NvDataInterface):
+    if isinstance(port_interface, NvDataInterface):
         if len(ref[1]) == 0:
-            #this section is for portAccess where only the port name is mentioned.
-            #This method only works if the port interface has only 1 data element,
+            # this section is for portAccess where only the port name is mentioned.
+            # This method only works if the port interface has only 1 data element,
             # i.e. no ambiguity as to what data element is meant
-            if len(portInterface.nvDatas)==1:
-                nvData=portInterface.nvDatas[0]
-                descriptor = NvBlockDescriptor('{0}_{1.name}_{2.name}'.format(baseName, port, nvData), parent, adminData)
+            if len(port_interface.nv_data) == 1:
+                nv_data = port_interface.nv_data[0]
+                descriptor = NvBlockDescriptor(f'{base_name}_{port.name}_{nv_data.name}', parent, admin_data)
             else:
-                raise NotImplementedError('port interfaces with multiple data elements not supported')
+                raise NotImplementedError('Port interfaces with multiple data elements not supported')
         else:
-            #this section is for portAccess where both port name and dataelement is represented as "portName/dataElementName"
-            if isinstance(portInterface, autosar.portinterface.NvDataInterface):
-                nvData=portInterface.find(ref[2])
-                if nvData is None:
-                    raise ValueError('invalid data element reference: '+str(portAccess))
-                descriptor = NvBlockDescriptor('{0}_{1.name}_{2.name}'.format(baseName, port, nvData), parent, adminData)
+            # this section is for portAccess where both port name and dataelement is represented as "portName/dataElementName"
+            if isinstance(port_interface, NvDataInterface):
+                nv_data = port_interface.find(ref[2])
+                if nv_data is None:
+                    raise ValueError(f'Invalid data element reference: {port_access}')
+                descriptor = NvBlockDescriptor(f'{base_name}_{port.name}_{nv_data.name}', parent, admin_data)
     else:
-        raise autosar.base.InvalidPortInterfaceRef(type(portInterface))
+        raise InvalidPortInterfaceRef(type(port_interface))
 
     if descriptor is not None:
-        dataTypeMappingRefs = kwargs.get('dataTypeMappingRefs', None)
-        nvmBlockConfig = kwargs.get('NvmBlockConfig', None)
-        timingEventRef = kwargs.get('timingEventRef', None)
-        swCalibrationAccess = kwargs.get('swCalibrationAccess', None)
-        supportDirtyFlag = kwargs.get('supportDirtyFlag', False)
-        ramBlockAdminData = kwargs.get('ramBlockAdminData', None)
-        romBlockAdminData = kwargs.get('romBlockAdminData', None)
-        romBlockDesc = kwargs.get('romBlockDesc', None)
-        romBlockLongName = kwargs.get('romBlockLongName', None)
-        romBlockInitValueRef = kwargs.get('romBlockInitValueRef', None)
-        rawRomBlockInitValue = kwargs.get('romBlockInitValue', None)
-        romBlockInitValue = None
+        data_type_mapping_refs = kwargs.get('data_type_mapping_refs', None)
+        nvm_block_config = kwargs.get('nvm_block_config', None)
+        timing_event_ref = kwargs.get('timing_event_ref', None)
+        sw_calibration_access = kwargs.get('sw_calibration_access', None)
+        support_dirty_flag = kwargs.get('support_dirty_flag', False)
+        ram_block_admin_data = kwargs.get('ram_block_admin_data', None)
+        rom_block_admin_data = kwargs.get('rom_block_admin_data', None)
+        rom_block_desc = kwargs.get('rom_block_desc', None)
+        rom_block_long_name = kwargs.get('rom_block_long_name', None)
+        rom_block_init_value_ref = kwargs.get('rom_block_init_value_ref', None)
+        raw_rom_block_init_value = kwargs.get('rom_block_init_value', None)
+        rom_block_init_value = None
 
-        if nvmBlockConfig is None or not isinstance(nvmBlockConfig, autosar.behavior.NvmBlockConfig):
-            raise autosar.base.InvalidDataTypeRef('NvmBlockConfig is missing or is not an autosar.behavior.NvmBlockConfig')
+        if nvm_block_config is None or not isinstance(nvm_block_config, NvmBlockConfig):
+            raise InvalidDataTypeRef('NvmBlockConfig is missing or is not an autosar.behavior.NvmBlockConfig')
 
-        descriptor.nvBlockNeeds = autosar.behavior.NvmBlockNeeds('NvmBlockNeed', nvmBlockConfig, parent)
+        descriptor.nv_block_needs = NvmBlockNeeds('NvmBlockNeed', nvm_block_config, parent)
 
-        if dataTypeMappingRefs is not None:
-            if isinstance(dataTypeMappingRefs, str):
-                dataTypeMappingRefs = [dataTypeMappingRefs]
-            descriptor.dataTypeMappingRefs.extend(dataTypeMappingRefs)
+        if data_type_mapping_refs is not None:
+            if isinstance(data_type_mapping_refs, str):
+                data_type_mapping_refs = [data_type_mapping_refs]
+            descriptor.data_type_mapping_refs.extend(data_type_mapping_refs)
 
-        if not isinstance(supportDirtyFlag, bool):
-            raise ValueError('supportDirtyFlag must be of bool type: '+str(type(supportDirtyFlag)))
+        if not isinstance(support_dirty_flag, bool):
+            raise ValueError(f'support_dirty_flag must be of bool type: {type(support_dirty_flag)}')
 
-        descriptor.supportDirtyFlag = supportDirtyFlag
+        descriptor.support_dirty_flag = support_dirty_flag
 
-        if isinstance(timingEventRef, str):
-            timingEvent = parent.behavior.find(timingEventRef)
-            if timingEvent is None:
-                raise ValueError('invalid data element reference: '+str(timingEventRef))
-            descriptor.timingEventRef = timingEvent.name
+        if isinstance(timing_event_ref, str):
+            timing_event = parent.behavior.find(timing_event_ref)
+            if timing_event is None:
+                raise ValueError(f'Invalid data element reference: {timing_event_ref}')
+            descriptor.timing_event_ref = timing_event.name
 
-        #verify compatibility of romBlockInitValueRef
-        if romBlockInitValueRef is not None:
-            initValueTmp = ws.find(romBlockInitValueRef, role='Constant')
-            if initValueTmp is None:
-                raise autosar.base.InvalidInitValueRef(str(romBlockInitValueRef))
-            if isinstance(initValueTmp,autosar.constant.Constant):
-                romBlockInitValueRef=initValueTmp.ref
-            elif isinstance(initValueTmp,autosar.constant.Value):
-                romBlockInitValueRef=initValueTmp.ref
+        # verify compatibility of rom_block_init_value_ref
+        if rom_block_init_value_ref is not None:
+            init_value_tmp = ws.find(rom_block_init_value_ref)
+            if init_value_tmp is None:
+                raise InvalidInitValueRef(str(rom_block_init_value_ref))
+            if isinstance(init_value_tmp, Constant):
+                rom_block_init_value_ref = init_value_tmp.ref
+            elif isinstance(init_value_tmp, Value):
+                rom_block_init_value_ref = init_value_tmp.ref
             else:
-                raise ValueError("reference is not a Constant or Value object: '%s'"%romBlockInitValueRef)
+                raise ValueError(f'Reference is not a Constant or Value object: "{rom_block_init_value_ref}"')
 
-        if rawRomBlockInitValue is not None:
-            if isinstance(rawRomBlockInitValue, autosar.constant.ValueAR4):
-                romBlockInitValue = rawRomBlockInitValue
-            elif isinstance(rawRomBlockInitValue, (int, float, str)):
-                dataType = ws.find(nvData.typeRef, role='DataType')
-                if dataType is None:
-                    raise autosar.base.InvalidDataTypeRef(nvData.typeRef)
-                valueBuilder = autosar.builder.ValueBuilder()
-                romBlockInitValue = valueBuilder.buildFromDataType(dataType, rawRomBlockInitValue)
+        if raw_rom_block_init_value is not None:
+            if isinstance(raw_rom_block_init_value, ValueAR4):
+                rom_block_init_value = raw_rom_block_init_value
+            elif isinstance(raw_rom_block_init_value, (int, float, str)):
+                data_type = ws.find(nv_data.typeRef)
+                if data_type is None:
+                    raise InvalidDataTypeRef(nv_data.typeRef)
+                value_builder = ValueBuilder()
+                rom_block_init_value = value_builder.build_from_data_type(data_type, raw_rom_block_init_value)
             else:
-                raise ValueError('romBlockInitValue must be an instance of (autosar.constant.ValueAR4, int, float, str)')
+                raise ValueError('rom_block_init_value must be an instance of (autosar.constant.ValueAR4, int, float, str)')
 
-        dataType = ws.find(nvData.typeRef, role='DataType')
-        if dataType is None:
-            raise ValueError('invalid reference: '+nvData.typeRef)
-        descriptor.romBlock = NvBlockRomBlock('ParameterDataPt', dataType.ref,
-                        swCalibrationAccess=swCalibrationAccess,
-                        initValue=romBlockInitValue,
-                        initValueRef=romBlockInitValueRef,
-                        parent=descriptor,
-                        adminData=romBlockAdminData)
+        data_type = ws.find(nv_data.type_ref)
+        if data_type is None:
+            raise ValueError(f'Invalid reference: {nv_data.type_ref}')
+        descriptor.rom_block = NvBlockRomBlock(
+            'ParameterDataPt',
+            data_type.ref,
+            sw_calibration_access=sw_calibration_access,
+            init_value=rom_block_init_value,
+            init_value_ref=rom_block_init_value_ref,
+            parent=descriptor,
+            admin_data=rom_block_admin_data,
+        )
 
-        if romBlockDesc is not None:
-            descriptor.romBlock.desc = romBlockDesc
+        if rom_block_desc is not None:
+            descriptor.rom_block.desc = rom_block_desc
 
-        if romBlockLongName is not None:
-            descriptor.romBlock.longName = romBlockLongName
+        if rom_block_long_name is not None:
+            descriptor.rom_block.longName = rom_block_long_name
 
-        descriptor.ramBlock = NvBlockRamBlock('VariableDataPt', dataType.ref, parent = descriptor, adminData = ramBlockAdminData)
+        descriptor.ram_block = NvBlockRamBlock(
+            'VariableDataPt',
+            data_type.ref,
+            parent=descriptor,
+            admin_data=ram_block_admin_data,
+        )
 
-        nvBlockDataMapping = NvBlockDataMapping(descriptor)
-        nvBlockDataMapping.nvRamBlockElement = NvRamBlockElement(parent=nvBlockDataMapping, localVariableRef=descriptor.ramBlock)
+        nv_block_data_mapping = NvBlockDataMapping(descriptor)
+        nv_block_data_mapping.nv_ram_block_element = NvRamBlockElement(
+            parent=nv_block_data_mapping,
+            local_variable_ref=descriptor.ram_block,
+        )
 
-        if isinstance(port, autosar.port.RequirePort):
-            nvBlockDataMapping.writtenNvData = WrittenNvData(parent=nvBlockDataMapping, autosarVariablePortRef=port, autosarVariableElementRef=nvData)
+        if isinstance(port, RequirePort):
+            nv_block_data_mapping.written_nv_data = WrittenNvData(
+                parent=nv_block_data_mapping,
+                autosar_variable_port_ref=port,
+                autosar_variable_element_ref=nv_data,
+            )
 
-        if isinstance(port, autosar.port.ProvidePort):
-            nvBlockDataMapping.readNvData = ReadNvData(parent=nvBlockDataMapping, autosarVariablePortRef=port, autosarVariableElementRef=nvData)
+        if isinstance(port, ProvidePort):
+            nv_block_data_mapping.read_nv_data = ReadNvData(
+                parent=nv_block_data_mapping,
+                autosar_variable_port_ref=port,
+                autosar_variable_element_ref=nv_data,
+            )
 
-        descriptor.nvBlockDataMappings.append(nvBlockDataMapping)
-        parent.nvBlockDescriptors.append(descriptor)
+        descriptor.nv_block_data_mappings.append(nv_block_data_mapping)
+        parent.nv_block_descriptors.append(descriptor)
     return descriptor
 
-class NvBlockRamBlock(autosar.element.DataElement):
+
+class NvBlockRamBlock(DataElement):
     """
     <RAM-BLOCK>
     """
-    def __init__(self, name, typeRef, isQueued=False, swAddressMethodRef=None, swCalibrationAccess=None, swImplPolicy = None, category = None, parent=None, adminData=None):
-        super().__init__(name, typeRef, isQueued, swAddressMethodRef, swCalibrationAccess, swImplPolicy, category, parent, adminData)
+
+    def __init__(
+            self,
+            name: str,
+            type_ref: str,
+            is_queued: bool = False,
+            sw_address_method_ref: str | None = None,
+            sw_calibration_access: str | None = None,
+            sw_impl_policy: str | None = None,
+            category: str | None = None,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(name, type_ref, is_queued, sw_address_method_ref, sw_calibration_access, sw_impl_policy, category, parent, admin_data)
 
     @classmethod
-    def cast(cls, ramBlock: autosar.element.DataElement):
+    def cast(cls, ram_block: DataElement):
         """Cast an autosar.element.DataElement into a NvBlockRamBlock."""
-        assert isinstance(ramBlock, autosar.element.DataElement)
-        ramBlock.__class__ = cls
-        assert isinstance(ramBlock, NvBlockRamBlock)
-        return ramBlock
+        assert isinstance(ram_block, DataElement)
+        ram_block.__class__ = cls
+        assert isinstance(ram_block, NvBlockRamBlock)
+        return ram_block
 
-    def tag(self, version):
+    @staticmethod
+    def tag(*_):
         return 'RAM-BLOCK'
+
 
 class NvBlockRomBlock(ParameterDataPrototype):
     """
     Represents <ROM-BLOCK>
     """
 
-    def __init__(self, name, typeRef, swAddressMethodRef=None, swCalibrationAccess=None, initValue = None, initValueRef = None, parent=None, adminData=None):
-        super().__init__(name=name, parent=parent, typeRef=typeRef, swAddressMethodRef=swAddressMethodRef, swCalibrationAccess=swCalibrationAccess, initValue=initValue, initValueRef=initValueRef, adminData=adminData)
+    def __init__(
+            self,
+            name: str,
+            type_ref: str,
+            sw_address_method_ref: str | None = None,
+            sw_calibration_access: str | None = None,
+            init_value: str | None = None,
+            init_value_ref: str | None = None,
+            parent: ArObject | None = None,
+            admin_data: AdminData | None = None,
+    ):
+        super().__init__(
+            name=name,
+            parent=parent,
+            type_ref=type_ref,
+            sw_address_method_ref=sw_address_method_ref,
+            sw_calibration_access=sw_calibration_access,
+            init_value=init_value,
+            init_value_ref=init_value_ref,
+            admin_data=admin_data,
+        )
 
     @classmethod
-    def cast(cls, romBlock: ParameterDataPrototype):
+    def cast(cls, rom_block: ParameterDataPrototype):
         """Cast an ParameterDataPrototype into a NvBlockRomBlock."""
-        assert isinstance(romBlock, ParameterDataPrototype)
-        romBlock.__class__ = cls
-        assert isinstance(romBlock, NvBlockRomBlock)
-        return romBlock
+        assert isinstance(rom_block, ParameterDataPrototype)
+        rom_block.__class__ = cls
+        assert isinstance(rom_block, NvBlockRomBlock)
+        return rom_block
 
-    def tag(self, version): return 'ROM-BLOCK'
+    @staticmethod
+    def tag(*_):
+        return 'ROM-BLOCK'
 
 
 class NvBlockDescriptor(Element):
     """
     <NV-BLOCK-DESCRIPTOR>
     """
-    def __init__(self, name, parent=None, adminData = None):
-        super().__init__(name, parent, adminData)
-        self.dataTypeMappingRefs = []
-        self.nvBlockDataMappings = []
-        self.nvBlockNeeds = None
-        self.ramBlock = None
-        self.romBlock = None
-        self.supportDirtyFlag = False
-        self.timingEventRef = None
 
-    def find(self, ref):
-        parts=ref.partition('/')
-        for elem in self.ramBlock, self.romBlock:
+    def __init__(self, name: str, parent: ArObject | None = None, admin_data: AdminData | None = None):
+        super().__init__(name, parent, admin_data)
+        self.data_type_mapping_refs: list[str] = []
+        self.nv_block_data_mappings: list[NvBlockDataMapping] = []
+        self.nv_block_needs: NvmBlockNeeds | None = None
+        self.ram_block: NvBlockRamBlock | None = None
+        self.rom_block: NvBlockRomBlock | None = None
+        self.support_dirty_flag = False
+        self.timing_event_ref: str | None = None
+
+    def find(self, ref: str, *args, **kwargs):
+        parts = ref.partition('/')
+        for elem in self.ram_block, self.rom_block:
             if elem.name == parts[0]:
                 return elem
         return None
 
-    def tag(self, version):
+    @staticmethod
+    def tag(*_):
         return 'NV-BLOCK-DESCRIPTOR'
 
-class NvBlockDataMapping(object):
+
+class NvBlockDataMapping(ArObject):
     """
     <NV-BLOCK-DATA-MAPPING>
     """
-    def __init__(self, parent=None):
-        self.parent = parent
-        self.nvRamBlockElement = None
-        self.readNvData = None
-        self.writtenNvData = None
-        self.writtenReadNvData = None
 
-    def tag(self, version):
+    def __init__(self, parent: ArObject | None = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.parent = parent
+        self.nv_ram_block_element: NvRamBlockElement | None = None
+        self.read_nv_data: ReadNvData | None = None
+        self.written_nv_data: WrittenNvData | None = None
+        self.written_read_nv_data: WrittenReadNvData | None = None
+
+    @staticmethod
+    def tag(*_):
         return 'NV-BLOCK-DATA-MAPPING'
 
-class AutosarVariableRef(object):
+
+class AutosarVariableRef(ArObject):
     """
     Base class for type AUTOSAR-VARIABLE-REF
     * localVariableRef: This reference is used if the variable is local to the current component.
     * autosarVariablePortRef: Port part of the autosarVariableRef.
     * autosarVariableElementRef: Element part of the autosarVariableRef.
     """
-    def tag(self,version):
+
+    @staticmethod
+    def tag(*_):
         return "AUTOSAR-VARIABLE-REF"
 
-    def __init__(self, parent=None, localVariableRef=None, autosarVariablePortRef=None, autosarVariableElementRef=None):
+    def __init__(
+            self,
+            parent: ArObject | None = None,
+            local_variable_ref: any = None,
+            autosar_variable_port_ref: any = None,
+            autosar_variable_element_ref: any = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
         self.parent = parent
 
-        if isinstance(localVariableRef,str):
-            self.localVariableRef=localVariableRef
-        elif hasattr(localVariableRef,'ref'):
-            assert(isinstance(localVariableRef.ref,str))
-            self.localVariableRef=localVariableRef.ref
+        if isinstance(local_variable_ref, str):
+            self.local_variable_ref = local_variable_ref
+        elif hasattr(local_variable_ref, 'ref'):
+            assert (isinstance(local_variable_ref.ref, str))
+            self.local_variable_ref = local_variable_ref.ref
         else:
-            self.localVariableRef=None
+            self.local_variable_ref = None
 
-        if isinstance(autosarVariablePortRef,str):
-            self.autosarVariablePortRef=autosarVariablePortRef
-        elif hasattr(autosarVariablePortRef,'ref'):
-            assert(isinstance(autosarVariablePortRef.ref,str))
-            self.autosarVariablePortRef=autosarVariablePortRef.ref
+        if isinstance(autosar_variable_port_ref, str):
+            self.autosar_variable_port_ref = autosar_variable_port_ref
+        elif hasattr(autosar_variable_port_ref, 'ref'):
+            assert (isinstance(autosar_variable_port_ref.ref, str))
+            self.autosar_variable_port_ref = autosar_variable_port_ref.ref
         else:
-            self.autosarVariablePortRef=None
+            self.autosar_variable_port_ref = None
 
-        if isinstance(autosarVariableElementRef,str):
-            self.autosarVariableElementRef=autosarVariableElementRef
-        elif hasattr(autosarVariableElementRef,'ref'):
-            assert(isinstance(autosarVariableElementRef.ref,str))
-            self.autosarVariableElementRef=autosarVariableElementRef.ref
+        if isinstance(autosar_variable_element_ref, str):
+            self.autosar_variable_element_ref = autosar_variable_element_ref
+        elif hasattr(autosar_variable_element_ref, 'ref'):
+            assert (isinstance(autosar_variable_element_ref.ref, str))
+            self.autosar_variable_element_ref = autosar_variable_element_ref.ref
         else:
-            self.autosarVariableElementRef=None
+            self.autosar_variable_element_ref = None
+
 
 class NvRamBlockElement(AutosarVariableRef):
-    def __init__(self, parent=None, localVariableRef=None):
-        super().__init__(parent=parent, localVariableRef=localVariableRef)
+    def __init__(self, parent: ArObject | None = None, local_variable_ref: any = None):
+        super().__init__(parent=parent, local_variable_ref=local_variable_ref)
 
-    def tag(self,version):
+    @staticmethod
+    def tag(*_):
         return "NV-RAM-BLOCK-ELEMENT"
 
-class ReadNvData(AutosarVariableRef):
-    def __init__(self, parent=None, autosarVariablePortRef=None, autosarVariableElementRef=None):
-        super().__init__(parent=parent, autosarVariablePortRef=autosarVariablePortRef, autosarVariableElementRef=autosarVariableElementRef)
 
-    def tag(self,version):
+class ReadNvData(AutosarVariableRef):
+    def __init__(
+            self,
+            parent: ArObject | None = None,
+            autosar_variable_port_ref: any = None,
+            autosar_variable_element_ref: any = None,
+    ):
+        super().__init__(
+            parent=parent,
+            autosar_variable_port_ref=autosar_variable_port_ref,
+            autosar_variable_element_ref=autosar_variable_element_ref,
+        )
+
+    @staticmethod
+    def tag(*_):
         return "READ-NV-DATA"
 
-class WrittenNvData(AutosarVariableRef):
-    def __init__(self, parent=None, autosarVariablePortRef=None, autosarVariableElementRef=None):
-        super().__init__(parent=parent, autosarVariablePortRef=autosarVariablePortRef, autosarVariableElementRef=autosarVariableElementRef)
 
-    def tag(self,version):
+class WrittenNvData(AutosarVariableRef):
+    def __init__(
+            self,
+            parent: ArObject | None = None,
+            autosar_variable_port_ref: any = None,
+            autosar_variable_element_ref: any = None,
+    ):
+        super().__init__(
+            parent=parent,
+            autosar_variable_port_ref=autosar_variable_port_ref,
+            autosar_variable_element_ref=autosar_variable_element_ref,
+        )
+
+    @staticmethod
+    def tag(*_):
         return "WRITTEN-NV-DATA"
 
-class WrittenReadNvData(AutosarVariableRef):
-    def __init__(self, parent=None, autosarVariablePortRef=None, autosarVariableElementRef=None):
-        super().__init__(parent=parent, autosarVariablePortRef=autosarVariablePortRef, autosarVariableElementRef=autosarVariableElementRef)
 
-    def tag(self,version):
+class WrittenReadNvData(AutosarVariableRef):
+    def __init__(
+            self,
+            parent: ArObject | None = None,
+            autosar_variable_port_ref: any = None,
+            autosar_variable_element_ref: any = None,
+    ):
+        super().__init__(
+            parent=parent,
+            autosar_variable_port_ref=autosar_variable_port_ref,
+            autosar_variable_element_ref=autosar_variable_element_ref,
+        )
+
+    @staticmethod
+    def tag(*_):
         return "WRITTEN-READ-NV-DATA"

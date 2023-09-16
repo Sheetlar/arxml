@@ -1,46 +1,53 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Mapping, Iterable
+
+from autosar.swc_implementation import SwcImplementation
+from autosar.ar_object import ArObject
+from autosar.base import InvalidPortInterfaceRef, split_ref, InvalidPortRef, InvalidMappingRef
 from autosar.element import Element
-import autosar.portinterface
-import autosar.constant
-import autosar.builder
-import autosar.port
-import copy
-import collections
-import sys
-from autosar._swc_implementation import SwcImplementation, SwcImplementationCodeDescriptor, EngineeringObject, ResourceConsumption, MemorySection
+from autosar.port import Port, ProvidePort, RequirePort
+from autosar.portinterface import SenderReceiverInterface
+
+if TYPE_CHECKING:
+    from autosar import Template
+    from autosar.behavior import InternalBehaviorCommon
+
 
 class ComponentType(Element):
     """
     Base class for all software component prototype classes.
     """
-    def __init__(self,name,parent=None):
-        super().__init__(name,parent)
-        self.requirePorts=[]
-        self.providePorts=[]
 
-    def find(self,ref):
-        ref=ref.partition('/')
-        for port in self.requirePorts:
+    def __init__(self, name: str, parent: ArObject | None = None):
+        super().__init__(name, parent)
+        self.require_ports: list[RequirePort] = []
+        self.provide_ports: list[ProvidePort] = []
+
+    def find(self, ref: str, *args, **kwargs):
+        ref = ref.partition('/')
+        for port in self.require_ports:
             if port.name == ref[0]:
                 return port
-        for port in self.providePorts:
+        for port in self.provide_ports:
             if port.name == ref[0]:
                 return port
         return None
 
-    def append(self, elem):
-        if isinstance(elem,autosar.port.RequirePort):
-            self.requirePorts.append(elem)
-            elem.parent=self
-        elif isinstance(elem,autosar.port.ProvidePort):
-            self.providePorts.append(elem)
-            elem.parent=self
+    def append(self, elem: Port):
+        if isinstance(elem, RequirePort):
+            self.require_ports.append(elem)
+            elem.parent = self
+        elif isinstance(elem, ProvidePort):
+            self.provide_ports.append(elem)
+            elem.parent = self
         else:
-            raise ValueError("unexpected type:" + str(type(elem)))
+            raise ValueError(f'Unexpected type: {type(elem)}')
 
-    def __getitem__(self,key):
+    def __getitem__(self, key):
         return self.find(key)
 
-    def createProvidePort(self, name, portInterfaceRef, **kwargs):
+    def create_provide_port(self, name: str, port_interface_ref: str, **kwargs):
         """
         Creates a provide port on this ComponentType
         The ComponentType must have a valid ref (must belong to a valid package in a valid workspace).
@@ -73,32 +80,32 @@ class ComponentType(Element):
         - romBlockInitValueRef (str): Used when you want an existing constant specification as your initValue.
         """
 
-        comspec = kwargs.get('comspec', None)
-        if comspec is not None:
-            if isinstance(comspec, collections.abc.Mapping):
-                comspecList = [comspec]
-            elif isinstance(comspec, collections.abc.Iterable):
-                comspecList = list(comspec)
+        com_spec = kwargs.get('comspec', None)
+        if com_spec is not None:
+            if isinstance(com_spec, Mapping):
+                com_spec_list = [com_spec]
+            elif isinstance(com_spec, Iterable):
+                com_spec_list = list(com_spec)
             else:
                 raise ValueError('comspec argument must be of type dict or list')
         else:
-            comspecList = None
+            com_spec_list = None
         assert (self.ref is not None)
-        ws = self.rootWS()
-        assert(ws is not None)
-        portInterface = ws.find(portInterfaceRef, role='PortInterface')
-        if portInterface is None:
-            raise autosar.base.InvalidPortInterfaceRef(portInterfaceRef)
-        if comspecList is None:
-            comspecDict = kwargs if len(kwargs) > 0 else None
-            port = autosar.port.ProvidePort(name, portInterface.ref, comspecDict, parent=self)
+        ws = self.root_ws()
+        assert (ws is not None)
+        port_interface = ws.find(port_interface_ref)
+        if port_interface is None:
+            raise InvalidPortInterfaceRef(port_interface_ref)
+        if com_spec_list is None:
+            com_spec_dict = kwargs if len(kwargs) > 0 else None
+            port = ProvidePort(name, port_interface.ref, com_spec_dict, parent=self)
         else:
-            port = autosar.port.ProvidePort(name, portInterface.ref, comspecList, parent=self)
-        assert(isinstance(port, autosar.port.Port))
-        self.providePorts.append(port)
+            port = ProvidePort(name, port_interface.ref, com_spec_list, parent=self)
+        assert (isinstance(port, Port))
+        self.provide_ports.append(port)
         return port
 
-    def createRequirePort(self, name, portInterfaceRef, **kwargs):
+    def create_require_port(self, name: str, port_interface_ref: str, **kwargs):
         """
         Creates a require port on this ComponentType
         The ComponentType must have a valid ref (must belong to a valid package in a valid workspace).
@@ -126,27 +133,23 @@ class ComponentType(Element):
         - initValue (int, float, str): Used to set an init value literal.
         - initValueRef (str): Used when you want an existing constant specification as your initValue.
         """
-        comspec = kwargs.get('comspec', None)
-        if comspec is not None:
-            comspecList = comspec
-        else:
-            comspecList = None
+        com_spec = kwargs.get('comspec', None)
         assert (self.ref is not None)
-        ws = self.rootWS()
-        assert(ws is not None)
-        portInterface = ws.find(portInterfaceRef, role='PortInterface')
-        if portInterface is None:
-            raise autosar.base.InvalidPortInterfaceRef(portInterfaceRef)
-        if comspecList is None:
-            comspecDict = kwargs if len(kwargs) > 0 else None
-            port = autosar.port.RequirePort(name, portInterface.ref, comspecDict, parent=self)
+        ws = self.root_ws()
+        assert (ws is not None)
+        port_interface = ws.find(port_interface_ref)
+        if port_interface is None:
+            raise InvalidPortInterfaceRef(port_interface_ref)
+        if com_spec is None:
+            com_spec_dict = kwargs if len(kwargs) > 0 else None
+            port = RequirePort(name, port_interface.ref, com_spec_dict, parent=self)
         else:
-            port = autosar.port.RequirePort(name, portInterface.ref, comspecList, parent=self)
-        assert(isinstance(port, autosar.port.Port))
-        self.requirePorts.append(port)
+            port = RequirePort(name, port_interface.ref, com_spec, parent=self)
+        assert (isinstance(port, Port))
+        self.require_ports.append(port)
         return port
 
-    def apply(self, template, **kwargs):
+    def apply(self, template: Template, **kwargs):
         """
         Applies template to this component
         This is typically used for port templates
@@ -155,41 +158,43 @@ class ComponentType(Element):
             template.apply(self)
         else:
             template.apply(self, **kwargs)
-        template.usageCount+=1
+        template.usage_count += 1
 
-    def copyPort(self, otherPort):
+    def copy_port(self, other_port: ProvidePort | RequirePort):
         """
         Adds a copy of a port (from another component)
         """
-        self.append(otherPort.copy())
+        self.append(other_port.copy())
 
-    def mirrorPort(self, otherPort):
+    def mirror_port(self, other_port: ProvidePort | RequirePort):
         """
         Adds a mirrored copy of a port (from another component)
         """
-        self.append(otherPort.mirror())
+        self.append(other_port.mirror())
+
 
 class AtomicSoftwareComponent(ComponentType):
     """
     base class for ApplicationSoftwareComponent and ComplexDeviceDriverComponent
     """
-    def __init__(self,name,parent=None):
-        super().__init__(name,parent)
-        self.behavior=None
-        self.implementation=None
 
-    def find(self,ref):
-        ws = self.rootWS()
-        ref=ref.partition('/')
-        for port in self.requirePorts:
+    def __init__(self, name: str, parent: ArObject | None = None):
+        super().__init__(name, parent)
+        self.behavior: InternalBehaviorCommon | None = None
+        self.implementation: SwcImplementation | None = None
+
+    def find(self, ref: str, **kwargs):
+        ws = self.root_ws()
+        ref = ref.partition('/')
+        for port in self.require_ports:
             if port.name == ref[0]:
                 return port
-        for port in self.providePorts:
+        for port in self.provide_ports:
             if port.name == ref[0]:
                 return port
         if (ws is not None) and (ws.version >= 4.0) and (self.behavior is not None):
             if self.behavior.name == ref[0]:
-                if len(ref[2])>0:
+                if len(ref[2]) > 0:
                     return self.behavior.find(ref[2])
                 else:
                     return self.behavior
@@ -197,57 +202,70 @@ class AtomicSoftwareComponent(ComponentType):
 
 
 class ApplicationSoftwareComponent(AtomicSoftwareComponent):
+    @staticmethod
+    def tag(version: float | None = None):
+        if version is not None and version >= 4.0:
+            return 'APPLICATION-SW-COMPONENT-TYPE'
+        return 'APPLICATION-SOFTWARE-COMPONENT-TYPE'
 
-    def tag(self,version=None): return 'APPLICATION-SW-COMPONENT-TYPE' if version>=4.0 else 'APPLICATION-SOFTWARE-COMPONENT-TYPE'
+    def __init__(self, name, parent=None):
+        super().__init__(name, parent)
 
-    def __init__(self,name,parent=None):
-        super().__init__(name,parent)
 
 class ComplexDeviceDriverComponent(AtomicSoftwareComponent):
-    def tag(self,version=None): return 'COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE' if version>=4.0 else 'COMPLEX-DEVICE-DRIVER-COMPONENT-TYPE'
+    @staticmethod
+    def tag(version: float | None = None):
+        if version is not None and version >= 4.0:
+            return 'COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE'
+        return 'COMPLEX-DEVICE-DRIVER-COMPONENT-TYPE'
 
-    def __init__(self,name,parent=None):
-        super().__init__(name,parent)
+    def __init__(self, name, parent=None):
+        super().__init__(name, parent)
+
 
 class ServiceComponent(AtomicSoftwareComponent):
-    def tag(self,version=None):
-        if version < 4.0:
-            return "SERVICE-COMPONENT-TYPE"
-        else:
-            return "SERVICE-SW-COMPONENT-TYPE"
+    @staticmethod
+    def tag(version: float | None = None):
+        if version is not None and version >= 4.0:
+            return 'SERVICE-COMPONENT-TYPE'
+        return 'SERVICE-SW-COMPONENT-TYPE'
 
-    def __init__(self,name,parent=None):
-        super().__init__(name,parent)
+    def __init__(self, name, parent=None):
+        super().__init__(name, parent)
+
 
 class ParameterComponent(AtomicSoftwareComponent):
-    def tag(self,version=None):
-        if version < 4.0:
-            return "CALPRM-COMPONENT-TYPE"
-        else:
-            return "PARAMETER-SW-COMPONENT-TYPE"
+    @staticmethod
+    def tag(version: float | None = None):
+        if version is not None and version >= 4.0:
+            return 'CALPRM-COMPONENT-TYPE'
+        return 'PARAMETER-SW-COMPONENT-TYPE'
 
-    def __init__(self,name,parent=None):
-        super().__init__(name,parent)
+    def __init__(self, name, parent=None):
+        super().__init__(name, parent)
 
 
 class SensorActuatorComponent(AtomicSoftwareComponent):
-    def tag(self,version=None):
+    @staticmethod
+    def tag(*_):
         return "SENSOR-ACTUATOR-SW-COMPONENT-TYPE"
 
     def __init__(self, name, parent=None):
         super().__init__(name, parent)
 
+
 class NvBlockComponent(AtomicSoftwareComponent):
-    def tag(self,version=None):
+    @staticmethod
+    def tag(*_):
         return "NV-BLOCK-SW-COMPONENT-TYPE"
 
     def __init__(self, name, parent=None):
         super().__init__(name, parent)
-        self.nvBlockDescriptors = []
+        self.nv_block_descriptors = []
 
-    def find(self, ref):
-        parts=ref.partition('/')
-        for elem in self.nvBlockDescriptors:
+    def find(self, ref, **kwargs):
+        parts = ref.partition('/')
+        for elem in self.nv_block_descriptors:
             if elem.name == parts[0]:
                 if len(parts[2]) > 0:
                     return elem.find(parts[2])
@@ -255,353 +273,435 @@ class NvBlockComponent(AtomicSoftwareComponent):
                     return elem
         return super().find(ref)
 
+
 class CompositionComponent(ComponentType):
     """
     Composition Component
     """
-    def __init__(self,name,parent=None):
-        super().__init__(name,parent)
-        self.components = []
-        self.assemblyConnectors = []
-        self.delegationConnectors = []
-        self.dataTypeMappingRefs = []
 
-    def tag(self,version): return 'COMPOSITION-SW-COMPONENT-TYPE' if version >= 4.0 else 'COMPOSITION-TYPE'
+    @staticmethod
+    def tag(version: float | None = None):
+        if version is not None and version >= 4.0:
+            return 'COMPOSITION-SW-COMPONENT-TYPE'
+        return 'COMPOSITION-TYPE'
 
-    def find(self, ref):
-        parts=ref.partition('/')
+    def __init__(self, name: str, parent: ArObject | None = None):
+        super().__init__(name, parent)
+        self.components: list[ComponentPrototype] = []
+        self.assembly_connectors: list[AssemblyConnector] = []
+        self.delegation_connectors: list[DelegationConnector] = []
+        self.data_type_mapping_refs: list[str] = []
+
+    def find(self, ref: str, **kwargs):
+        parts = ref.partition('/')
         for elem in self.components:
             if elem.name == parts[0]:
                 return elem
-        for elem in self.assemblyConnectors:
+        for elem in self.assembly_connectors:
             if elem.name == parts[0]:
                 return elem
-        for elem in self.delegationConnectors:
+        for elem in self.delegation_connectors:
             if elem.name == parts[0]:
                 return elem
         return super().find(ref)
 
-
-    def createComponentRef(self, componentRef):
+    def create_component_ref(self, component_ref: str):
         """
         Alias for createComponentPrototype
         """
-        return self.createComponentPrototype(componentRef)
+        return self.create_component_prototype(component_ref)
 
-    def createComponentPrototype(self, componentRef, name = None):
+    def create_component_prototype(self, component_ref: str, name: str | None = None):
         """
         creates a new ComponentPrototype object and appends it to the CompositionComponent
         """
-        ws = self.rootWS()
-        component = ws.find(componentRef, role='ComponentType')
+        ws = self.root_ws()
+        component = ws.find(component_ref)
         if component is None:
-            raise ValueError('invalid reference: '+componentRef)
+            raise ValueError('invalid reference: ' + component_ref)
         if name is None:
             name = component.name
         elem = ComponentPrototype(name, component.ref, self)
         self.components.append(elem)
         return elem
 
-    def createConnector(self, portRef1, portRef2):
+    def create_connector(self, port_ref_1: str, port_ref_2: str):
         """
         creates a connector between an inner and outer port or between two inner ports
         portRef1 and portRef2 can be of either formats:
         'componentName/portName', 'portName' or 'componentRef/portName'
         """
-        ws = self.rootWS()
+        ws = self.root_ws()
         assert (ws is not None)
-        port1, component1 = self._analyzePortRef(ws, portRef1)
-        port2, component2 = self._analyzePortRef(ws, portRef2)
+        port1, component1 = self._analyze_port_ref(ws, port_ref_1)
+        port2, component2 = self._analyze_port_ref(ws, port_ref_2)
 
         if isinstance(component1, ComponentPrototype) and isinstance(component2, ComponentPrototype):
-            #create an assembly port between the two ports
-            providePort=None
-            requirePort=None
-            if isinstance(port1, autosar.port.RequirePort) and isinstance(port2, autosar.port.ProvidePort):
-                requesterComponent, providerComponent = component1, component2
-                requirePort, providePort = port1, port2
-            elif isinstance(port2, autosar.port.RequirePort) and isinstance(port1, autosar.port.ProvidePort):
-                requesterComponent, providerComponent = component2, component1
-                requirePort, providePort = port2, port1
-            elif isinstance(port2, autosar.port.RequirePort) and isinstance(port1, autosar.port.RequirePort):
-                raise ValueError('cannot create assembly connector between two require ports')
+            # create an assembly port between the two ports
+            if isinstance(port1, RequirePort) and isinstance(port2, ProvidePort):
+                requester_component, provider_component = component1, component2
+                require_port, provide_port = port1, port2
+            elif isinstance(port2, RequirePort) and isinstance(port1, ProvidePort):
+                requester_component, provider_component = component2, component1
+                require_port, provide_port = port2, port1
+            elif isinstance(port2, RequirePort) and isinstance(port1, RequirePort):
+                raise ValueError('Cannot create assembly connector between two require ports')
             else:
-                raise ValueError('cannot create assembly connector between two provide ports')
-            return self._createAssemblyPortInternal(providerComponent, providePort, requesterComponent, requirePort)
+                raise ValueError('Cannot create assembly connector between two provide ports')
+            return self._create_assembly_port_internal(provider_component, provide_port, requester_component, require_port)
         elif isinstance(component1, ComponentPrototype):
-            #create a delegation port between port1 and port2
-            innerComponent, innerPort=component1,port1
-            outerPort = port2
+            # create a delegation port between port1 and port2
+            inner_component, inner_port = component1, port1
+            outer_port = port2
         elif component1 is self and isinstance(component2, ComponentPrototype):
-            #create a delegation port between port1 and port2
-            innerComponent, innerPort=component2, port2
-            outerPort = port1
+            # create a delegation port between port1 and port2
+            inner_component, inner_port = component2, port2
+            outer_port = port1
         else:
-            raise ValueError('invalid connector arguments ("%s", "%s")'%(portRef1, portRef2))
-        #create delegation connector
-        return self._createDelegationConnectorInternal(innerComponent, innerPort, outerPort)
+            raise ValueError(f'Invalid connector arguments ("{port_ref_1}", "{port_ref_2}")')
+        # create delegation connector
+        return self._create_delegation_connector_internal(inner_component, inner_port, outer_port)
 
-    def _createAssemblyPortInternal(self, providerComponent, providePort, requesterComponent, requirePort):
-        connectorName='_'.join([providerComponent.name, providePort.name, requesterComponent.name, requirePort.name])
-        connector = AssemblyConnector(connectorName, ProviderInstanceRef(providerComponent.ref,providePort.ref), RequesterInstanceRef(requesterComponent.ref,requirePort.ref))
-        if self.find(connectorName) is not None:
-            raise ValueError('connector "%s" already exists'%connectorName)
-        self.assemblyConnectors.append(connector)
+    def _create_assembly_port_internal(
+            self,
+            provider_component: ComponentPrototype,
+            provide_port: ProvidePort,
+            requester_component: ComponentPrototype,
+            require_port: RequirePort,
+    ):
+        connector_name = '_'.join([provider_component.name, provide_port.name, requester_component.name, require_port.name])
+        connector = AssemblyConnector(
+            connector_name,
+            ProviderInstanceRef(provider_component.ref, provide_port.ref),
+            RequesterInstanceRef(requester_component.ref, require_port.ref),
+        )
+        if self.find(connector_name) is not None:
+            raise ValueError(f'Connector "{connector_name}" already exists')
+        self.assembly_connectors.append(connector)
         return connector
 
-    def _createDelegationConnectorInternal(self, innerComponent, innerPort, outerPort):
-        if isinstance(outerPort, autosar.port.ProvidePort):
-            connectorName = '_'.join([innerComponent.name, innerPort.name, outerPort.name])
+    def _create_delegation_connector_internal(
+            self,
+            inner_component: ComponentPrototype,
+            inner_port: Port,
+            outer_port: Port,
+    ):
+        if isinstance(outer_port, ProvidePort):
+            connector_name = '_'.join([inner_component.name, inner_port.name, outer_port.name])
         else:
-            connectorName = '_'.join([outerPort.name, innerComponent.name, innerPort.name])
-        connector = DelegationConnector(connectorName, InnerPortInstanceRef(innerComponent.ref, innerPort.ref), OuterPortRef(outerPort.ref))
-        self.delegationConnectors.append(connector)
+            connector_name = '_'.join([outer_port.name, inner_component.name, inner_port.name])
+        connector = DelegationConnector(
+            connector_name,
+            InnerPortInstanceRef(inner_component.ref, inner_port.ref),
+            OuterPortRef(outer_port.ref),
+        )
+        self.delegation_connectors.append(connector)
         return connector
 
-    def _analyzePortRef(self, ws, portRef):
-        parts=autosar.base.splitRef(portRef)
-        if len(parts)>1:
-            if len(parts)==2:
-                #assume format 'componentName/portName' where componentName is an inner component
-                port=None
-                for innerComponent in self.components:
-                    component = ws.find(innerComponent.typeRef)
+    def _analyze_port_ref(self, ws, port_ref: str):
+        parts = split_ref(port_ref)
+        if len(parts) > 1:
+            if len(parts) == 2:
+                # assume format 'componentName/portName' where componentName is an inner component
+                for inner_component in self.components:
+                    component = ws.find(inner_component.type_ref)
                     if component is None:
-                        raise ValueError('invalid reference: '+innerComponent.typeRef)
+                        raise ValueError(f'Invalid reference: {inner_component.type_ref}')
                     if component.name == parts[0]:
                         port = component.find(parts[1])
-                        component = innerComponent
                         if port is None:
-                            raise ValueError('Component "{0}" does not seem to have port with name "{1}"'.format(component.name, parts[1]))
-                        break
-            else:
-                #assume portRef is a full reference
-                port = ws.find(portRef)
-                if port is None:
-                    raise autosar.base.InvalidPortRef(portRef)
-                if not isinstance(port, autosar.port.Port):
-                    raise ValueError('Reference "{0}" is not a port or duplicate references exists in the workspace'.format(parts[0]))
-                parentRef = port.parent.ref
-                for innerComponent in self.components:
-                    if innerComponent.typeRef == parentRef:
-                        component = innerComponent
+                            raise ValueError(f'Component "{component.name}" does not seem to have port with name "{parts[1]}"')
+                        component = inner_component
                         break
                 else:
-                    raise ValueError('Reference "{0}" does not seem to be a port where the (parent) component is part of this composition'.format(portRef))
+                    raise ValueError(f'Component with port ref "{port_ref}" not found')
+            else:
+                # assume portRef is a full reference
+                port = ws.find(port_ref)
+                if port is None:
+                    raise InvalidPortRef(port_ref)
+                if not isinstance(port, Port):
+                    raise ValueError(f'Reference "{parts[0]}" is not a port or duplicate references exists in the workspace')
+                parent_ref = port.parent.ref
+                for inner_component in self.components:
+                    if inner_component.type_ref == parent_ref:
+                        component = inner_component
+                        break
+                else:
+                    raise ValueError(f'Reference "{port_ref}" does not seem to be a port where the (parent) component is part of this composition')
         else:
             port = self.find(parts[0])
-            component=self
+            component = self
         if port is None:
-            raise ValueError('Component "{0}" does not seem to have port with name "{1}"'.format(component.name, parts[0]))
-        if not isinstance(port, autosar.port.Port):
-            raise ValueError('Port name "{0}" is ambiguous. This might be due to duplicate references exists in the workspace '.format(parts[0]))
+            raise ValueError(f'Component "{component.name}" does not seem to have port with name "{parts[0]}"')
+        if not isinstance(port, Port):
+            raise ValueError(f'Port name "{parts[0]}" is ambiguous. This might be due to duplicate references exists in the workspace')
         return port, component
 
-    def autoConnect(self):
+    def auto_connect(self):
         """
         Connect ports with matching names and matching port interface references
         """
-        ws = self.rootWS()
+        ws = self.root_ws()
         assert (ws is not None)
-        inner_require_port_map, inner_provide_port_map = self._buildInnerPortMap(ws)
-        self._autoCreateAssemblyConnectors(inner_require_port_map, inner_provide_port_map)
-        self._autoCreateDelegationConnectors(inner_require_port_map, inner_provide_port_map)
+        inner_require_port_map, inner_provide_port_map = self._build_inner_port_map(ws)
+        self._auto_create_assembly_connectors(inner_require_port_map, inner_provide_port_map)
+        self._auto_create_delegation_connectors(inner_require_port_map, inner_provide_port_map)
 
-    def _buildInnerPortMap(self, ws):
+    def _build_inner_port_map(self, ws) -> tuple[
+        dict[str, list[tuple[ComponentPrototype, RequirePort]]],
+        dict[str, list[tuple[ComponentPrototype, ProvidePort]]],
+    ]:
         require_ports = {}
         provide_ports = {}
-        #build inner map
-        for innerComponent in self.components:
-            actualComponent = ws.find(innerComponent.typeRef)
-            if actualComponent is None:
-                raise ValueError('invalid reference: '+innerComponent.typeRef)
-            for innerPort in actualComponent.requirePorts:
-                if innerPort.name not in require_ports:
-                    require_ports[innerPort.name] = []
-                require_ports[innerPort.name].append((innerComponent, innerPort))
-            for innerPort in actualComponent.providePorts:
-                if innerPort.name not in provide_ports:
-                    provide_ports[innerPort.name] = []
-                provide_ports[innerPort.name].append((innerComponent, innerPort))
+        # build inner map
+        for inner_component in self.components:
+            actual_component = ws.find(inner_component.type_ref)
+            if actual_component is None:
+                raise ValueError(f'Invalid reference: {inner_component.type_ref}')
+            for inner_port in actual_component.require_ports:
+                if inner_port.name not in require_ports:
+                    require_ports[inner_port.name] = []
+                require_ports[inner_port.name].append((inner_component, inner_port))
+            for inner_port in actual_component.provide_ports:
+                if inner_port.name not in provide_ports:
+                    provide_ports[inner_port.name] = []
+                provide_ports[inner_port.name].append((inner_component, inner_port))
         return require_ports, provide_ports
 
-    def _autoCreateAssemblyConnectors(self, inner_require_port_map, inner_provide_port_map):
+    def _auto_create_assembly_connectors(
+            self,
+            inner_require_port_map: dict[str, list[tuple[ComponentPrototype, RequirePort]]],
+            inner_provide_port_map: dict[str, list[tuple[ComponentPrototype, ProvidePort]]],
+    ):
         for name in sorted(inner_provide_port_map.keys()):
-            if len(inner_provide_port_map[name])>1:
-                print("Warning: Multiple components are providing the same port '%s': "%name+', '.join([x[0].name for x in inner_provide_port_map[name]]), file=sys.stderr)
-            (providerComponent, providePort) = inner_provide_port_map[name][0]
+            if len(inner_provide_port_map[name]) > 1:
+                self._logger.warning(f'Multiple components are providing the same port "{name}: '
+                                     f'{", ".join(x.name for x, _ in inner_provide_port_map[name])}"')
+            provider_component, provide_port = inner_provide_port_map[name][0]
             if name in inner_require_port_map:
-                for (requesterComponent, requirePort) in inner_require_port_map[name]:
-                    if requirePort.portInterfaceRef == providePort.portInterfaceRef:
-                        self._createAssemblyPortInternal(providerComponent, providePort, requesterComponent, requirePort)
+                for requester_component, require_port in inner_require_port_map[name]:
+                    if require_port.port_interface_ref == provide_port.port_interface_ref:
+                        self._create_assembly_port_internal(provider_component, provide_port, requester_component, require_port)
 
-    def _autoCreateDelegationConnectors(self, inner_require_port_map, inner_provide_port_map):
-        for outerPort in sorted(self.providePorts, key=lambda x: x.name):
-            if outerPort.name and outerPort.name in inner_provide_port_map:
-                for (innerComponent, innerPort) in inner_provide_port_map[outerPort.name]:
-                    if innerPort.portInterfaceRef == outerPort.portInterfaceRef:
-                        self._createDelegationConnectorInternal(innerComponent, innerPort, outerPort)
-        for outerPort in sorted(self.requirePorts, key=lambda x: x.name):
-            if outerPort.name and outerPort.name in inner_require_port_map:
-                for (innerComponent, innerPort) in inner_require_port_map[outerPort.name]:
-                    if innerPort.portInterfaceRef == outerPort.portInterfaceRef:
-                        self._createDelegationConnectorInternal(innerComponent, innerPort, outerPort)
+    def _auto_create_delegation_connectors(
+            self,
+            inner_require_port_map: dict[str, list[tuple[ComponentPrototype, RequirePort]]],
+            inner_provide_port_map: dict[str, list[tuple[ComponentPrototype, ProvidePort]]],
+    ):
+        for outer_port in sorted(self.provide_ports, key=lambda x: x.name):
+            if outer_port.name and outer_port.name in inner_provide_port_map:
+                for inner_component, inner_port in inner_provide_port_map[outer_port.name]:
+                    if inner_port.port_interface_ref == outer_port.port_interface_ref:
+                        self._create_delegation_connector_internal(inner_component, inner_port, outer_port)
+        for outer_port in sorted(self.require_ports, key=lambda x: x.name):
+            if outer_port.name and outer_port.name in inner_require_port_map:
+                for inner_component, inner_port in inner_require_port_map[outer_port.name]:
+                    if inner_port.port_interface_ref == outer_port.port_interface_ref:
+                        self._create_delegation_connector_internal(inner_component, inner_port, outer_port)
 
-    def findUnconnectedPorts(self):
+    def find_unconnected_ports(self):
         """
         Returns a list unconnected ports found in this composition
         """
-        ws = self.rootWS()
+        ws = self.root_ws()
         assert (ws is not None)
         unconnected = []
-        inner_require_port_map, inner_provide_port_map = self._buildInnerPortMap(ws)
+        inner_require_port_map, inner_provide_port_map = self._build_inner_port_map(ws)
         for name in sorted(inner_provide_port_map.keys()):
-            for (innerComponent, providePort) in inner_provide_port_map[name]:
-                if self._isUnconnectedPortInner(ws, providePort):
-                    unconnected.append(providePort)
+            for inner_component, provide_port in inner_provide_port_map[name]:
+                if self._is_unconnected_port_inner(ws, provide_port):
+                    unconnected.append(provide_port)
         for name in sorted(inner_require_port_map.keys()):
-            for (innerComponent, requirePort) in inner_require_port_map[name]:
-                if self._isUnconnectedPortInner(ws, requirePort):
-                    unconnected.append(requirePort)
-        for port in sorted(self.providePorts,key=lambda x: x.name)+sorted(self.requirePorts,key=lambda x: x.name):
-            if self._isUnconnectedPortOuter(ws, port):
+            for inner_component, require_port in inner_require_port_map[name]:
+                if self._is_unconnected_port_inner(ws, require_port):
+                    unconnected.append(require_port)
+        all_ports = [*sorted(self.provide_ports, key=lambda x: x.name), *sorted(self.require_ports, key=lambda x: x.name)]
+        for port in all_ports:
+            if self._is_unconnected_port_outer(ws, port):
                 unconnected.append(port)
         return unconnected
 
-    def _isUnconnectedPortInner(self, ws, innerPort):
-        innerPortRef = innerPort.ref
-        portInterface = ws.find(innerPort.portInterfaceRef)
-        if portInterface is None:
-            raise ValueError('invalid reference: '+innerPort.portInterfaceRef)
-        if not isinstance(portInterface, autosar.portinterface.SenderReceiverInterface):
+    def _is_unconnected_port_inner(self, ws, inner_port: Port):
+        inner_port_ref = inner_port.ref
+        port_interface = ws.find(inner_port.port_interface_ref)
+        if port_interface is None:
+            raise ValueError(f'Invalid reference: {inner_port.port_interface_ref}')
+        if not isinstance(port_interface, SenderReceiverInterface):
             return False
-        for connector in self.assemblyConnectors:
-            if (connector.providerInstanceRef.portRef == innerPortRef) or (connector.requesterInstanceRef.portRef == innerPortRef):
+        for connector in self.assembly_connectors:
+            if (connector.provider_instance_ref.port_ref == inner_port_ref) or (connector.requester_instance_ref.port_ref == inner_port_ref):
                 return False
-        for connector in self.delegationConnectors:
-            if connector.innerPortInstanceRef.portRef == innerPortRef:
+        for connector in self.delegation_connectors:
+            if connector.inner_port_instance_ref.port_ref == inner_port_ref:
                 return False
         return True
 
-    def _isUnconnectedPortOuter(self, ws, outerPort):
-        outerPortRef = outerPort.ref
-        portInterface = ws.find(outerPort.portInterfaceRef)
-        if portInterface is None:
-            raise ValueError('invalid reference: '+outerPort.portInterfaceRef)
-        if not isinstance(portInterface, autosar.portinterface.SenderReceiverInterface):
+    def _is_unconnected_port_outer(self, ws, outer_port: Port):
+        outer_port_ref = outer_port.ref
+        port_interface = ws.find(outer_port.port_interface_ref)
+        if port_interface is None:
+            raise ValueError(f'Invalid reference: {outer_port.port_interface_ref}')
+        if not isinstance(port_interface, SenderReceiverInterface):
             return False
-        for connector in self.delegationConnectors:
-            if connector.outerPortRef.portRef == outerPortRef:
+        for connector in self.delegation_connectors:
+            if connector.outer_port_ref.port_ref == outer_port_ref:
                 return False
         return True
 
-    def findMappedDataTypeRef(self, applicationDataTypeRef):
+    def find_mapped_data_type_ref(self, application_data_type_ref: str):
         """
         Returns a reference to the mapped implementation data type or None if not in map
         """
-        ws = self.rootWS()
-        assert(ws is not None)
-        alreadyProcessed = set()
-        for mappingRef in self.dataTypeMappingRefs:
-            if mappingRef in alreadyProcessed:
+        ws = self.root_ws()
+        assert (ws is not None)
+        already_processed = set()
+        for mapping_ref in self.data_type_mapping_refs:
+            if mapping_ref in already_processed:
                 continue
             else:
-                alreadyProcessed.add(mappingRef)
-                mappingSet = ws.find(mappingRef)
-                if mappingSet is None:
-                    raise autosar.base.InvalidMappingRef()
-                typeRef = mappingSet.findMappedDataTypeRef(applicationDataTypeRef)
-                if typeRef is not None:
-                    return typeRef
+                already_processed.add(mapping_ref)
+                mapping_set = ws.find(mapping_ref)
+                if mapping_set is None:
+                    raise InvalidMappingRef()
+                type_ref = mapping_set.find_mapped_data_type_ref(application_data_type_ref)
+                if type_ref is not None:
+                    return type_ref
         return None
 
-class ComponentPrototype(Element):
-    def __init__(self,name,typeRef,parent=None):
-        super().__init__(name,parent)
-        self.typeRef=typeRef
 
-    def tag(self, version=None): return 'SW-COMPONENT-PROTOTYPE' if version >= 4.0 else'COMPONENT-PROTOTYPE'
+class ComponentPrototype(Element):
+    parent: CompositionComponent
+
+    @staticmethod
+    def tag(version: float | None = None):
+        if version is not None and version >= 4.0:
+            return 'SW-COMPONENT-PROTOTYPE'
+        return 'COMPONENT-PROTOTYPE'
+
+    def __init__(self, name: str, type_ref: str, parent: CompositionComponent | None = None):
+        super().__init__(name, parent)
+        self.type_ref = type_ref
+
 
 class ProviderInstanceRef:
     """
     <PROVIDER-IREF>
     """
-    def __init__(self,componentRef, portRef):
-        self.componentRef=componentRef
-        self.portRef=portRef
-    def asdict(self):
-        return {'type': self.__class__.__name__,'componentRef':self.componentRef,'portRef':self.portRef}
-    def tag(self, version=None):
+
+    @staticmethod
+    def tag(*_):
         return 'PROVIDER-IREF'
+
+    def __init__(self, component_ref: str, port_ref: str):
+        self.component_ref = component_ref
+        self.port_ref = port_ref
+
+    def asdict(self):
+        return {'type': self.__class__.__name__, 'componentRef': self.component_ref, 'portRef': self.port_ref}
 
 
 class RequesterInstanceRef:
     """
     <REQUESTER-IREF>
     """
-    def __init__(self,componentRef, portRef):
-        self.componentRef=componentRef
-        self.portRef=portRef
-    def asdict(self):
-        return {'type': self.__class__.__name__,'componentRef':self.componentRef,'portRef':self.portRef}
-    def tag(self, version=None):
+
+    @staticmethod
+    def tag(*_):
         return 'REQUESTER-IREF'
+
+    def __init__(self, component_ref: str, port_ref: str):
+        self.component_ref = component_ref
+        self.port_ref = port_ref
+
+    def asdict(self):
+        return {'type': self.__class__.__name__, 'componentRef': self.component_ref, 'portRef': self.port_ref}
 
 
 class InnerPortInstanceRef:
     """
     <INNER-PORT-IREF>
     """
-    def __init__(self,componentRef,portRef):
-        self.componentRef=componentRef
-        self.portRef=portRef
-    def asdict(self):
-        return {'type': self.__class__.__name__,'componentRef':self.componentRef,'portRef':self.portRef}
-    def tag(self, version=None):
+
+    @staticmethod
+    def tag(*_):
         return 'INNER-PORT-IREF'
+
+    def __init__(self, component_ref: str, port_ref: str):
+        self.component_ref = component_ref
+        self.port_ref = port_ref
+
+    def asdict(self):
+        return {'type': self.__class__.__name__, 'componentRef': self.component_ref, 'portRef': self.port_ref}
 
 
 class OuterPortRef:
     """
     <OUTER-PORT-REF>
     """
-    def __init__(self,portRef):
-        self.portRef=portRef
-    def asdict(self):
-        return {'type': self.__class__.__name__, 'portRef':self.portRef}
-    def tag(self, version=None):
+
+    @staticmethod
+    def tag(*_):
         return 'OUTER-PORT-REF'
+
+    def __init__(self, port_ref: str):
+        self.port_ref = port_ref
+
+    def asdict(self):
+        return {'type': self.__class__.__name__, 'portRef': self.port_ref}
 
 
 class AssemblyConnector(Element):
     """
     <ASSEMBLY-CONNECTOR-PROTOTYPE>
     """
-    def __init__(self,name,providerInstanceRef,requesterInstanceRef,parent=None):
-        assert(isinstance(providerInstanceRef,ProviderInstanceRef))
-        assert(isinstance(requesterInstanceRef,RequesterInstanceRef))
-        super().__init__(name, parent)
-        self.providerInstanceRef=providerInstanceRef
-        self.requesterInstanceRef=requesterInstanceRef
-    def asdict(self):
-        return {'type': self.__class__.__name__,'providerInstanceRef':self.providerInstanceRef.asdict(),'requesterInstanceRef':self.requesterInstanceRef.asdict()}
 
-    def tag(self, version):
-        return 'ASSEMBLY-SW-CONNECTOR' if version >= 4.0 else 'ASSEMBLY-CONNECTOR-PROTOTYPE'
+    @staticmethod
+    def tag(version: float | None = None):
+        if version is not None and version >= 4.0:
+            return 'ASSEMBLY-SW-CONNECTOR'
+        return 'ASSEMBLY-CONNECTOR-PROTOTYPE'
+
+    def __init__(
+            self,
+            name: str,
+            provider_instance_ref: ProviderInstanceRef,
+            requester_instance_ref: RequesterInstanceRef,
+            parent: ArObject | None = None,
+    ):
+        assert (isinstance(provider_instance_ref, ProviderInstanceRef))
+        assert (isinstance(requester_instance_ref, RequesterInstanceRef))
+        super().__init__(name, parent)
+        self.provider_instance_ref = provider_instance_ref
+        self.requester_instance_ref = requester_instance_ref
+
+    def asdict(self):
+        return {'type': self.__class__.__name__, 'providerInstanceRef': self.provider_instance_ref.asdict(), 'requesterInstanceRef': self.requester_instance_ref.asdict()}
 
 
 class DelegationConnector(Element):
     """
     <DELEGATION-CONNECTOR-PROTOTYPE>
     """
-    def __init__(self, name, innerPortInstanceRef, outerPortRef, parent=None):
-        assert(isinstance(innerPortInstanceRef,InnerPortInstanceRef))
-        assert(isinstance(outerPortRef,OuterPortRef))
+
+    @staticmethod
+    def tag(version: float | None = None):
+        if version is not None and version >= 4.0:
+            return 'DELEGATION-SW-CONNECTOR'
+        return 'DELEGATION-CONNECTOR-PROTOTYPE'
+
+    def __init__(
+            self,
+            name: str,
+            inner_port_instance_ref: InnerPortInstanceRef,
+            outer_port_ref: OuterPortRef,
+            parent: ArObject | None = None,
+    ):
+        assert (isinstance(inner_port_instance_ref, InnerPortInstanceRef))
+        assert (isinstance(outer_port_ref, OuterPortRef))
         super().__init__(name, parent)
-        self.innerPortInstanceRef = innerPortInstanceRef
-        self.outerPortRef = outerPortRef
+        self.inner_port_instance_ref = inner_port_instance_ref
+        self.outer_port_ref = outer_port_ref
 
     def asdict(self):
-        return {'type': self.__class__.__name__,'innerPortInstanceRef':self.innerPortInstanceRef.asdict()}
-
-    def tag(self, version): return 'DELEGATION-SW-CONNECTOR' if version >= 4.0 else 'DELEGATION-CONNECTOR-PROTOTYPE'
+        return {'type': self.__class__.__name__, 'innerPortInstanceRef': self.inner_port_instance_ref.asdict()}

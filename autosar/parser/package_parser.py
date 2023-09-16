@@ -1,65 +1,66 @@
-import autosar.package
-import autosar.element
-import autosar.parser.parser_base
-import sys
-from autosar.base import parseTextNode
+from autosar.base import parse_text_node
+from autosar.element import Element
+from autosar.has_logger import HasLogger
+from autosar.package import Package
+from autosar.parser.parser_base import ElementParser
 
-class PackageParser:
-    def __init__(self,version):
-        assert(isinstance(version, float))
-        self.version=version
-        self.registeredParsers={}
-        self.switcher={}
 
-    def registerElementParser(self, elementParser):
+class PackageParser(HasLogger):
+    def __init__(self, version: float, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert (isinstance(version, float))
+        self.version = version
+        self.registered_parsers: dict[str, ElementParser] = {}
+        self.switcher: dict[str, ElementParser] = {}
+
+    def register_element_parser(self, element_parser: ElementParser):
         """
         Registers a new element parser into the package parser
         """
-        assert(isinstance(elementParser, autosar.parser.parser_base.ElementParser))
-        name = type(elementParser).__name__
-        if name not in self.registeredParsers:
-            for tagname in elementParser.getSupportedTags():
-                self.switcher[tagname]=elementParser
-            self.registeredParsers[name] = elementParser
+        assert (isinstance(element_parser, ElementParser))
+        name = type(element_parser).__name__
+        if name not in self.registered_parsers:
+            for tag_name in element_parser.get_supported_tags():
+                self.switcher[tag_name] = element_parser
+            self.registered_parsers[name] = element_parser
 
-    def loadXML(self, package, xmlRoot):
+    def load_xml(self, package: Package, xml_root):
         """
         Loads an XML package by repeatedly invoking its registered element parsers
         """
-        assert(self.switcher is not None)
-        if xmlRoot.find('ELEMENTS'):
-            elementNames = set([x.name for x in package.elements])
-            for xmlElement in xmlRoot.findall('./ELEMENTS/*'):
-                parserObject = self.switcher.get(xmlElement.tag)
-                if parserObject is not None:
-                    element = parserObject.parseElement(xmlElement,package)
+        assert (self.switcher is not None)
+        if xml_root.find('ELEMENTS'):
+            element_names = set([x.name for x in package.elements])
+            for xml_element in xml_root.findall('./ELEMENTS/*'):
+                parser_object = self.switcher.get(xml_element.tag)
+                if parser_object is not None:
+                    element = parser_object.parse_element(xml_element, package)
                     if element is None:
-                        print("[PackageParser] No return value: %s"%xmlElement.tag)
+                        self._logger.warning(f'No return value: {xml_element.tag}')
                         continue
-                    element.parent=package
-                    if isinstance(element,autosar.element.Element):
-                        if element.name not in elementNames:
-                            #ignore duplicated items
+                    element.parent = package
+                    if isinstance(element, Element):
+                        if element.name not in element_names:
+                            # ignore duplicated items
                             package.append(element)
-                            elementNames.add(element.name)
+                            element_names.add(element.name)
                     else:
-                        #raise ValueError("parse error: %s"%type(element))
-                        raise ValueError("parse error: %s"%xmlElement.tag)
+                        raise ValueError(f'Parse error: {xml_element.tag}')
                 else:
-                    package.unhandledParser.add(xmlElement.tag)
+                    package.unhandled_parser.add(xml_element.tag)
 
-        if self.version >= 3.0 and self.version < 4.0:
-            if xmlRoot.find('SUB-PACKAGES'):
-                for xmlPackage in xmlRoot.findall('./SUB-PACKAGES/AR-PACKAGE'):
-                    name = xmlPackage.find("./SHORT-NAME").text
-                    subPackage = autosar.package.Package(name)
-                    package.append(subPackage)
-                    self.loadXML(subPackage,xmlPackage)
+        if 3.0 <= self.version < 4.0:
+            if xml_root.find('SUB-PACKAGES'):
+                for xml_package in xml_root.findall('./SUB-PACKAGES/AR-PACKAGE'):
+                    name = xml_package.find("./SHORT-NAME").text
+                    sub_package = Package(name)
+                    package.append(sub_package)
+                    self.load_xml(sub_package, xml_package)
         elif self.version >= 4.0:
-            for subPackageXML in xmlRoot.findall('./AR-PACKAGES/AR-PACKAGE'):
-                name = parseTextNode(subPackageXML.find("./SHORT-NAME"))
-                subPackage = package.find(name)
-                if subPackage is None:
-                    subPackage = autosar.package.Package(name)
-                    package.append(subPackage)
-                self.loadXML(subPackage, subPackageXML)
+            for sub_package_xml in xml_root.findall('./AR-PACKAGES/AR-PACKAGE'):
+                name = parse_text_node(sub_package_xml.find("./SHORT-NAME"))
+                sub_package = package.find(name)
+                if sub_package is None:
+                    sub_package = Package(name)
+                    package.append(sub_package)
+                self.load_xml(sub_package, sub_package_xml)
