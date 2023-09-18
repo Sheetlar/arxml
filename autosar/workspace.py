@@ -10,7 +10,6 @@ from autosar.base import (
     get_xml_namespace,
     remove_namespace,
     parse_autosar_version_and_schema,
-    prepare_filter,
     parse_version_string,
     create_admin_data,
 )
@@ -33,16 +32,6 @@ from autosar.parser.signal_parser import SignalParser
 from autosar.parser.some_ip_tp_parser import SomeIpTpParser
 from autosar.parser.swc_implementation_parser import SwcImplementationParser
 from autosar.parser.system_parser import SystemParser
-from autosar.writer import WorkspaceWriter
-from autosar.writer.behavior_writer import XMLBehaviorWriter, CodeBehaviorWriter
-from autosar.writer.component_writer import XMLComponentTypeWriter, CodeComponentTypeWriter
-from autosar.writer.constant_writer import XMLConstantWriter, CodeConstantWriter
-from autosar.writer.datatype_writer import XMLDataTypeWriter, CodeDataTypeWriter
-from autosar.writer.mode_writer import XMLModeWriter
-from autosar.writer.package_writer import PackageWriter
-from autosar.writer.portinterface_writer import XMLPortInterfaceWriter, CodePortInterfaceWriter
-from autosar.writer.signal_writer import SignalWriter
-from autosar.writer.writer_base import ElementWriter
 
 _valid_ws_roles = [
     'DataType',
@@ -121,7 +110,6 @@ class Workspace(ArObject):
         self.release = None if release is None else release
         self.schema = schema
         self.package_parser: PackageParser | None = None
-        self.package_writer: PackageWriter | None = None
         self.xml_root: Element | None = None
         self.attributes = attributes
         self.use_default_writers = use_default_writers
@@ -363,39 +351,6 @@ class Workspace(ArObject):
     def root_ws(self):
         return self
 
-    def save_xml(self, filename: Path, filters: str | list[str] | None = None, ignore: str | list[str] | None = None):
-        if self.package_writer is None:
-            self.package_writer = PackageWriter(self.version, self.patch)
-            if self.use_default_writers:
-                self._register_default_element_writers(self.package_writer)
-        workspace_writer = WorkspaceWriter(self.version, self.patch, self.schema, self.package_writer)
-        with open(filename, 'w', encoding="utf-8") as fp:
-            if isinstance(filters, str):
-                filters = [filters]
-            if isinstance(ignore, str):
-                filters = [ignore]
-            if filters is not None:
-                filters = [prepare_filter(x) for x in filters]
-            workspace_writer.save_xml(self, fp, filters, ignore)
-
-        if self.unhandled_writer:
-            unhandled = ', '.join(self.unhandled_writer)
-            self._logger.warning(f'Unhandled: {unhandled}')
-
-    def to_xml(self, filters: str | list[str] | None = None, ignore: str | list[str] | None = None):
-        if self.package_writer is None:
-            self.package_writer = PackageWriter(self.version, self.patch)
-            if self.use_default_writers:
-                self._register_default_element_writers(self.package_writer)
-        workspace_writer = WorkspaceWriter(self.version, self.patch, self.schema, self.package_writer)
-        if isinstance(filters, str):
-            filters = [filters]
-        if isinstance(ignore, str):
-            filters = [ignore]
-        if filters is not None:
-            filters = [prepare_filter(x) for x in filters]
-        return workspace_writer.to_xml(self, filters, ignore)
-
     def append(self, elem: Package):
         if isinstance(elem, Package):
             self.packages.append(elem)
@@ -463,16 +418,6 @@ class Workspace(ArObject):
             self._register_default_element_parsers(self.package_parser)
         self.package_parser.register_element_parser(element_parser)
 
-    def register_element_writer(self, element_writer: ElementWriter):
-        """
-        Registers a custom element parser object
-        """
-        if self.package_writer is None:
-            self.package_writer = PackageWriter(self.version, self.patch)
-            if self.use_default_writers:
-                self._register_default_element_writers(self.package_writer)
-        self.package_writer.register_element_writer(element_writer)
-
     def _register_default_element_parsers(self, parser: PackageParser):
         parser.register_element_parser(DataTypeParser(self.version))
         parser.register_element_parser(DataTypeSemanticsParser(self.version))
@@ -494,17 +439,3 @@ class Workspace(ArObject):
         parser.register_element_parser(EcuParser(self.version))
         parser.register_element_parser(CollectionParser(self.version))
         parser.register_element_parser(SomeIpTpParser(self.version))
-
-    def _register_default_element_writers(self, writer: PackageWriter):
-        writer.register_element_writer(XMLDataTypeWriter(self.version, self.patch))
-        writer.register_element_writer(XMLConstantWriter(self.version, self.patch))
-        writer.register_element_writer(XMLPortInterfaceWriter(self.version, self.patch))
-        writer.register_element_writer(XMLComponentTypeWriter(self.version, self.patch))
-        writer.register_element_writer(XMLBehaviorWriter(self.version, self.patch))
-        writer.register_element_writer(CodeDataTypeWriter(self.version, self.patch))
-        writer.register_element_writer(CodeConstantWriter(self.version, self.patch))
-        writer.register_element_writer(CodePortInterfaceWriter(self.version, self.patch))
-        writer.register_element_writer(CodeComponentTypeWriter(self.version, self.patch))
-        writer.register_element_writer(CodeBehaviorWriter(self.version, self.patch))
-        writer.register_element_writer(SignalWriter(self.version, self.patch))
-        writer.register_element_writer(XMLModeWriter(self.version, self.patch))
