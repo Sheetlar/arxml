@@ -85,6 +85,26 @@ class Workspace(ArObject):
     """
     An autosar worspace
     """
+    autosar_platform_types = {
+        '/AUTOSAR_Platform/BaseTypes/uint8': '>u1',
+        '/AUTOSAR_Platform/BaseTypes/uint16': '>u2',
+        '/AUTOSAR_Platform/BaseTypes/uint32': '>u4',
+        '/AUTOSAR_Platform/BaseTypes/uint64': '>u8',
+        '/AUTOSAR_Platform/BaseTypes/sint8': '>i1',
+        '/AUTOSAR_Platform/BaseTypes/sint16': '>i2',
+        '/AUTOSAR_Platform/BaseTypes/sint32': '>i4',
+        '/AUTOSAR_Platform/BaseTypes/sint64': '>i8',
+        '/AUTOSAR_Platform/BaseTypes/float32': '>f4',
+        '/AUTOSAR_Platform/ImplementationDataTypes/uint8': '>u1',
+        '/AUTOSAR_Platform/ImplementationDataTypes/uint16': '>u2',
+        '/AUTOSAR_Platform/ImplementationDataTypes/uint32': '>u4',
+        '/AUTOSAR_Platform/ImplementationDataTypes/uint64': '>u8',
+        '/AUTOSAR_Platform/ImplementationDataTypes/sint8': '>i1',
+        '/AUTOSAR_Platform/ImplementationDataTypes/sint16': '>i2',
+        '/AUTOSAR_Platform/ImplementationDataTypes/sint32': '>i4',
+        '/AUTOSAR_Platform/ImplementationDataTypes/sint64': '>i8',
+        '/AUTOSAR_Platform/ImplementationDataTypes/float32': '>f4',
+    }
 
     def __init__(
             self,
@@ -93,7 +113,6 @@ class Workspace(ArObject):
             schema: str | None,
             release: int | None = None,
             attributes: Any = None,
-            use_default_writers: bool = True,
             *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -112,7 +131,7 @@ class Workspace(ArObject):
         self.package_parser: PackageParser | None = None
         self.xml_root: Element | None = None
         self.attributes = attributes
-        self.use_default_writers = use_default_writers
+        self.type_references = {}
         self.role_elements = {}
         self.roles = PackageRoles()
         self.role_stack = deque()  # stack of PackageRoles
@@ -190,6 +209,11 @@ class Workspace(ArObject):
         """
         roles = self.role_stack.pop()
         self.roles.update(roles)
+
+    def add_type_reference(self, name: str, type_ref: str):
+        if type_ref not in self.autosar_platform_types:
+            return
+        self.type_references[name] = self.autosar_platform_types[type_ref]
 
     def open_xml(self, filename: Path):
         xml_root = parse_xml_file(filename)

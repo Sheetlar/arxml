@@ -14,11 +14,10 @@ def workspace(
         patch: int = 2,
         schema: str | None = None,
         attributes: Any = None,
-        use_default_writers: bool = True,
 ):
     if schema is None and ((version == 3.0 and patch == 2) or (version == "3.0.2")):
         schema = 'autosar_302_ext.xsd'
-    return Workspace(version, patch, schema, attributes, use_default_writers)
+    return Workspace(version, patch, schema, attributes)
 
 
 def split_ref(ref: str):

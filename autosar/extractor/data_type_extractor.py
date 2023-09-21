@@ -1,9 +1,9 @@
 from typing import Iterable
 
 from autosar.data_transformation import TransformationTechnology, EndToEndTransformationDescription
-from autosar.datatype import ApplicationDataType, ApplicationPrimitiveDataType, ApplicationRecordDataType, ApplicationArrayDataType, CompuMethod
+from autosar.datatype import ApplicationDataType, ApplicationPrimitiveDataType, ApplicationRecordDataType, ApplicationArrayDataType, CompuMethod, DataConstraint
 from autosar.element import DataElement
-from autosar.extractor.common import DataType, ScalableDataType, BitfieldDataType, EnumDataType, dtype_mapper, get_type_by_range, get_max_value
+from autosar.extractor.common import DataType, ScalableDataType, BitfieldDataType, EnumDataType, get_max_value, get_type_by_range
 from autosar.extractor.e2e import e2e_profiles
 from autosar.has_logger import HasLogger
 
@@ -75,6 +75,16 @@ class ExtractedDataType(HasLogger):
         if compu_method is None:
             raise NotImplementedError
         name = compu_method.name
+        if name in self._ws.type_references:
+            dtype = self._ws.type_references[name]
+        else:
+            if element_type.data_constraint_ref is None:
+                raise NotImplementedError
+            constraint: DataConstraint = self._ws.find(element_type.data_constraint_ref)
+            dtype = get_type_by_range(
+                constraint.lower_limit,
+                constraint.upper_limit,
+            )
         unit_factor = 1
         if compu_method.unit_ref is not None:
             unit = self._ws.find(compu_method.unit_ref)
@@ -83,23 +93,14 @@ class ExtractedDataType(HasLogger):
                 pass
         match compu_method.category:
             case 'IDENTICAL':
-                dtype = dtype_mapper[name] if name in dtype_mapper else 'f'
                 return ScalableDataType(name, dtype, 1 / unit_factor)
             case 'LINEAR':
                 if compu_method.int_to_phys is None:
                     raise NotImplementedError
-                dtype = get_type_by_range(
-                    compu_method.int_to_phys.lower_limit,
-                    compu_method.int_to_phys.upper_limit,
-                )
                 scale_element, = compu_method.int_to_phys.elements
                 scale = scale_element.offset + scale_element.numerator / scale_element.denominator
                 return ScalableDataType(name, dtype, scale / unit_factor)
             case 'TEXTTABLE':
-                dtype = get_type_by_range(
-                    compu_method.int_to_phys.lower_limit,
-                    compu_method.int_to_phys.upper_limit,
-                )
                 mapping = {}
                 for e in compu_method.int_to_phys.elements:
                     if e.lower_limit != e.upper_limit:
@@ -119,13 +120,8 @@ class ExtractedDataType(HasLogger):
                     desc = {m: (values_off[m], v) for m, v in values_on.items()}
                 except KeyError:
                     raise NotImplementedError
-                dtype = get_type_by_range(0, max(desc.keys()))
                 return BitfieldDataType(name, dtype, desc)
             case 'SCALE_LINEAR_AND_TEXTTABLE':
-                dtype = get_type_by_range(
-                    compu_method.int_to_phys.lower_limit,
-                    compu_method.int_to_phys.upper_limit,
-                )
                 scale_elem, = tuple(x for x in compu_method.int_to_phys.elements if x.text_value is None)
                 if isinstance(scale_elem.upper_limit, float) and scale_elem.numerator == 1:
                     scale_elem.numerator = round(scale_elem.upper_limit / get_max_value(dtype), 5)

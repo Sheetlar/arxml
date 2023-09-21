@@ -9,7 +9,7 @@ from autosar.element import Element
 class RecordTypeElement(Element):
     """
     (AUTOSAR3)
-    Implemenetation of <RECORD-ELEMENT> (found inside <RECORD-TYPE>).
+    Implementation of <RECORD-ELEMENT> (found inside <RECORD-TYPE>).
 
     """
 
@@ -633,7 +633,43 @@ class DataConstraint(Element):
                 return rule
 
 
-class ImplementationDataType(Element):
+class ImplementationDataTypeBase:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.variant_props: list[SwDataDefPropsConditional | SwPointerTargetProps] = []
+
+    def get_type_reference(self):
+        """
+        Deprecated, use implementationTypeRef property instead
+        """
+        return self.implementation_type_ref
+
+    @property
+    def base_type_ref(self):
+        if len(self.variant_props) > 0:
+            return self.variant_props[0].base_type_ref
+        return None
+
+    @property
+    def data_constraint_ref(self):
+        if len(self.variant_props) > 0:
+            return self.variant_props[0].data_constraint_ref
+        return None
+
+    @property
+    def implementation_type_ref(self):
+        if len(self.variant_props) > 0:
+            return self.variant_props[0].implementation_type_ref
+        return None
+
+    @property
+    def compu_method_ref(self):
+        if len(self.variant_props) > 0:
+            return self.variant_props[0].compu_method_ref
+        return None
+
+
+class ImplementationDataType(Element, ImplementationDataTypeBase):
     @staticmethod
     def tag(*_):
         return 'IMPLEMENTATION-DATA-TYPE'
@@ -651,7 +687,6 @@ class ImplementationDataType(Element):
         super().__init__(name, parent, admin_data, category)
         self.dynamic_array_size_profile = dynamic_array_size_profile
         self.type_emitter = type_emitter
-        self.variant_props: list[SwDataDefPropsConditional | SwPointerTargetProps] = []
         self.sub_elements: list[ImplementationDataTypeElement] = []
         self.symbol_props: SymbolProps | None = None
         if isinstance(variant_props, (SwDataDefPropsConditional, SwPointerTargetProps)):
@@ -662,6 +697,8 @@ class ImplementationDataType(Element):
                     self.variant_props.append(elem)
                 else:
                     raise ValueError('Invalid type: ', type(elem))
+        if self.category == 'TYPE_REFERENCE':
+            self.root_ws().add_type_reference(self.name, self.implementation_type_ref)
 
     def get_array_length(self):
         """
@@ -669,42 +706,12 @@ class ImplementationDataType(Element):
         """
         return self.array_size
 
-    def get_type_reference(self):
-        """
-        Deprecated, use implementationTypeRef property instead
-        """
-        return self.implementation_type_ref
-
     @property
     def array_size(self):
         if len(self.sub_elements) > 0:
             return self.sub_elements[0].array_size
         else:
             return None
-
-    @property
-    def implementation_type_ref(self):
-        if len(self.variant_props) > 0:
-            return self.variant_props[0].implementation_type_ref
-        return None
-
-    @property
-    def base_type_ref(self):
-        if len(self.variant_props) > 0:
-            return self.variant_props[0].base_type_ref
-        return None
-
-    @property
-    def data_constraint_ref(self):
-        if len(self.variant_props) > 0:
-            return self.variant_props[0].data_constraint_ref
-        return None
-
-    @property
-    def compu_method_ref(self):
-        if len(self.variant_props) > 0:
-            return self.variant_props[0].compu_method_ref
-        return None
 
     def set_symbol_props(self, name: str, symbol: str):
         """
@@ -738,7 +745,7 @@ class SwBaseType(Element):
         self.type_encoding = type_encoding
 
 
-class ImplementationDataTypeElement(Element):
+class ImplementationDataTypeElement(Element, ImplementationDataTypeBase):
     @staticmethod
     def tag(*_):
         return 'IMPLEMENTATION-DATA-TYPE-ELEMENT'
@@ -755,7 +762,6 @@ class ImplementationDataTypeElement(Element):
     ):
         super().__init__(name, parent, admin_data, category)
         self.array_size = array_size
-        self.variant_props: list[SwDataDefPropsConditional | SwPointerTargetProps] = []
         if array_size is not None:
             if array_size_semantics is not None:
                 self.array_size_semantics = array_size_semantics
@@ -772,6 +778,11 @@ class ImplementationDataTypeElement(Element):
                         self.variant_props.append(elem)
                     else:
                         raise ValueError('Invalid type: ', type(elem))
+        ws = self.root_ws()
+        if self.implementation_type_ref is not None:
+            ws.add_type_reference(f'{self.parent.name}_{self.name}', self.implementation_type_ref)
+        elif self.base_type_ref is not None:
+            ws.add_type_reference(f'{self.parent.name}_{self.name}', self.base_type_ref)
 
 
 class ApplicationDataType(Element):
@@ -883,7 +894,7 @@ class ApplicationArrayElement(Element):
     typeRef: <TYPE-TREF> (None or str)
     arraySize: <MAX-NUMBER-OF-ELEMENTS> (None or int)
     sizeHandling: <ARRAY-SIZE-HANDLING> (None or str['ALL-INDICES-DIFFERENT-ARRAY-SIZE', 'ALL-INDICES-SAME-ARRAY-SIZE', 'INHERITED-FROM-ARRAY-ELEMENT-TYPE-SIZE', ])
-    sizeSemantics: <ARRAY-SIZE-SEMANTICS> (None or str['FIXED-SIZE', 'VARIABLE-SIZE']])
+    sizeSemantics: <ARRAY-SIZE-SEMANTICS> (None or str['FIXED-SIZE', 'VARIABLE-SIZE'])
     """
 
     @staticmethod
