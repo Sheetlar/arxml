@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "arxml"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python AUTOSAR XML parser"
 
 requires-python = ">=3.11"
