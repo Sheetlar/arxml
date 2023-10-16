@@ -3,7 +3,7 @@ from typing import Iterable
 from autosar.data_transformation import TransformationTechnology, EndToEndTransformationDescription
 from autosar.datatype import ApplicationDataType, ApplicationPrimitiveDataType, ApplicationRecordDataType, ApplicationArrayDataType, CompuMethod, DataConstraint
 from autosar.element import DataElement
-from autosar.extractor.common import DataType, ScalableDataType, BitfieldDataType, EnumDataType, get_max_value, get_type_by_range
+from autosar.extractor.common import DataType, ScalableDataType, BitfieldDataType, EnumDataType, Array, get_max_value, get_type_by_range
 from autosar.extractor.e2e import e2e_profiles
 from autosar.has_logger import HasLogger
 
@@ -44,14 +44,16 @@ class ExtractedDataType(HasLogger):
             self,
             element_type: ApplicationDataType,
             prefix: str = '',
-    ) -> dict[str, ApplicationPrimitiveDataType]:
+    ) -> dict[str, DataType]:
         if isinstance(element_type, ApplicationRecordDataType):
+            if prefix != '':
+                prefix = f'{prefix}_'
             result = {}
             for field in element_type.elements:
                 field_element = self._ws.find(field.type_ref)
                 field_result = self._recursive_element_extract(
                     field_element,
-                    f'{prefix}{field.name}_',
+                    f'{prefix}{field.name}',
                 )
                 result.update(field_result)
             return result
@@ -60,14 +62,11 @@ class ExtractedDataType(HasLogger):
             if element_type.element.size_semantics != 'FIXED-SIZE':
                 raise NotImplementedError
             result = self._recursive_element_extract(element)
-            return {
-                f'{prefix}{idx}_{n}': t
-                for idx in range(element_type.element.array_size)
-                for n, t in result.items()
-            }
+            return {prefix: Array(element_type.name, result, element_type.element.array_size)}
         if isinstance(element_type, ApplicationPrimitiveDataType):
-            name = prefix.removesuffix('_')
-            return {name: self._get_data_type(element_type)}
+            if prefix == '' and element_type.name is not None:
+                prefix = element_type.name
+            return {prefix: self._get_data_type(element_type)}
         raise NotImplementedError
 
     def _get_data_type(self, element_type: ApplicationPrimitiveDataType) -> DataType:

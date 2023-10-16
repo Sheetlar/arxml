@@ -55,3 +55,9 @@ class EnumDataType(DataType):  # TEXTTABLE
 @dataclass
 class BitfieldDataType(DataType):  # BITFIELD_TEXTTABLE
     bit_description: dict[int, tuple[str, str]]
+
+
+@dataclass
+class Array(DataType):  # Special type for arrays
+    dtype: DataType | dict[str, DataType]
+    length: int
