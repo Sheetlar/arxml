@@ -59,10 +59,13 @@ class ExtractedDataType(HasLogger):
             return result
         if isinstance(element_type, ApplicationArrayDataType):
             element = self._ws.find(element_type.element.type_ref)
+            size = element_type.element.array_size
             if element_type.element.size_semantics != 'FIXED-SIZE':
-                raise NotImplementedError
+                if element_type.element.size_handling != 'ALL-INDICES-SAME-ARRAY-SIZE':
+                    raise NotImplementedError
+                size = (1, size)
             result = self._recursive_element_extract(element)
-            return {prefix: Array(element_type.name, result, element_type.element.array_size)}
+            return {prefix: Array(element_type.name, result, size)}
         if isinstance(element_type, ApplicationPrimitiveDataType):
             if prefix == '' and element_type.name is not None:
                 prefix = element_type.name

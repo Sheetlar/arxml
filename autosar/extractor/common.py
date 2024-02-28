@@ -60,4 +60,4 @@ class BitfieldDataType(DataType):  # BITFIELD_TEXTTABLE
 @dataclass
 class Array(DataType):  # Special type for arrays
     dtype: DataType | dict[str, DataType]
-    length: int
+    length: int | tuple[int, int]
