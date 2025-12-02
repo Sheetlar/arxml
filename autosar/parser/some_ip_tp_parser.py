@@ -1,7 +1,7 @@
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.some_ip_tp import SomeIpConfig, SomeIpConnection, SomeIpTPChannel
+from autosar.model.ar_object import ArObject
+from autosar.model.some_ip_tp import SomeIpConfig, SomeIpConnection, SomeIpTPChannel
 from autosar.parser.parser_base import ElementParser
 
 
@@ -15,7 +15,7 @@ class SomeIpTpParser(ElementParser):
         return None
 
     def _parse_tp_config(self, xml_elem: Element, parent: ArObject | None) -> SomeIpConfig:
-        common_args = self._parse_common_tags(xml_elem)
+        common_args = self.parse_common_tags(xml_elem)
         ref = None
         channels = None
         connections = None
@@ -26,12 +26,12 @@ class SomeIpTpParser(ElementParser):
                 case 'COMMUNICATION-CLUSTER-REF':
                     ref = self.parse_text_node(child_elem)
                 case 'TP-CHANNELS':
-                    channels = self._parse_element_list(
+                    channels = self.parse_variable_element_list(
                         child_elem,
                         {'SOMEIP-TP-CHANNEL': self._parse_channel},
                     )
                 case 'TP-CONNECTIONS':
-                    connections = self._parse_element_list(
+                    connections = self.parse_variable_element_list(
                         child_elem,
                         {'SOMEIP-TP-CONNECTION': self._parse_connection},
                     )
@@ -47,7 +47,7 @@ class SomeIpTpParser(ElementParser):
         return config
 
     def _parse_channel(self, xml_elem: Element) -> SomeIpTPChannel:
-        common_args = self._parse_common_tags(xml_elem)
+        common_args = self.parse_common_tags(xml_elem)
         separation_time = self.parse_number_node(xml_elem.find('SEPARATION-TIME'))
         channel = SomeIpTPChannel(
             separation_time=separation_time,

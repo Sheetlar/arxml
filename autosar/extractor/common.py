@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import TypeAlias
 
-from autosar.data_transformation import TransformationTechnology
-from autosar.signal import SystemSignal
+from autosar.model.transformation import TransformationTechnology
+from autosar.model.signal import SystemSignal
 
 Event: TypeAlias = tuple[SystemSignal, tuple[TransformationTechnology, ...], int]
 SomeIpFeature: TypeAlias = tuple[int, int, int]

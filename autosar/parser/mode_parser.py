@@ -1,8 +1,8 @@
 from typing import Callable
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.mode import ModeDeclaration, ModeDeclarationGroup
+from autosar.model.ar_object import ArObject
+from autosar.model.mode import ModeDeclaration, ModeDeclarationGroup
 from autosar.parser.parser_base import ElementParser
 
 

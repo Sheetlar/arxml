@@ -1,35 +1,34 @@
 from typing import Callable
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.base import parse_text_node, parse_int_node
+from autosar.model.ar_object import ArObject
+from autosar.model.base import SwDataDefPropsVariants, ValueSpecification
 from autosar.parser.parser_base import ElementParser
-from autosar.signal import (
+from autosar.model.signal import (
     SystemSignal,
     SystemSignalGroup,
     ISignal,
     ISignalGroup,
+    ISignalProps,
+    TransformationISignalPropsVariants,
     SomeIpTransformationISignalProps,
+    SomeIpTransformationISignalPropsVariants,
     EndToEndTransformationISignalProps,
+    EndToEndTransformationISignalPropsVariants,
+    UserDefinedTransformationISignalProps,
+    UserDefinedTransformationISignalPropsVariants,
 )
 
 
 class SignalParser(ElementParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        if 3.0 <= self.version < 4.0:
-            self.switcher: dict[str, Callable[[Element, ArObject | None], SystemSignal | SystemSignalGroup | None]] = {
-                'SYSTEM-SIGNAL': self.parse_system_signal,
-                'SYSTEM-SIGNAL-GROUP': self.parse_system_signal_group,
-            }
-        elif self.version >= 4.0:
-            self.switcher: dict[str, Callable[[Element, ArObject | None], SystemSignal | ISignal | None]] = {
-                'SYSTEM-SIGNAL': self.parse_system_signal_ar4,
-                'SYSTEM-SIGNAL-GROUP': self.parse_system_signal_group,
-                'I-SIGNAL': self.parse_i_signal,
-                'I-SIGNAL-GROUP': self.parse_i_signal_group,
-            }
+        self.switcher: dict[str, Callable[[Element, ArObject | None], SystemSignal | ISignal | None]] = {
+            'SYSTEM-SIGNAL': self.parse_system_signal,
+            'SYSTEM-SIGNAL-GROUP': self.parse_system_signal_group,
+            'I-SIGNAL': self.parse_i_signal,
+            'I-SIGNAL-GROUP': self.parse_i_signal_group,
+        }
 
     def get_supported_tags(self):
         return self.switcher.keys()
@@ -44,231 +43,217 @@ class SignalParser(ElementParser):
             return parse_func(xml_element, parent)
         return None
 
-    def parse_system_signal(self, xml_root: Element, parent: ArObject | None) -> SystemSignal | None:
-        """
-        parses <SYSTEM-SIGNAL>
-        """
-        assert (xml_root.tag == 'SYSTEM-SIGNAL')
-        name = None
-        data_type_ref = None
-        init_value_ref = None
-        length = None
-        desc = None
-        for elem in xml_root.findall('./*'):
-            if elem.tag == 'SHORT-NAME':
-                name = parse_text_node(elem)
-            elif elem.tag == 'DATA-TYPE-REF':
-                data_type_ref = parse_text_node(elem)
-            elif elem.tag == 'INIT-VALUE-REF':
-                init_value_ref = parse_text_node(elem)
-            elif elem.tag == 'LENGTH':
-                length = parse_int_node(elem)
-            elif elem.tag == 'DESC':
-                desc_xml = xml_root.find('DESC')
-                if desc_xml is not None:
-                    l2_xml = desc_xml.find('L-2')
-                    if l2_xml is not None:
-                        desc = parse_text_node(l2_xml)
-            else:
-                self._logger.warning(f'Unexpected tag for {xml_root.tag}: {elem.tag}')
-        if name is None or length is None:  # All signals don't have IV constant Ref or DatatypeRef
-            self._logger.error(f'Failed to parse {xml_root.tag}')
-            return None
-        return SystemSignal(name, data_type_ref, init_value_ref, length, desc, parent)
+    def parse_system_signal_group(self, xml_elem: Element, parent: ArObject | None) -> SystemSignalGroup:
+        common_args = self.parse_common_tags(xml_elem)
+        system_signal_refs: list[str] | None = None
+        transforming_signal_ref: str | None = None
+        for child_elem in xml_elem:
+            match child_elem.tag:
+                case tag if tag in self.common_tags:
+                    pass
+                case 'SYSTEM-SIGNAL-REFS':
+                    system_signal_refs = list(self.child_string_nodes(child_elem))
+                case 'TRANSFORMING-SYSTEM-SIGNAL-REF':
+                    transforming_signal_ref = self.parse_text_node(child_elem)
+                case _:
+                    self.log_unexpected(xml_elem, child_elem)
+        return SystemSignalGroup(
+            system_signal_refs=system_signal_refs,
+            transforming_system_signal_ref=transforming_signal_ref,
+            parent=parent,
+            **common_args,
+        )
 
-    def parse_system_signal_group(self, xml_root: Element, parent: ArObject | None) -> SystemSignalGroup | None:
-        name = None
-        system_signal_refs = None
-        for elem in xml_root.findall('./*'):
-            if elem.tag == 'SHORT-NAME':
-                name = parse_text_node(elem)
-            elif elem.tag == 'SYSTEM-SIGNAL-REFS':
-                system_signal_refs = []
-                for child_elem in elem.findall('./*'):
-                    if child_elem.tag != 'SYSTEM-SIGNAL-REF':
-                        self._logger.error(f'Unexpected tag for {elem.tag}: {child_elem.tag}')
-                        continue
-                    system_signal_refs.append(parse_text_node(child_elem))
-            else:
-                self._logger.warning(f'Unexpected tag for {xml_root.tag}: {elem.tag}')
-        if name is None or system_signal_refs is None:
-            self._logger.error(f'Failed to parse {xml_root.tag}')
-            return None
-        return SystemSignalGroup(name, system_signal_refs, parent)
+    def parse_system_signal(self, xml_elem: Element, parent: ArObject | None) -> SystemSignal | None:
+        common_args = self.parse_common_tags(xml_elem)
+        dynamic_length: bool | None = None
+        physical_props: SwDataDefPropsVariants | None = None
+        for child_elem in xml_elem:
+            match child_elem.tag:
+                case tag if tag in self.common_tags:
+                    pass
+                case 'DYNAMIC-LENGTH':
+                    dynamic_length = self.parse_boolean_node(child_elem)
+                case 'PHYSICAL-PROPS':
+                    physical_props = self.parse_sw_data_def_props(child_elem)
+                case _:
+                    self.log_unexpected(xml_elem, child_elem)
+        return SystemSignal(
+            dynamic_length=dynamic_length,
+            physical_props=physical_props,
+            parent=parent,
+            **common_args,
+        )
 
-    def parse_system_signal_ar4(self, xml_root: Element, parent: ArObject | None) -> SystemSignal | None:
-        """
-        parses <SYSTEM-SIGNAL>
-        """
-        assert (xml_root.tag == 'SYSTEM-SIGNAL')
-        name = None
-        data_type_ref = None
-        init_value_ref = None
-        length = None
-        dynamic_length = False
-        desc = None
-        for elem in xml_root.findall('./*'):
-            if elem.tag == 'SHORT-NAME':
-                name = parse_text_node(elem)
-            elif elem.tag == 'DATA-TYPE-REF':
-                data_type_ref = parse_text_node(elem)
-            elif elem.tag == 'INIT-VALUE-REF':
-                init_value_ref = parse_text_node(elem)
-            elif elem.tag == 'LENGTH':
-                length = parse_int_node(elem)
-            elif elem.tag == 'DYNAMIC-LENGTH':
-                dynamic_length = self.parse_boolean_node(elem)
-            elif elem.tag == 'DESC':
-                desc = parse_text_node(elem.find('L-2'))
-            else:
-                self._logger.warning(f'Unexpected tag for {xml_root.tag}: {elem.tag}')
-        if name is None:  # All signals don't have IV constant Ref or DatatypeRef
-            self._logger.error(f'Failed to parse {xml_root.tag}')
-            return None
-        return SystemSignal(name, data_type_ref, init_value_ref, length, dynamic_length, desc, parent)
-
-    def parse_i_signal(self, xml_elem: Element, parent: ArObject | None) -> ISignal | None:
-        name = None
-        data_transformations = []
-        data_type_policy = None
-        length = None
-        system_signal_ref = None
-        transformation_props = []
+    def parse_i_signal(self, xml_elem: Element, parent: ArObject | None) -> ISignal:
+        common_args = self.parse_common_tags(xml_elem)
+        system_signal_ref: str | None = None
+        data_type_policy: str | None = None
+        length: int | None = None
+        i_signal_type: str | None = None
+        i_signal_props: ISignalProps | None = None
+        transformation_refs: list[str] | None = None
+        init_value: ValueSpecification | None = None
+        network_props: SwDataDefPropsVariants | None = None
+        timeout_substitution_value: ValueSpecification | None = None
+        transformation_props: list[TransformationISignalPropsVariants] | None = None
         for child_elem in xml_elem.findall('./*'):
             match child_elem.tag:
-                case 'SHORT-NAME':
-                    name = self.parse_text_node(child_elem)
-                case 'DATA-TRANSFORMATIONS':
-                    for sub_elem in child_elem.findall('./*'):
-                        if sub_elem.tag != 'DATA-TRANSFORMATION-REF-CONDITIONAL':
-                            self._logger.error(f'Unexpected tag for {child_elem.tag}: {sub_elem.tag}')
-                            continue
-                        ref_elem = sub_elem.find('DATA-TRANSFORMATION-REF')
-                        if ref_elem is None:
-                            self._logger.error(f'Missing <DATA-TRANSFORMATION-REF> for {sub_elem.tag}')
-                            continue
-                        data_transformation = self.parse_text_node(ref_elem)
-                        if data_transformation is not None:
-                            data_transformations.append(data_transformation)
+                case tag if tag in self.common_tags:
+                    pass
+                case 'SYSTEM-SIGNAL-REF':
+                    system_signal_ref = self.parse_text_node(child_elem)
                 case 'DATA-TYPE-POLICY':
                     data_type_policy = self.parse_text_node(child_elem)
                 case 'LENGTH':
                     length = self.parse_int_node(child_elem)
-                case 'SYSTEM-SIGNAL-REF':
-                    system_signal_ref = self.parse_text_node(child_elem)
+                case 'I-SIGNAL-TYPE':
+                    i_signal_type = self.parse_text_node(child_elem)
+                case 'I-SIGNAL-PROPS':
+                    i_signal_props = ISignalProps(self.parse_text_node(
+                        child_elem.find('HANDLE-OUT-OF-RANGE'),
+                    ))
+                case 'DATA-TRANSFORMATIONS':
+                    transformation_refs = list(self.variation_child_string_nodes(child_elem, 'DATA-TRANSFORMATION-REF'))
+                case 'INIT-VALUE':
+                    init_value = self.parse_value_specification(child_elem)
+                case 'NETWORK-REPRESENTATION-PROPS':
+                    network_props = self.parse_sw_data_def_props(child_elem)
+                case 'TIMEOUT-SUBSTITUTION-VALUE':
+                    timeout_substitution_value = self.parse_value_specification(child_elem)
                 case 'TRANSFORMATION-I-SIGNAL-PROPSS':
-                    transformation_props = self._parse_element_list(child_elem, {
-                        'SOMEIP-TRANSFORMATION-I-SIGNAL-PROPS': self._parse_some_ip_transformation_props,
+                    transformation_props = self.parse_variable_element_list(child_elem, {
                         'END-TO-END-TRANSFORMATION-I-SIGNAL-PROPS': self._parse_end_to_end_transformation_props,
+                        'SOMEIP-TRANSFORMATION-I-SIGNAL-PROPS': self._parse_some_ip_transformation_props,
+                        'USER-DEFINED-TRANSFORMATION-I-SIGNAL-PROPS': self._parse_user_defined_transformation_props,
                     })
                 case _:
-                    self._logger.warning(f'Unexpected tag for {xml_elem.tag}: {child_elem.tag}')
-        if name is None:
-            return None
+                    self.log_unexpected(xml_elem, child_elem)
         signal = ISignal(
-            name=name,
+            system_signal_ref=system_signal_ref,
             data_type_policy=data_type_policy,
             length=length,
-            system_signal_ref=system_signal_ref,
-            data_transformation_refs=data_transformations,
+            i_signal_type=i_signal_type,
+            i_signal_props=i_signal_props,
+            data_transformation_refs=transformation_refs,
+            init_value=init_value,
+            network_representation_props=network_props,
+            timeout_substitution_value=timeout_substitution_value,
             transformation_i_signal_props=transformation_props,
             parent=parent,
+            **common_args,
         )
         return signal
 
-    def parse_i_signal_group(self, xml_elem: Element, parent: ArObject | None) -> ISignalGroup | None:
-        name = None
-        group_transformations = []
-        signal_refs = []
-        system_signal_group_ref = None
-        transformation_props = []
+    def parse_i_signal_group(self, xml_elem: Element, parent: ArObject | None) -> ISignalGroup:
+        common_args = self.parse_common_tags(xml_elem)
+        signal_refs: list[str] | None = None
+        system_signal_group_ref: str | None = None
+        group_transformations: list[str] | None = None
+        transformation_props: list[TransformationISignalPropsVariants] | None = None
         for child_elem in xml_elem.findall('./*'):
             match child_elem.tag:
-                case 'SHORT-NAME':
-                    name = self.parse_text_node(child_elem)
-                case 'COM-BASED-SIGNAL-GROUP-TRANSFORMATIONS':
-                    for sub_elem in child_elem.findall('./*'):
-                        if sub_elem.tag != 'DATA-TRANSFORMATION-REF-CONDITIONAL':
-                            self._logger.error(f'Unexpected tag for {child_elem.tag}: {sub_elem.tag}')
-                            continue
-                        ref_elem = sub_elem.find('DATA-TRANSFORMATION-REF')
-                        if ref_elem is None:
-                            self._logger.error(f'Missing <DATA-TRANSFORMATION-REF> for {sub_elem.tag}')
-                            continue
-                        data_transformation = self.parse_text_node(ref_elem)
-                        if data_transformation is not None:
-                            group_transformations.append(data_transformation)
+                case tag if tag in self.common_tags:
+                    pass
                 case 'I-SIGNAL-REFS':
-                    for sub_elem in child_elem.findall('./*'):
-                        if sub_elem.tag != 'I-SIGNAL-REF':
-                            self._logger.error(f'Unexpected tag for {child_elem.tag}: {sub_elem.tag}')
-                            continue
-                        signal_ref = self.parse_text_node(sub_elem)
-                        if signal_ref is not None:
-                            signal_refs.append(signal_ref)
+                    signal_refs = list(self.child_string_nodes(xml_elem))
                 case 'SYSTEM-SIGNAL-GROUP-REF':
                     system_signal_group_ref = self.parse_text_node(child_elem)
+                case 'COM-BASED-SIGNAL-GROUP-TRANSFORMATIONS':
+                    group_transformations = list(self.variation_child_string_nodes(xml_elem, 'DATA-TRANSFORMATION-REF'))
                 case 'TRANSFORMATION-I-SIGNAL-PROPSS':
-                    transformation_props = self._parse_element_list(child_elem,{
-                        'SOMEIP-TRANSFORMATION-I-SIGNAL-PROPS': self._parse_some_ip_transformation_props,
+                    transformation_props = self.parse_variable_element_list(child_elem, {
                         'END-TO-END-TRANSFORMATION-I-SIGNAL-PROPS': self._parse_end_to_end_transformation_props,
+                        'SOMEIP-TRANSFORMATION-I-SIGNAL-PROPS': self._parse_some_ip_transformation_props,
+                        'USER-DEFINED-TRANSFORMATION-I-SIGNAL-PROPS': self._parse_user_defined_transformation_props,
                     })
                 case _:
-                    self._logger.warning(f'Unexpected tag for {xml_elem.tag}: {child_elem.tag}')
-        if name is None:
-            return None
+                    self.log_unexpected(xml_elem, child_elem)
         signal_group = ISignalGroup(
-            name=name,
-            com_based_signal_group_transformations=group_transformations,
             i_signal_refs=signal_refs,
             system_signal_group_ref=system_signal_group_ref,
+            com_based_signal_group_transformation_refs=group_transformations,
             transformation_i_signal_props=transformation_props,
             parent=parent,
+            **common_args,
         )
         return signal_group
 
-    def _parse_some_ip_transformation_props(self, xml_elem: Element) -> SomeIpTransformationISignalProps | None:
+    def _parse_some_ip_transformation_props(self, xml_elem: Element) -> SomeIpTransformationISignalPropsVariants | None:
+        def variants():
+            for variant_elem in variants_elem.findall('SOMEIP-TRANSFORMATION-I-SIGNAL-PROPS-CONDITIONAL'):
+                transformer_ref = self.parse_text_node(variant_elem.find('TRANSFORMER-REF'))
+                if transformer_ref is None:
+                    self.log_missing_required(variant_elem, 'TRANSFORMER-REF')
+                    continue
+                common_args = self.parse_common_tags(variant_elem)
+                yield SomeIpTransformationISignalProps(
+                    transformer_ref=transformer_ref,
+                    cs_error_reaction=self.parse_text_node(variant_elem.find('CS-ERROR-REACTION')),
+                    message_type=self.parse_text_node(variant_elem.find('MESSAGE-TYPE')),
+                    interface_version=self.parse_int_node(variant_elem.find('INTERFACE-VERSION')),
+                    is_dynamic_length_field_size=self.parse_boolean_node(variant_elem.find('IS-DYNAMIC-LENGTH-FIELD-SIZE')),
+                    session_handling_sr=self.parse_text_node(variant_elem.find('SESSION-HANDLING-SR')),
+                    size_of_array_length_fields=self.parse_int_node(variant_elem.find('SIZE-OF-ARRAY-LENGTH-FIELDS')),
+                    size_of_string_length_fields=self.parse_int_node(variant_elem.find('SIZE-OF-STRING-LENGTH-FIELDS')),
+                    size_of_struct_length_fields=self.parse_int_node(variant_elem.find('SIZE-OF-STRUCT-LENGTH-FIELDS')),
+                    size_of_union_length_fields=self.parse_int_node(variant_elem.find('SIZE-OF-UNION-LENGTH-FIELDS')),
+                    tlv_data_id_definition_refs=list(self.child_string_nodes(
+                        variant_elem.find('TLV-DAT-ID-DEFINITION-REFS'),
+                    )),
+                    implements_legacy_string_serialization=self.parse_boolean_node(
+                        variant_elem.find('IMPLEMENTS-SOMEIP-STRING-HANDLING'),
+                    ),
+                    **common_args,
+                )
+
         variants_elem = xml_elem.find('SOMEIP-TRANSFORMATION-I-SIGNAL-PROPS-VARIANTS')
         if variants_elem is None:
             return None
-        conditional_elem = variants_elem.find('SOMEIP-TRANSFORMATION-I-SIGNAL-PROPS-CONDITIONAL')
-        if conditional_elem is None:
-            return None
-        transformer_ref = self.parse_text_node(conditional_elem.find('TRANSFORMER-REF'))
-        implements_string_holding = self.parse_boolean_node(conditional_elem.find('IMPLEMENTS-SOMEIP-STRING-HANDLING'))
-        msg_type = self.parse_text_node(conditional_elem.find('MESSAGE-TYPE'))
-        if transformer_ref is None:
-            return None
-        props = SomeIpTransformationISignalProps(
-            transformer_ref=transformer_ref,
-            implements_some_ip_string_handling=implements_string_holding,
-            message_type=msg_type,
-        )
+        props = SomeIpTransformationISignalPropsVariants(variants=variants())
         return props
 
-    def _parse_end_to_end_transformation_props(self, xml_elem: Element) -> EndToEndTransformationISignalProps | None:
+    def _parse_end_to_end_transformation_props(self, xml_elem: Element) -> EndToEndTransformationISignalPropsVariants | None:
+        def variants():
+            for variant_elem in variants_elem.findall('END-TO-END-TRANSFORMATION-I-SIGNAL-PROPS-CONDITIONAL'):
+                transformer_ref = self.parse_text_node(variant_elem.find('TRANSFORMER-REF'))
+                if transformer_ref is None:
+                    self.log_missing_required(variant_elem, 'TRANSFORMER-REF')
+                    continue
+                common_args = self.parse_common_tags(variant_elem)
+                yield EndToEndTransformationISignalProps(
+                    transformer_ref=transformer_ref,
+                    cs_error_reaction=self.parse_text_node(variant_elem.find('CS-ERROR-REACTION')),
+                    data_ids=self.parse_element_list(variant_elem.find('DATA-IDS'), self.parse_int_node),
+                    data_length=self.parse_int_node(variant_elem.find('DATA-LENGTH')),
+                    max_data_length=self.parse_int_node(variant_elem.find('MAX-DATA-LENGTH')),
+                    min_data_length=self.parse_int_node(variant_elem.find('MIN-DATA-LENGTH')),
+                    source_id=self.parse_int_node(variant_elem.find('SOURCE-ID')),
+                    **common_args,
+                )
+
         variants_elem = xml_elem.find('END-TO-END-TRANSFORMATION-I-SIGNAL-PROPS-VARIANTS')
         if variants_elem is None:
             return None
-        conditional_elem = variants_elem.find('END-TO-END-TRANSFORMATION-I-SIGNAL-PROPS-CONDITIONAL')
-        if conditional_elem is None:
+        props = EndToEndTransformationISignalPropsVariants(variants=variants())
+        return props
+
+    def _parse_user_defined_transformation_props(self, xml_elem: Element) -> UserDefinedTransformationISignalPropsVariants | None:
+        def variants():
+            for variant_elem in variants_elem.findall('USER-DEFINED-TRANSFORMATION-I-SIGNAL-PROPS-CONDITIONAL'):
+                transformer_ref = self.parse_text_node(variant_elem.find('TRANSFORMER-REF'))
+                if transformer_ref is None:
+                    self.log_missing_required(variant_elem, 'TRANSFORMER-REF')
+                    continue
+                common_args = self.parse_common_tags(variant_elem)
+                yield UserDefinedTransformationISignalProps(
+                    transformer_ref=transformer_ref,
+                    cs_error_reaction=self.parse_text_node(variant_elem.find('CS-ERROR-REACTION')),
+                    **common_args,
+                )
+
+        variants_elem = xml_elem.find('USER-DEFINED-TRANSFORMATION-I-SIGNAL-PROPS-VARIANTS')
+        if variants_elem is None:
             return None
-        transformer_ref = self.parse_text_node(conditional_elem.find('TRANSFORMER-REF'))
-        length = self.parse_text_node(conditional_elem.find('DATA-LENGTH'))
-        data_ids = []
-        ids_elem = conditional_elem.find('DATA-IDS')
-        for id_elem in ids_elem.findall('./*'):
-            if id_elem.tag != 'DATA-ID':
-                self._logger.error(f'Unexpected tag for {ids_elem.tag}: {id_elem.tag}')
-                continue
-            data_id = self.parse_int_node(id_elem)
-            if data_id is not None:
-                data_ids.append(data_id)
-        if transformer_ref is None:
-            return None
-        props = EndToEndTransformationISignalProps(
-            transformer_ref=transformer_ref,
-            data_ids=data_ids,
-            data_length=length,
-        )
+        props = UserDefinedTransformationISignalPropsVariants(variants=variants())
         return props

@@ -3,10 +3,10 @@ Implements the class SwcImplementationParser
 """
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.component import SwcImplementation
+from autosar.model.ar_object import ArObject
+from autosar.model.component import SwcImplementation
 from autosar.parser.parser_base import ElementParser
-from autosar.swc_implementation import SwcImplementationCodeDescriptor, EngineeringObject, ResourceConsumption, MemorySection
+from autosar.model.swc_implementation import SwcImplementationCodeDescriptor, EngineeringObject, ResourceConsumption, MemorySection
 
 
 class SwcImplementationParser(ElementParser):

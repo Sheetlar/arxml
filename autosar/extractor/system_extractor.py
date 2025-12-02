@@ -2,20 +2,26 @@ import itertools
 from dataclasses import dataclass
 from typing import Iterable
 
-from autosar.base import AdminData
-from autosar.data_transformation import TransformationTechnology
-from autosar.ecu import EcuInstance
-from autosar.element import DataElement
-from autosar.ethernet_cluster import ApplicationEndpoint, NetworkEndpoint, PduTriggering
+from autosar.model.base import AdminData
+from autosar.model.transformation import TransformationTechnology
+from autosar.model.ecu import EcuInstance
+from autosar.model.element import DataElement
+from autosar.model.ethernet_cluster import ApplicationEndpoint, NetworkEndpoint, PduTriggering
 from autosar.extractor.common import Event, SomeIpFeature
 from autosar.extractor.data_type_extractor import ExtractedDataType
-from autosar.has_logger import HasLogger
-from autosar.pdu import SoConIPduIdentifier, ISignalIPdu, GeneralPurposeIPdu
-from autosar.portinterface import Operation, Trigger
-from autosar.service_instance_collection import ServiceInstanceCollectionSet, ProvidedServiceInstance, EventHandler
-from autosar.signal import SystemSignal, ISignal
-from autosar.some_ip_tp import SomeIpConfig, SomeIpConnection
-from autosar.system import System, SenderReceiverToSignalMapping, ClientServerToSignalMapping, TriggerToSignalMapping
+from autosar.model.has_logger import HasLogger
+from autosar.model.pdu import SoConIPduIdentifier, ISignalIPdu, GeneralPurposeIPdu
+from autosar.model.portinterface import Operation, Trigger
+from autosar.model.service_instance_collection import ServiceInstanceCollectionSet, ProvidedServiceInstance, EventHandler
+from autosar.model.signal import SystemSignal, ISignal
+from autosar.model.some_ip_tp import SomeIpConfig, SomeIpConnection
+from autosar.model.system import (
+    System,
+    AnyDataMapping,
+    SenderReceiverToSignalMapping,
+    ClientServerToSignalMapping,
+    TriggerToSignalMapping,
+)
 
 
 @dataclass
@@ -60,7 +66,7 @@ class SystemExtractor(HasLogger):
     def _get_fibex_elements(self):
         self.fibex_elements = tuple(filter(
             lambda x: x is not None,
-            map(lambda x: self.ws.find(x), self.system.fibex_element_refs),
+            map(self.ws.find, self.system.fibex_element_refs),
         ))
 
     def _get_transport_configs(self):
@@ -152,7 +158,7 @@ class SystemExtractor(HasLogger):
         return system_signal, transformations, event_id
 
     def _scan_data_mappings(self):
-        mappings = itertools.chain.from_iterable(
+        mappings: Iterable[AnyDataMapping] = itertools.chain.from_iterable(
             x.data_mappings
             for x in self.system.mappings
             if x.data_mappings is not None
@@ -160,16 +166,16 @@ class SystemExtractor(HasLogger):
         data_mapping: dict[str, Operation | DataElement | Trigger] = {}
         for mapping in mappings:
             if isinstance(mapping, SenderReceiverToSignalMapping):
-                data_element = self.ws.find(mapping.instance_ref.target_data_prototype_ref)
+                data_element = self.ws.find(mapping.data_element_instance_ref.target_data_prototype_ref)
                 data_mapping.update({mapping.system_signal_ref: data_element})
             elif isinstance(mapping, ClientServerToSignalMapping):
-                operation = self.ws.find(mapping.instance_ref.target_operation_ref)
+                operation = self.ws.find(mapping.client_server_operation_instance_ref.target_operation_ref)
                 data_mapping.update({
                     mapping.call_signal_ref: operation,
                     mapping.return_signal_ref: operation,
                 })
             elif isinstance(mapping, TriggerToSignalMapping):
-                trigger = self.ws.find(mapping.instance_ref.target_trigger_ref)
+                trigger = self.ws.find(mapping.trigger_instance_ref.target_trigger_ref)
                 data_mapping.update({mapping.system_signal_ref: trigger})
         self.data_mapping = data_mapping
 

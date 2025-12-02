@@ -1,9 +1,9 @@
 from typing import Callable
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.base import split_ref, has_admin_data, parse_admin_data_node
-from autosar.component import (
+from autosar.model.ar_object import ArObject
+from autosar.model.base import split_ref, has_admin_data, parse_admin_data_node
+from autosar.model.component import (
     ApplicationSoftwareComponent,
     ComplexDeviceDriverComponent,
     ServiceComponent,
@@ -20,11 +20,11 @@ from autosar.component import (
     OuterPortRef,
     ComponentType,
 )
-from autosar.constant import ValueAR4
+from autosar.model.constant import ValueAR4
 from autosar.parser.behavior_parser import BehaviorParser
 from autosar.parser.constant_parser import ConstantParser
 from autosar.parser.parser_base import ElementParser
-from autosar.port import (
+from autosar.model.port import (
     RequirePort,
     OperationComSpec,
     DataElementComSpec,

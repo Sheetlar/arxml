@@ -1,7 +1,7 @@
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.constant import (
+from autosar.model.ar_object import ArObject
+from autosar.model.constant import (
     ValueAR4,
     Constant,
     IntegerValue,

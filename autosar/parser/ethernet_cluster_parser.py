@@ -1,7 +1,7 @@
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.ethernet_cluster import (
+from autosar.model.ar_object import ArObject
+from autosar.model.ethernet_cluster import (
     EthernetCluster,
     EthernetClusterConditional,
     CouplingPortConnection,
@@ -43,7 +43,7 @@ class EthernetClusterParser(ElementParser):
                 case 'ADMIN-DATA':
                     admin_data = self.parse_admin_data_node(child_elem)
                 case 'ETHERNET-CLUSTER-VARIANTS':
-                    ethernet_cluster_variants = self._parse_element_list(
+                    ethernet_cluster_variants = self.parse_variable_element_list(
                         child_elem,
                         {'ETHERNET-CLUSTER-CONDITIONAL': self._parse_ethernet_cluster_conditional},
                     )
@@ -69,12 +69,12 @@ class EthernetClusterParser(ElementParser):
                 case 'BAUDRATE':
                     baud_rate = self.parse_int_node(child_elem)
                 case 'PHYSICAL-CHANNELS':
-                    physical_channels = self._parse_element_list(
+                    physical_channels = self.parse_variable_element_list(
                         child_elem,
                         {'ETHERNET-PHYSICAL-CHANNEL': self._parse_eth_phys_channel},
                     )
                 case 'COUPLING-PORT-CONNECTIONS':
-                    coupling_port_connections = self._parse_element_list(
+                    coupling_port_connections = self.parse_variable_element_list(
                         child_elem,
                         {'COUPLING-PORT-CONNECTIONS': self._parse_coupling_port_connection},
                     )
@@ -103,7 +103,7 @@ class EthernetClusterParser(ElementParser):
                 case 'COMM-CONNECTORS':
                     comm_connectors_refs = self._parse_comm_connectors_refs(child_elem)
                 case 'NETWORK-ENDPOINTS':
-                    network_endpoints = self._parse_element_list(
+                    network_endpoints = self.parse_variable_element_list(
                         child_elem,
                         {'NETWORK-ENDPOINT': self._parse_network_endpoint},
                     )
@@ -112,7 +112,7 @@ class EthernetClusterParser(ElementParser):
                     if socket_addresses is None:
                         self._logger.warning(f'Missing <SOCKET-ADDRESSS> in {child_elem.tag}')
                         continue
-                    addresses = self._parse_element_list(
+                    addresses = self.parse_variable_element_list(
                         socket_addresses,
                         {'SOCKET-ADDRESS': self._parse_socket_address},
                     )
@@ -120,12 +120,12 @@ class EthernetClusterParser(ElementParser):
                 case 'VLAN':
                     vlan = self._parse_vlan(child_elem)
                 case 'I-SIGNAL-TRIGGERINGS':
-                    signal_triggerings = self._parse_element_list(
+                    signal_triggerings = self.parse_variable_element_list(
                         child_elem,
                         {'I-SIGNAL-TRIGGERING': self._parse_i_signal_triggering},
                     )
                 case 'PDU-TRIGGERINGS':
-                    pdu_triggerings = self._parse_element_list(
+                    pdu_triggerings = self.parse_variable_element_list(
                         child_elem,
                         {'PDU-TRIGGERING': self._parse_pdu_triggering},
                     )

@@ -1,8 +1,8 @@
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
+from autosar.model.ar_object import ArObject
 from autosar.parser.parser_base import ElementParser
-from autosar.service_instance_collection import (
+from autosar.model.service_instance_collection import (
     ServiceInstanceCollectionSet,
     ConsumedServiceInstance,
     ConsumedEventGroup,
@@ -33,7 +33,7 @@ class ServiceInstanceCollectionParser(ElementParser):
                 case 'SHORT-NAME':
                     name = self.parse_text_node(child_element)
                 case 'SERVICE-INSTANCES':
-                    service_instances = self._parse_element_list(
+                    service_instances = self.parse_variable_element_list(
                         child_element,
                         {
                             'PROVIDED-SERVICE-INSTANCE': self._parse_provided_service_instance,
@@ -70,12 +70,12 @@ class ServiceInstanceCollectionParser(ElementParser):
                 case 'INSTANCE-IDENTIFIER':
                     instance_identifier = self.parse_int_node(elem)
                 case 'CONSUMED-EVENT-GROUPS':
-                    consumed_event_groups = self._parse_element_list(
+                    consumed_event_groups = self.parse_variable_element_list(
                         elem,
                         {'CONSUMED-EVENT-GROUP': self._parse_consumed_event_group},
                     )
                 case 'LOCAL-UNICAST-ADDRESSS':
-                    local_unicast_addresses = self._parse_element_list(
+                    local_unicast_addresses = self.parse_variable_element_list(
                         elem,
                         {'APPLICATION-ENDPOINT-REF-CONDITIONAL': self._parse_endpoint_ref},
                     )
@@ -115,12 +115,12 @@ class ServiceInstanceCollectionParser(ElementParser):
                 case 'INSTANCE-IDENTIFIER':
                     instance_identifier = self.parse_int_node(elem)
                 case 'EVENT-HANDLERS':
-                    event_handlers = self._parse_element_list(
+                    event_handlers = self.parse_variable_element_list(
                         elem,
                         {'EVENT-HANDLER': self._parse_event_handler},
                     )
                 case 'LOCAL-UNICAST-ADDRESSS':
-                    local_unicast_addresses = self._parse_element_list(
+                    local_unicast_addresses = self.parse_variable_element_list(
                         elem,
                         {'APPLICATION-ENDPOINT-REF-CONDITIONAL': self._parse_endpoint_ref},
                     )
@@ -150,7 +150,7 @@ class ServiceInstanceCollectionParser(ElementParser):
                 case 'EVENT-GROUP-IDENTIFIER':
                     event_group_identifier = self.parse_int_node(elem)
                 case 'PDU-ACTIVATION-ROUTING-GROUPS':
-                    activation_groups = self._parse_element_list(
+                    activation_groups = self.parse_variable_element_list(
                         elem,
                         {'PDU-ACTIVATION-ROUTING-GROUP': self._parse_activation_routing_group},
                     )
@@ -179,7 +179,7 @@ class ServiceInstanceCollectionParser(ElementParser):
                 case 'MULTICAST-THRESHOLD':
                     multicast_threshold = self.parse_int_node(elem)
                 case 'PDU-ACTIVATION-ROUTING-GROUPS':
-                    activation_groups = self._parse_element_list(
+                    activation_groups = self.parse_variable_element_list(
                         elem,
                         {'PDU-ACTIVATION-ROUTING-GROUP': self._parse_activation_routing_group},
                     )

@@ -1,10 +1,10 @@
 from typing import Mapping, Sequence
 
-from autosar.ar_object import ArObject
-from autosar.base import InvalidDataTypeRef
-from autosar.constant import TextValue, NumericalValue, RecordValueAR4, ArrayValueAR4
-from autosar.datatype import ImplementationDataType, ApplicationPrimitiveDataType
-from autosar.has_logger import HasLogger
+from autosar.model.ar_object import ArObject
+from autosar.model.base import InvalidDataTypeRef
+from autosar.model.constant import TextValue, NumericalValue, RecordValueAR4, ArrayValueAR4
+from autosar.model.datatype import ImplementationDataType, ApplicationPrimitiveDataType
+from autosar.model.has_logger import HasLogger
 
 
 class ValueBuilder(HasLogger):

@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import Iterable
 
-from autosar.element import Element
+from autosar.model.element import Element
 
 
 class PDUActivationRoutingGroup(Element):

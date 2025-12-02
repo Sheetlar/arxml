@@ -1,7 +1,7 @@
 from xml.etree.ElementTree import Element
 
 from autosar import ArObject
-from autosar.collection import Collection
+from autosar.model.collection import Collection
 from autosar.parser.parser_base import ElementParser
 
 
@@ -32,7 +32,7 @@ class CollectionParser(ElementParser):
                             refs.append(ref)
                 case _:
                     self._logger.warning(f'Unexpected tag for {xml_elem.tag}: {child_elem.tag}')
-        common_args = self._parse_common_tags(xml_elem)
+        common_args = self.parse_common_tags(xml_elem)
         if common_args['name'] is None:
             self._logger.warning(f'Cannot find <SHORT-NAME> in {xml_elem.tag}, skipping')
             return None

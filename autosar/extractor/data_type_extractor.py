@@ -1,11 +1,27 @@
 from typing import Iterable
 
-from autosar.data_transformation import TransformationTechnology, EndToEndTransformationDescription
-from autosar.datatype import ApplicationDataType, ApplicationPrimitiveDataType, ApplicationRecordDataType, ApplicationArrayDataType, CompuMethod, DataConstraint
-from autosar.element import DataElement
-from autosar.extractor.common import DataType, ScalableDataType, BitfieldDataType, EnumDataType, Array, get_max_value, get_type_by_range
+from autosar.model.compu import CompuScaleConstantContents, CompuConstTextContent
+from autosar.model.transformation import TransformationTechnology, EndToEndTransformationDescription
+from autosar.model.datatype import (
+    ApplicationDataType,
+    ApplicationPrimitiveDataType,
+    ApplicationRecordDataType,
+    ApplicationArrayDataType,
+    CompuMethod,
+    DataConstraint,
+)
+from autosar.model.element import DataElement
+from autosar.extractor.common import (
+    DataType,
+    ScalableDataType,
+    BitfieldDataType,
+    EnumDataType,
+    Array,
+    get_max_value,
+    get_type_by_range,
+)
 from autosar.extractor.e2e import e2e_profiles
-from autosar.has_logger import HasLogger
+from autosar.model.has_logger import HasLogger
 
 
 class ExtractedDataType(HasLogger):
@@ -107,17 +123,20 @@ class ExtractedDataType(HasLogger):
                 for e in compu_method.int_to_phys.elements:
                     if e.lower_limit != e.upper_limit:
                         raise NotImplementedError
-                    mapping[e.lower_limit] = e.label
+                    mapping[e.lower_limit] = e.short_label
                 return EnumDataType(name, dtype, mapping)
             case 'BITFIELD_TEXTTABLE':
                 values_off = {}
                 values_on = {}
                 for e in compu_method.int_to_phys.elements:
+                    if (not isinstance(e.compu_scale_contents, CompuScaleConstantContents)
+                            or not isinstance(e.compu_scale_contents.compu_const.compu_const_content_type, CompuConstTextContent)):
+                        raise NotImplementedError
                     if e.lower_limit != e.upper_limit:
                         raise NotImplementedError
                     if e.lower_limit == 0:
                         values_off[e.mask] = e.text_value
-                    values_on[e.mask] = e.lower_limit
+                    values_on[e.mask] = str(e.lower_limit)
                 try:
                     desc = {m: (values_off[m], v) for m, v in values_on.items()}
                 except KeyError:
@@ -125,9 +144,10 @@ class ExtractedDataType(HasLogger):
                 return BitfieldDataType(name, dtype, desc)
             case 'SCALE_LINEAR_AND_TEXTTABLE':
                 scale_elem, = tuple(x for x in compu_method.int_to_phys.elements if x.text_value is None)
-                if isinstance(scale_elem.upper_limit, float) and scale_elem.numerator == 1:
-                    scale_elem.numerator = round(scale_elem.upper_limit / get_max_value(dtype), 5)
-                scale = scale_elem.offset + scale_elem.numerator / scale_elem.denominator
+                numerator = scale_elem.numerator
+                if isinstance(scale_elem.upper_limit, float) and numerator == 1:
+                    numerator = round(scale_elem.upper_limit / get_max_value(dtype), 5)
+                scale = scale_elem.offset + numerator / scale_elem.denominator
                 return ScalableDataType(name, dtype, scale / unit_factor)
             case _:
                 raise NotImplementedError

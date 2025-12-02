@@ -1,11 +1,11 @@
 from abc import (ABC, abstractmethod)
 from typing import Any
 
-from autosar.ar_object import ArObject
-from autosar.base import split_ref as ar_split_ref, AdminData
-from autosar.element import DataElement, ParameterDataPrototype
-from autosar.mode import ModeGroup
-from autosar.portinterface import ApplicationError
+from autosar.model.ar_object import ArObject
+from autosar.model.base import split_ref as ar_split_ref, AdminData
+from autosar.model.element import DataElement, ParameterDataPrototype
+from autosar.model.mode import ModeGroup
+from autosar.model.portinterface import ApplicationError
 from autosar.workspace import Workspace
 
 

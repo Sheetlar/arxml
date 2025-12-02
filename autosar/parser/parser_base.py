@@ -1,28 +1,36 @@
 import abc
 from collections import deque
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, Generator
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.base import (
+from autosar.model.ar_object import ArObject
+from autosar.model.base import (
     AdminData,
     SpecialDataGroup,
     SpecialData,
-    SwDataDefPropsConditional,
+    SwDataDefProps,
+    SwDataDefPropsVariants,
     SwPointerTargetProps,
     SymbolProps,
+    ValueSpecification,
+    NumericalValueSpecification,
+    TextValueSpecification,
+    DataFilter,
+    Limit,
+    IntLimit,
+    FloatLimit,
 )
-from autosar.element import DataElement
-from autosar.has_logger import HasLogger
+from autosar.model.element import DataElement
+from autosar.model.has_logger import HasLogger
 
-T = TypeVar('T')
+T = TypeVar('T', bound=ArObject)
 
 
 def _parse_boolean(value: str | None) -> bool | None:
     if isinstance(value, str):
-        if value == 'true':
+        if value.lower() == 'true':
             return True
-        elif value == 'false':
+        elif value.lower() == 'false':
             return False
     return None
 
@@ -79,8 +87,6 @@ class BaseParser(HasLogger):
             self.common[-1].desc, self.common[-1].desc_attr = self.parse_desc_direct(xml_elem)
         elif xml_elem.tag == 'LONG-NAME':
             self.common[-1].long_name, self.common[-1].long_name_attr = self.parse_long_name_direct(xml_elem)
-        else:
-            self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
 
     def apply_desc(self, obj: ArObject):
         if self.common[-1].desc is not None:
@@ -150,6 +156,31 @@ class BaseParser(HasLogger):
             return l2_text, l2_attr
         return None, None
 
+    def log_not_implemented(self, parent: Element, child: Element):
+        self._logger.warning(f'Parser not implemented: {parent.tag}::{child.tag}')
+
+    def log_unexpected(self, parent: Element, child: Element):
+        self._logger.warning(f'Unexpected tag: {child.tag} for {parent.tag}')
+
+    def log_missing_required(self, parent: Element, child_name: str):
+        self._logger.error(f'Missing {child_name} in {parent.tag}, ignoring')
+
+    def find_required_tag(self, in_elem: Element, tag_to_find: str):
+        if (child := in_elem.find(tag_to_find)) is None:
+            self.log_missing_required(in_elem, tag_to_find)
+            return None
+        return child
+
+    @staticmethod
+    def not_none_dict(data: dict) -> dict:
+        return {k: v for k, v in data.items() if v is not None}
+
+    @staticmethod
+    def get_uuid(xml_elem: Element | None) -> str | None:
+        if xml_elem is None:
+            return None
+        return xml_elem.attrib.get('UUID', None)
+
     @staticmethod
     def parse_text_node(xml_elem: Element) -> str | None:
         if xml_elem is None:
@@ -171,21 +202,30 @@ class BaseParser(HasLogger):
     @staticmethod
     def parse_boolean_node(xml_elem: Element) -> bool | None:
         if xml_elem is None:
-            return False
+            return None
         return _parse_boolean(xml_elem.text)
 
-    def parse_number_node(self, xml_elem: Element) -> int | float | str | None:
+    def parse_number_node(self, xml_elem: Element) -> int | float | None:
+        def get_int_base() -> int:
+            if text_value.startswith('0x'):
+                return 16
+            if text_value.startswith('0b'):
+                return 2
+            if text_value.startswith('0'):
+                return 8
+            return 10
+
         if xml_elem is None:
             return None
-        text_value = self.parse_text_node(xml_elem)
+        text_value = self.parse_text_node(xml_elem).lower()
         try:
-            retval = int(text_value)
+            return int(text_value, base=get_int_base())
         except ValueError:
             try:
-                retval = float(text_value)
+                return float(text_value)
             except ValueError:
-                retval = text_value
-        return retval
+                self._logger.warning(f'Cannot parse numeric node {xml_elem.tag}: "{text_value}", value will be None')
+                return None
 
     @staticmethod
     def has_admin_data(xml_root: Element) -> bool:
@@ -215,30 +255,75 @@ class BaseParser(HasLogger):
                 child_group = self._parse_special_data_group(child_elem)
                 special_data_group.sdg.append(child_group)
             else:
-                self._logger.error(f'Unexpected tag for {xml_elem.tag}: {child_elem.tag}')
+                self.log_unexpected(xml_elem, child_elem)
         return special_data_group
 
-    def parse_sw_data_def_props(self, xml_root: Element, parent: ArObject | None = None) -> list | None:
-        assert (xml_root.tag == 'SW-DATA-DEF-PROPS')
-        variants = []
-        for item_xml in xml_root.findall('./*'):
-            if item_xml.tag != 'SW-DATA-DEF-PROPS-VARIANTS':
-                self._logger.error(f'Unexpected tag: {item_xml.tag}')
-                continue
-            for sub_item_xml in item_xml.findall('./*'):
-                if sub_item_xml.tag != 'SW-DATA-DEF-PROPS-CONDITIONAL':
-                    self._logger.error(f'Unexpected tag: {sub_item_xml.tag}')
-                    continue
-                variant = self.parse_sw_data_def_props_conditional(sub_item_xml, parent)
-                assert (variant is not None)
-                variants.append(variant)
-        return variants if len(variants) > 0 else None
+    def parse_value_specification(self, xml_elem: Element) -> ValueSpecification | None:
+        return self.parse_subclass_aggregation(xml_elem, {
+            'NUMERICAL-VALUE-SPECIFICATION': self._parse_numerical_value_spec,
+            'TEXT-VALUE-SPECIFICATION': self._parse_text_value_spec,
+        })
 
-    def parse_sw_data_def_props_conditional(
+    def _parse_numerical_value_spec(self, xml_elem: Element) -> NumericalValueSpecification:
+        values = list(map(self.parse_number_node, xml_elem.findall('VALUE')))
+        if len(values) == 1:
+            values, = values
+        return NumericalValueSpecification(
+            short_label=self.parse_text_node(xml_elem.find('SHORT-LABEL')),
+            value=values,
+        )
+
+    def _parse_text_value_spec(self, xml_elem: Element) -> TextValueSpecification:
+        return TextValueSpecification(
+            short_label=self.parse_text_node(xml_elem.find('SHORT-LABEL')),
+            value=self.parse_text_node(xml_elem.find('VALUE')),
+        )
+
+    def parse_data_filter(self, xml_elem: Element) -> DataFilter:
+        data_filter = DataFilter(
+            data_filter_type=self.parse_text_node(xml_elem.find('DATA-FILTER-TYPE')),
+            mask=self.parse_int_node(xml_elem.find('MASK')),
+            max=self.parse_int_node(xml_elem.find('MAX')),
+            min=self.parse_int_node(xml_elem.find('MIN')),
+            offset=self.parse_int_node(xml_elem.find('OFFSET')),
+            period=self.parse_int_node(xml_elem.find('PERIOD')),
+            x=self.parse_int_node(xml_elem.find('X')),
+        )
+        return data_filter
+
+    def parse_limit(self, xml_elem: Element) -> Limit | None:
+        value = self.parse_number_node(xml_elem)
+        if value is None:
+            return None
+        if isinstance(value, int):
+            limit = IntLimit(value)
+        else:
+            limit = FloatLimit(value)
+        if (t := xml_elem.attrib.get('INTERVAL-TYPE', None)) is not None:
+            limit.interval_type = t
+        return limit
+
+    def parse_sw_data_def_props(self, xml_root: Element, parent: ArObject | None = None) -> SwDataDefPropsVariants | None:
+        variants_elem = xml_root.find('SW-DATA-DEF-PROPS-VARIANTS')
+        if variants_elem is None:
+            return None
+        variants = []
+        for sub_item_xml in variants_elem:
+            if sub_item_xml.tag != 'SW-DATA-DEF-PROPS-CONDITIONAL':
+                self.log_unexpected(variants_elem, sub_item_xml)
+                continue
+            variant = self._parse_single_sw_data_def_props(sub_item_xml, parent)
+            assert (variant is not None)
+            variants.append(variant)
+        if len(variants) == 0:
+            return None
+        return SwDataDefPropsVariants(variants)
+
+    def _parse_single_sw_data_def_props(
             self,
             xml_root,
             parent: ArObject | None = None,
-    ) -> SwDataDefPropsConditional:
+    ) -> SwDataDefProps:
         assert (xml_root.tag == 'SW-DATA-DEF-PROPS-CONDITIONAL')
         base_type_ref = None
         implementation_type_ref = None
@@ -272,20 +357,20 @@ class BaseParser(HasLogger):
             elif xml_item.tag == 'SW-RECORD-LAYOUT-REF':
                 sw_record_layout_ref = self.parse_text_node(xml_item)
             elif xml_item.tag == 'ADDITIONAL-NATIVE-TYPE-QUALIFIER':
-                self._logger.warning(f'Unhandled: {xml_item.tag}')
+                self.log_not_implemented(xml_root, xml_item)
                 pass  # implement later
             elif xml_item.tag == 'SW-CALPRM-AXIS-SET':
-                self._logger.warning(f'Unhandled: {xml_item.tag}')
+                self.log_not_implemented(xml_root, xml_item)
                 pass  # implement later
             elif xml_item.tag == 'INVALID-VALUE':
-                self._logger.warning(f'Unhandled: {xml_item.tag}')
+                self.log_not_implemented(xml_root, xml_item)
                 pass  # implement later
             elif xml_item.tag == 'SW-TEXT-PROPS':
-                self._logger.warning(f'Unhandled: {xml_item.tag}')
+                self.log_not_implemented(xml_root, xml_item)
                 pass  # implement later
             else:
-                self._logger.warning(f'Unexpected tag: {xml_item.tag}')
-        variant = SwDataDefPropsConditional(
+                self.log_unexpected(xml_root, xml_item)
+        variant = SwDataDefProps(
             base_type_ref,
             implementation_type_ref,
             sw_address_method_ref,
@@ -353,21 +438,23 @@ class BaseParser(HasLogger):
             elif xml_elem.tag == 'SYMBOL':
                 symbol = self.parse_text_node(xml_elem)
             else:
-                self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
+                self.log_unexpected(xml_root, xml_elem)
         return SymbolProps(name, symbol)
 
     def __repr__(self):
         return self.__class__.__name__
 
-    def _parse_element_list(
+    def parse_variable_element_list(
             self,
-            xml_element: Element,
+            xml_element: Element | None,
             parser_mapper: dict[str, Callable[[Element], T | None]],
     ) -> list[T]:
+        if xml_element is None:
+            return []
         result = []
         for child_elem in xml_element.findall('./*'):
             if child_elem.tag not in parser_mapper:
-                self._logger.error(f'Unexpected tag for {xml_element.tag}: {child_elem.tag}')
+                self.log_unexpected(xml_element, child_elem)
                 continue
             parse_element = parser_mapper[child_elem.tag]
             parsed = parse_element(child_elem)
@@ -375,21 +462,74 @@ class BaseParser(HasLogger):
                 result.append(parsed)
         return result
 
+    def parse_element_list(
+            self,
+            xml_element: Element | None,
+            parser: Callable[[Element], T | None],
+            expected_child_name: str | None = None,
+    ) -> list[T]:
+        if xml_element is None:
+            return []
+        result = []
+        if expected_child_name is None:
+            expected_child_name = xml_element.tag.removesuffix('S')
+        for child_elem in xml_element:
+            if child_elem.tag != expected_child_name:
+                self.log_unexpected(xml_element, child_elem)
+                continue
+            parsed = parser(child_elem)
+            if parsed is not None:
+                result.append(parsed)
+        return result
+
+    def parse_subclass_aggregation(
+            self,
+            role_elem: Element | None,
+            subclass_parser_map: dict[str, Callable[[Element], T | None]],
+    ) -> T | None:
+        if role_elem is None:
+            return None
+        for subclass, parser in subclass_parser_map.items():
+            type_elem = role_elem.find(subclass)
+            if type_elem is not None:
+                return parser(role_elem)
+        self._logger.warning(f'None of known subclasses found for {role_elem.tag}')
+        return None
+
+    def child_string_nodes(self, xml_element: Element | None, child_name: str | None = None) -> Generator[str, None, None]:
+        if xml_element is None:
+            return None
+        if child_name is None:
+            child_name = xml_element.tag.removesuffix('S')
+        for child_elem in xml_element.findall(child_name):
+            child_txt = self.parse_text_node(child_elem)
+            if child_txt is not None:
+                yield child_txt
+
+    def variation_child_string_nodes(self, xml_element: Element | None, child_name: str) -> Generator[str, None, None]:
+        if xml_element is None:
+            return None
+        for child_elem in xml_element.findall(f'{child_name}-CONDITIONAL'):
+            child_txt = self.parse_text_node(child_elem.find(child_name))
+            if child_txt is not None:
+                yield child_txt
+
 
 class ElementParser(BaseParser, abc.ABC):
     common_tags = ('SHORT-NAME', 'DESC', 'LONG-NAME', 'CATEGORY', 'ADMIN-DATA')
 
-    def _parse_common_tags(self, xml_elem: Element):
+    def parse_common_tags(self, xml_elem: Element):
         desc, _ = self.parse_desc_direct(xml_elem.find('DESC'))
         long_name, _ = self.parse_long_name_direct(xml_elem.find('LONG-NAME'))
         common_args = {
             'name': self.parse_text_node(xml_elem.find('SHORT-NAME')),
+            'uuid': self.get_uuid(xml_elem),
             'desc': desc,
             'long_name': long_name,
             'category': self.parse_text_node(xml_elem.find('CATEGORY')),
             'admin_data': self.parse_admin_data_node(xml_elem.find('ADMIN-DATA')),
         }
-        return common_args
+        return self.not_none_dict(common_args)
 
     @abc.abstractmethod
     def get_supported_tags(self):

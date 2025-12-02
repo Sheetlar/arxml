@@ -1,7 +1,10 @@
 from abc import ABC
-from typing import Iterable, Mapping
+from typing import TYPE_CHECKING, TypeVar, TypeAlias
 
-from autosar.has_logger import HasLogger
+from autosar.model.has_logger import HasLogger
+
+if TYPE_CHECKING:
+    from autosar.workspace import Workspace
 
 
 class ArObject(HasLogger, ABC):
@@ -10,10 +13,10 @@ class ArObject(HasLogger, ABC):
     ref = None
     name = None
 
-    def root_ws(self):
-        return NotImplementedError
+    def root_ws(self) -> 'Workspace':
+        raise NotImplementedError
 
-    def find(self, *_):
+    def find(self, *_) -> 'MaybeArObject':
         raise NotImplementedError
 
     def __repr__(self):
@@ -26,3 +29,7 @@ class ArObject(HasLogger, ABC):
             and not isinstance(v, (list, dict, tuple))
         )
         return f'{self.__class__.__name__}({params_str})'
+
+
+AnyArObject = TypeVar('AnyArObject', bound=ArObject)
+MaybeArObject: TypeAlias = AnyArObject | None

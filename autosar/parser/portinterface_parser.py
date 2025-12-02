@@ -1,12 +1,12 @@
 from typing import Callable
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.base import has_admin_data, parse_admin_data_node
-from autosar.element import DataElement, ParameterDataPrototype, SoftwareAddressMethod
-from autosar.mode import ModeGroup
+from autosar.model.ar_object import ArObject
+from autosar.model.base import has_admin_data, parse_admin_data_node
+from autosar.model.element import DataElement, ParameterDataPrototype, SoftwareAddressMethod
+from autosar.model.mode import ModeGroup
 from autosar.parser.parser_base import ElementParser
-from autosar.portinterface import (
+from autosar.model.portinterface import (
     SenderReceiverInterface,
     InvalidationPolicy,
     ParameterInterface,
@@ -445,7 +445,7 @@ class PortInterfacePackageParser(ElementParser):
             if xml_elem.tag == 'IS-SERVICE':
                 is_service = self.parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'TRIGGERS' and self.version >= 4.0:
-                triggers = self._parse_element_list(
+                triggers = self.parse_variable_element_list(
                     xml_elem,
                     {'TRIGGER': self._parse_trigger},
                 )

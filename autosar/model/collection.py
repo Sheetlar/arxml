@@ -1,4 +1,4 @@
-from autosar.element import Element
+from autosar.model.element import Element
 
 
 class Collection(Element):

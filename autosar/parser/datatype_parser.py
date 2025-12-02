@@ -1,8 +1,8 @@
 from typing import Callable
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.datatype import (
+from autosar.model.ar_object import ArObject
+from autosar.model.datatype import (
     IntegerDataType,
     RecordTypeElement,
     RecordDataType,
@@ -24,12 +24,12 @@ from autosar.datatype import (
     ModeRequestTypeMap,
     CompuMethod,
     Computation,
-    CompuScaleElement,
     Unit,
     BufferProperties,
     BufferComputation,
 )
-from autosar.element import Element as ArElement
+from autosar.model.element import Element as ArElement
+from autosar.parser.compu_parser import CompuParser
 from autosar.parser.parser_base import ElementParser
 
 
@@ -487,7 +487,7 @@ class DataTypeParser(ElementParser):
         return ModeRequestTypeMap(mode_declaration_group_ref, implementation_data_type_ref)
 
 
-class DataTypeSemanticsParser(ElementParser):
+class DataTypeSemanticsParser(ElementParser, CompuParser):
     def get_supported_tags(self):
         return ['COMPU-METHOD']
 
@@ -535,7 +535,7 @@ class DataTypeSemanticsParser(ElementParser):
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'COMPU-SCALES':
                 for compu_scale_xml in xml_elem.findall('COMPU-SCALE'):
-                    compu_scale = self._parse_compu_scale_xml(compu_scale_xml)
+                    compu_scale = self.parse_compu_scale(compu_scale_xml)
                     computation.elements.append(compu_scale)
             elif xml_elem.tag == 'COMPU-DEFAULT-VALUE':
                 for xml_child in xml_elem.findall('./*'):
@@ -553,82 +553,6 @@ class DataTypeSemanticsParser(ElementParser):
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         return computation
-
-    def _parse_compu_scale_xml(self, xml_root: Element) -> CompuScaleElement:
-        assert (xml_root.tag == 'COMPU-SCALE')
-        label = None
-        lower_limit = None
-        upper_limit = None
-        lower_limit_type = None
-        upper_limit_type = None
-        symbol = None
-        admin_data = None
-        offset = None
-        numerator = None
-        denominator = None
-        text_value = None
-        mask = None
-        for xml_elem in xml_root.findall('./*'):
-            if xml_elem.tag == 'DESC':
-                pass  # implement later
-            elif xml_elem.tag == 'SHORT-LABEL':
-                label = self.parse_text_node(xml_elem)
-            elif xml_elem.tag == 'LOWER-LIMIT':
-                lower_limit = self.parse_number_node(xml_elem)
-                if (self.version >= 4.0) and 'INTERVAL-TYPE' in xml_elem.attrib:
-                    lower_limit_type = xml_elem.attrib['INTERVAL-TYPE']
-            elif xml_elem.tag == 'UPPER-LIMIT':
-                upper_limit = self.parse_number_node(xml_elem)
-                if (self.version >= 4.0) and 'INTERVAL-TYPE' in xml_elem.attrib:
-                    upper_limit_type = xml_elem.attrib['INTERVAL-TYPE']
-            elif xml_elem.tag == 'COMPU-RATIONAL-COEFFS':
-                offset, numerator, denominator = self._parse_compu_rational_xml(xml_elem)
-            elif xml_elem.tag == 'SYMBOL':
-                symbol = self.parse_text_node(xml_elem)
-            elif xml_elem.tag == 'ADMIN-DATA':
-                admin_data = self.parse_admin_data_node(xml_elem)
-            elif xml_elem.tag == 'COMPU-CONST':
-                text_value = self.parse_text_node(xml_elem.find('./VT'))
-            elif xml_elem.tag == 'MASK':
-                mask = self.parse_int_node(xml_elem)
-            else:
-                self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
-        compu_scale = CompuScaleElement(
-            lower_limit,
-            upper_limit,
-            lower_limit_type,
-            upper_limit_type,
-            label,
-            symbol,
-            admin_data,
-        )
-        compu_scale.offset = offset
-        compu_scale.numerator = numerator
-        compu_scale.denominator = denominator
-        compu_scale.text_value = text_value
-        compu_scale.mask = mask
-        return compu_scale
-
-    def _parse_compu_rational_xml(
-            self,
-            xml_root: Element,
-    ) -> tuple[int | float | str, int | float | str, int | float | str]:
-        assert (xml_root.tag == 'COMPU-RATIONAL-COEFFS')
-        num_xml = xml_root.findall('./COMPU-NUMERATOR/V')
-        den_xml = xml_root.findall('./COMPU-DENOMINATOR/V')
-        assert (num_xml is not None)
-        assert (len(num_xml) == 2)
-        assert (den_xml is not None)
-        if self.parse_text_node(num_xml[0]):
-            offset = self.parse_number_node(num_xml[0])
-        else:
-            offset = 0
-        if self.parse_text_node(num_xml[1]):
-            numerator = self.parse_number_node(num_xml[1])
-        else:
-            numerator = 1
-        denominator = self.parse_number_node(den_xml[0])
-        return offset, numerator, denominator
 
 
 class DataTypeUnitsParser(ElementParser):

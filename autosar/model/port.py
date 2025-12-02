@@ -9,12 +9,12 @@ See LICENSE file for additional information.
 import copy
 from typing import Mapping, Iterable, TYPE_CHECKING
 
-from autosar.ar_object import ArObject
-from autosar.base import AdminData, InvalidInitValueRef, InvalidDataTypeRef
-from autosar.builder import ValueBuilder
-from autosar.constant import Constant, Value, ValueAR4
-from autosar.element import Element
-from autosar.portinterface import (
+from autosar.model.ar_object import ArObject
+from autosar.model.base import AdminData, InvalidInitValueRef, InvalidDataTypeRef
+from autosar.model.builder import ValueBuilder
+from autosar.model.constant import Constant, Value, ValueAR4
+from autosar.model.element import Element
+from autosar.model.portinterface import (
     PortInterface,
     ClientServerInterface,
     SenderReceiverInterface,
@@ -24,7 +24,7 @@ from autosar.portinterface import (
 )
 
 if TYPE_CHECKING:
-    from autosar.component import ComponentType
+    from autosar.model.component import ComponentType
 
 sender_receiver_com_spec_arguments_ar4 = {'dataElement', 'initValue', 'initValueRef', 'aliveTimeout', 'queueLength'}
 sender_receiver_com_spec_arguments_ar3 = {'dataElement', 'canInvalidate', 'initValueRef', 'aliveTimeout', 'queueLength'}

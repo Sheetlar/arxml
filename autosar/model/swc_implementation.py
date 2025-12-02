@@ -1,5 +1,5 @@
-from autosar.ar_object import ArObject
-from autosar.element import Element
+from autosar.model.ar_object import ArObject
+from autosar.model.element import Element
 
 
 class SwcImplementation(Element):

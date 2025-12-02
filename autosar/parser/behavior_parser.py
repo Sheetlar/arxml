@@ -1,7 +1,7 @@
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.behavior import (
+from autosar.model.ar_object import ArObject
+from autosar.model.behavior import (
     InternalBehavior,
     PortAPIOption,
     PerInstanceMemory,
@@ -51,7 +51,7 @@ from autosar.behavior import (
     ModeSwitchPoint,
     ParameterAccessPoint,
 )
-from autosar.element import Element as ArElement
+from autosar.model.element import Element as ArElement
 from autosar.parser.constant_parser import ConstantParser
 from autosar.parser.parser_base import ElementParser
 

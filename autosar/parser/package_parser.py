@@ -1,7 +1,9 @@
-from autosar.base import parse_text_node
-from autosar.element import Element
-from autosar.has_logger import HasLogger
-from autosar.package import Package
+import traceback
+
+from autosar.model.base import parse_text_node
+from autosar.model.element import Element
+from autosar.model.has_logger import HasLogger
+from autosar.model.package import Package
 from autosar.parser.parser_base import ElementParser
 
 
@@ -32,22 +34,29 @@ class PackageParser(HasLogger):
         if xml_root.find('ELEMENTS'):
             element_names = set([x.name for x in package.elements])
             for xml_element in xml_root.findall('./ELEMENTS/*'):
-                parser_object = self.switcher.get(xml_element.tag)
-                if parser_object is not None:
-                    element = parser_object.parse_element(xml_element, package)
-                    if element is None:
-                        self._logger.warning(f'No return value: {xml_element.tag}')
-                        continue
-                    element.parent = package
-                    if isinstance(element, Element):
-                        if element.name not in element_names:
-                            # ignore duplicated items
-                            package.append(element)
-                            element_names.add(element.name)
+                try:
+                    parser_object = self.switcher.get(xml_element.tag)
+                    if parser_object is not None:
+                        element = parser_object.parse_element(xml_element, package)
+                        if element is None:
+                            self._logger.warning(f'No return value: {xml_element.tag}')
+                            continue
+                        element.parent = package
+                        if isinstance(element, Element):
+                            if element.name not in element_names:
+                                # ignore duplicated items
+                                package.append(element)
+                                element_names.add(element.name)
+                        else:
+                            raise ValueError(f'Parse error: {xml_element.tag}')
                     else:
-                        raise ValueError(f'Parse error: {xml_element.tag}')
-                else:
-                    package.unhandled_parser.add(xml_element.tag)
+                        package.unhandled_parser.add(xml_element.tag)
+                except Exception as e:
+                    self._logger.error(f'Error parsing element: {xml_element.tag}: {e!r}')
+                    self._logger.debug(traceback.format_exc())
+        if len(package.unhandled_parser) > 0:
+            unhandled_tags = ', '.join(package.unhandled_parser)
+            self._logger.warning(f'Unhandled elements of package {package.ref}: {unhandled_tags}')
 
         if 3.0 <= self.version < 4.0:
             if xml_root.find('SUB-PACKAGES'):

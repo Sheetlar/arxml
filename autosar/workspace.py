@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Any
 from xml.etree.ElementTree import Element
 
-from autosar.ar_object import ArObject
-from autosar.base import (
+from autosar.model.ar_object import ArObject
+from autosar.model.base import (
     parse_xml_file,
     get_xml_namespace,
     remove_namespace,
@@ -13,14 +13,17 @@ from autosar.base import (
     parse_version_string,
     create_admin_data,
 )
-from autosar.package import Package
+from autosar.model.package import Package
 from autosar.parser.behavior_parser import BehaviorParser
 from autosar.parser.collection_parser import CollectionParser
 from autosar.parser.component_parser import ComponentTypeParser
 from autosar.parser.constant_parser import ConstantParser
-from autosar.parser.data_transformation_parser import DataTransformationSetParser
+from autosar.parser.frame_parser import FrameParser
+from autosar.parser.tp_parser import TransportProtocolParser
+from autosar.parser.transformation_parser import TransformationParser
 from autosar.parser.datatype_parser import DataTypeParser, DataTypeSemanticsParser, DataTypeUnitsParser
 from autosar.parser.ecu_parser import EcuParser
+from autosar.parser.can_cluster_parser import CanClusterParser
 from autosar.parser.ethernet_cluster_parser import EthernetClusterParser
 from autosar.parser.mode_parser import ModeDeclarationParser
 from autosar.parser.package_parser import PackageParser
@@ -32,6 +35,7 @@ from autosar.parser.signal_parser import SignalParser
 from autosar.parser.some_ip_tp_parser import SomeIpTpParser
 from autosar.parser.swc_implementation_parser import SwcImplementationParser
 from autosar.parser.system_parser import SystemParser
+from autosar.model.system import System
 
 _valid_ws_roles = [
     'DataType',
@@ -83,7 +87,7 @@ class WorkspaceProfile:
 
 class Workspace(ArObject):
     """
-    An autosar worspace
+    An autosar workspace
     """
     autosar_platform_types = {
         '/AUTOSAR_Platform/BaseTypes/uint8': '>u1',
@@ -119,6 +123,7 @@ class Workspace(ArObject):
         self.major = 0
         self.minor = 0
         self.packages = []
+        self.systems: list[System] = []
         if isinstance(version, str):
             major, minor, patch = parse_version_string(version)
             self._version = float(f'{major}.{minor}')
@@ -456,10 +461,13 @@ class Workspace(ArObject):
         parser.register_element_parser(SignalParser(self.version))
         parser.register_element_parser(SwcImplementationParser(self.version))
         parser.register_element_parser(ServiceInstanceCollectionParser(self.version))
+        parser.register_element_parser(CanClusterParser(self.version))
         parser.register_element_parser(EthernetClusterParser(self.version))
-        parser.register_element_parser(DataTransformationSetParser(self.version))
+        parser.register_element_parser(TransformationParser(self.version))
         parser.register_element_parser(PduParser(self.version))
         parser.register_element_parser(SoConSetParser(self.version))
         parser.register_element_parser(EcuParser(self.version))
         parser.register_element_parser(CollectionParser(self.version))
         parser.register_element_parser(SomeIpTpParser(self.version))
+        parser.register_element_parser(TransportProtocolParser(self.version))
+        parser.register_element_parser(FrameParser(self.version))
