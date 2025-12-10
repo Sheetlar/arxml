@@ -21,7 +21,7 @@ from autosar.model.base import (
     FloatLimit,
 )
 from autosar.model.element import DataElement
-from autosar.model.has_logger import HasLogger
+from autosar.misc import HasLogger
 
 T = TypeVar('T', bound=ArObject)
 

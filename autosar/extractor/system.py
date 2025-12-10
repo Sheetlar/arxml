@@ -1,16 +1,24 @@
 from itertools import chain
 
-from autosar.extractor.data import (
-    DataType,
+from autosar.extractor.data import DataType, Signal
+from autosar.extractor.conversion import (
+    ConstantConversion,
     LinearConversion,
     RationalConversion,
+    ConversionInterval,
+    NumericConversion,
+    MapConversion,
+    AnyConversion,
+    NumericAndMapConversion,
+    BitfieldConversion,
 )
-from autosar.extractor.topology import Ecu, CanFrame, CanChannel, Signal
+from autosar.extractor.topology import Ecu, CanFrame, CanChannel
 from autosar.model.ar_object import AnyArObject
 from autosar.model.can_cluster import CanClusterVariants, CanCluster, CanPhysicalChannel, CanFrameTriggering
+from autosar.model.compu import CompuScaleRationalFormula, CompuScaleConstantContents
 from autosar.model.datatype import SwBaseType, CompuMethod
 from autosar.model.ecu import EcuInstance
-from autosar.model.has_logger import HasLogger
+from autosar.misc import HasLogger
 from autosar.model.signal import ISignal, SystemSignal
 from autosar.model.system import System
 
@@ -100,10 +108,10 @@ class ExtractedSystem(HasLogger):
             size=base_type.size,
             encoding=base_type.type_encoding,
         )
-        self._extract_compu(compu)
+        conversion = self._extract_compu(compu)
         return system_signal.name, ...
 
-    def _extract_compu(self, compu: CompuMethod):
+    def _extract_compu(self, compu: CompuMethod) -> AnyConversion | None:
         match compu.category:
             case 'IDENTICAL':
                 return None
@@ -111,15 +119,110 @@ class ExtractedSystem(HasLogger):
                 c = compu.int_to_phys.elements[0]
                 return LinearConversion(c.numerator / c.denominator, c.offset / c.denominator)
             case 'SCALE_LINEAR':
-                ...
+                return NumericConversion((
+                    ConversionInterval(
+                        min=scale.lower_limit,
+                        max=scale.upper_limit,
+                        convertion=LinearConversion(scale.numerator / scale.denominator, scale.offset / scale.denominator),
+                    )
+                    for scale in compu.int_to_phys.elements
+                ))
+            case 'SCALE_LINEAR_AND_TEXTTABLE':
+                return NumericAndMapConversion(
+                    numeric_intervals=(
+                        ConversionInterval(
+                            min=scale.lower_limit,
+                            max=scale.upper_limit,
+                            convertion=LinearConversion(scale.numerator / scale.denominator, scale.offset / scale.denominator),
+                        )
+                        for scale in compu.int_to_phys.elements
+                        if isinstance(scale.compu_scale_contents, CompuScaleRationalFormula)
+                    ),
+                    map_intervals=(
+                        ConversionInterval(
+                            min=scale.lower_limit,
+                            max=scale.upper_limit,
+                            convertion=ConstantConversion(scale.text_value),
+                        )
+                        for scale in compu.int_to_phys.elements
+                        if isinstance(scale.compu_scale_contents, CompuScaleConstantContents)
+                    ),
+                )
             case 'RAT_FUNC':
                 c = compu.int_to_phys.elements[0]
                 return RationalConversion(
                     c.compu_scale_contents.compu_rational_coeffs.compu_numerator.vs,
                     c.compu_scale_contents.compu_rational_coeffs.compu_denominator.vs,
                 )
-            case _: ...
-        raise NotImplementedError
+            case 'SCALE_RAT_FUNC':
+                return NumericConversion((
+                    ConversionInterval(
+                        min=scale.lower_limit,
+                        max=scale.upper_limit,
+                        convertion=RationalConversion(
+                            scale.compu_scale_contents.compu_rational_coeffs.compu_numerator.vs,
+                            scale.compu_scale_contents.compu_rational_coeffs.compu_denominator.vs,
+                        )
+                    )
+                    for scale in compu.int_to_phys.elements
+                ))
+            case 'SCALE_RATIONAL_AND_TEXTTABLE':
+                return NumericAndMapConversion(
+                    numeric_intervals=(
+                        ConversionInterval(
+                            min=scale.lower_limit,
+                            max=scale.upper_limit,
+                            convertion=RationalConversion(
+                                scale.compu_scale_contents.compu_rational_coeffs.compu_numerator.vs,
+                                scale.compu_scale_contents.compu_rational_coeffs.compu_denominator.vs,
+                            )
+                        )
+                        for scale in compu.int_to_phys.elements
+                        if isinstance(scale.compu_scale_contents, CompuScaleRationalFormula)
+                    ),
+                    map_intervals=(
+                        ConversionInterval(
+                            min=scale.lower_limit,
+                            max=scale.upper_limit,
+                            convertion=ConstantConversion(scale.text_value),
+                        )
+                        for scale in compu.int_to_phys.elements
+                        if isinstance(scale.compu_scale_contents, CompuScaleConstantContents)
+                    ),
+                )
+            case 'TEXTTABLE':
+                return MapConversion((
+                    ConversionInterval(
+                        min=scale.lower_limit,
+                        max=scale.upper_limit,
+                        convertion=ConstantConversion(scale.text_value),
+                    )
+                    for scale in compu.int_to_phys.elements
+                ))
+            case 'TAB_NOINTP':
+                return MapConversion((
+                    ConversionInterval(
+                        min=scale.lower_limit,
+                        max=scale.upper_limit,
+                        convertion=ConstantConversion(scale.compu_scale_contents.compu_const.compu_const_content_type.v),
+                    )
+                    for scale in compu.int_to_phys.elements
+                ))
+            case 'BITFIELD_TEXTTABLE':
+                return BitfieldConversion((
+                    (
+                        scale.mask,
+                        ConversionInterval(
+                            min=scale.lower_limit,
+                            max=scale.upper_limit,
+                            convertion=ConstantConversion(scale.text_value),
+                        ),
+                    )
+                    for scale in compu.int_to_phys.elements
+                ))
+            case _:
+                self._logger.warning(f'Unexpected CompuMethod category "{compu.category}", defaulting to IDENTICAL')
+                return None
 
     def _extract_topology(self):
         clusters = chain.from_iterable(

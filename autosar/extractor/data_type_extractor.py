@@ -21,7 +21,7 @@ from autosar.extractor.common import (
     get_type_by_range,
 )
 from autosar.extractor.e2e import e2e_profiles
-from autosar.model.has_logger import HasLogger
+from autosar.misc import HasLogger
 
 
 class ExtractedDataType(HasLogger):

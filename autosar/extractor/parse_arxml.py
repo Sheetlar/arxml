@@ -2,9 +2,8 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import autosar
-from autosar.extractor.system_extractor import SystemExtractor
 from autosar.extractor.system import ExtractedSystem
-from autosar.model.has_logger import setup_logger
+from autosar.misc import setup_logger
 
 
 def parse_arxml(arxml_file_path: Path):

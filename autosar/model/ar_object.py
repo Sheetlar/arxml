@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import TYPE_CHECKING, TypeVar, TypeAlias
 
-from autosar.model.has_logger import HasLogger
+from autosar.misc import HasLogger
 
 if TYPE_CHECKING:
     from autosar.workspace import Workspace

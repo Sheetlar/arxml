@@ -4,6 +4,22 @@ from abc import ABC
 from typing import Iterable
 
 
+class HasRepr(ABC):
+    _blacklist = ()
+
+    def _repr_filter(self, name: str):
+        return not name.startswith('_') and name not in self._blacklist
+
+    def __repr__(self):
+        params = ', '.join(
+            f'{name}={attr!r}'
+            for name in dir(self)
+            if self._repr_filter(name)
+            if not callable(attr := getattr(self, name))
+        )
+        return f'{self.__class__.__name__}({params})'
+
+
 class HasLogger(ABC):
     def __init__(self, *args, **kwargs):
         self._logger = logging.getLogger(name=self.__class__.__name__)

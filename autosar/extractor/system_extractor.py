@@ -9,7 +9,7 @@ from autosar.model.element import DataElement
 from autosar.model.ethernet_cluster import ApplicationEndpoint, NetworkEndpoint, PduTriggering
 from autosar.extractor.common import Event, SomeIpFeature
 from autosar.extractor.data_type_extractor import ExtractedDataType
-from autosar.model.has_logger import HasLogger
+from autosar.misc import HasLogger
 from autosar.model.pdu import SoConIPduIdentifier, ISignalIPdu, GeneralPurposeIPdu
 from autosar.model.portinterface import Operation, Trigger
 from autosar.model.service_instance_collection import ServiceInstanceCollectionSet, ProvidedServiceInstance, EventHandler

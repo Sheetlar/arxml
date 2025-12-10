@@ -4,7 +4,7 @@ from autosar.model.ar_object import ArObject
 from autosar.model.base import InvalidDataTypeRef
 from autosar.model.constant import TextValue, NumericalValue, RecordValueAR4, ArrayValueAR4
 from autosar.model.datatype import ImplementationDataType, ApplicationPrimitiveDataType
-from autosar.model.has_logger import HasLogger
+from autosar.misc import HasLogger
 
 
 class ValueBuilder(HasLogger):

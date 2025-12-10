@@ -2,7 +2,7 @@ import traceback
 
 from autosar.model.base import parse_text_node
 from autosar.model.element import Element
-from autosar.model.has_logger import HasLogger
+from autosar.misc import HasLogger
 from autosar.model.package import Package
 from autosar.parser.parser_base import ElementParser
 

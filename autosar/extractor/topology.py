@@ -3,22 +3,6 @@ from typing import Iterable
 from autosar.extractor.base import SystemElement
 
 
-class Signal(SystemElement):
-    def __init__(
-            self,
-            bit_length: int,
-            np_dtype: str,
-            compu: str | None = None,
-            unit: str | None = None,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.bit_length = bit_length
-        self.np_dtype = np_dtype
-        self.compu = compu
-        self.unit = unit
-
-
 class Ecu(SystemElement):
     pass
 
