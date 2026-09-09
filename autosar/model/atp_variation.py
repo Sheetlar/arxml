@@ -1,11 +1,12 @@
-from typing import TypeVar, Generic, Iterable
+from typing import TypeVar, Generic, Iterable, Any
 
+from autosar.misc import HasRepr
 from autosar.model.ar_object import ArObject
 
 T = TypeVar('T', bound=ArObject)
 
 
-class Variants(Generic[T]):
+class Variants(Generic[T], HasRepr):
     def __init__(self, variants: Iterable[T], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._variants = tuple(variants)
@@ -28,3 +29,10 @@ class Variants(Generic[T]):
         if len(self._variants) != 1:
             return None
         return self._variants[0]
+
+    def _repr_filter(self, attr_name: str, attr_value: Any) -> bool:
+        if attr_name == 'single' and len(self._variants) != 1:
+            return False
+        if attr_name == 'variants' and len(self._variants) == 1:
+            return False
+        return super()._repr_filter(attr_name, attr_value)

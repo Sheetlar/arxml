@@ -19,6 +19,7 @@ from autosar.model.base import (
     Limit,
     IntLimit,
     FloatLimit,
+    SomeEnum,
 )
 from autosar.model.element import DataElement
 from autosar.misc import HasLogger
@@ -187,25 +188,13 @@ class BaseParser(HasLogger):
             return None
         return xml_elem.text
 
-    @staticmethod
-    def parse_int_node(xml_elem: Element) -> int | None:
-        if xml_elem is None:
+    def parse_enum_node(self, xml_elem: Element, enum_type: type[SomeEnum]) -> SomeEnum | None:
+        try:
+            return enum_type(self.parse_text_node(xml_elem))
+        except ValueError:
             return None
-        return int(xml_elem.text) if xml_elem.text is not None else None
 
-    @staticmethod
-    def parse_float_node(xml_elem: Element) -> float | None:
-        if xml_elem is None:
-            return None
-        return float(xml_elem.text) if xml_elem.text is not None else None
-
-    @staticmethod
-    def parse_boolean_node(xml_elem: Element) -> bool | None:
-        if xml_elem is None:
-            return None
-        return _parse_boolean(xml_elem.text)
-
-    def parse_number_node(self, xml_elem: Element) -> int | float | None:
+    def parse_int_node(self, xml_elem: Element) -> int | None:
         def get_int_base() -> int:
             if text_value.startswith('0x'):
                 return 16
@@ -215,17 +204,34 @@ class BaseParser(HasLogger):
                 return 8
             return 10
 
+        text_value = self.parse_text_node(xml_elem)
+        if text_value is None:
+            return None
+        return int(text_value.lower(), base=get_int_base())
+
+    def parse_float_node(self, xml_elem: Element) -> float | None:
+        text_value = self.parse_text_node(xml_elem)
+        if text_value is None:
+            return None
+        return float(text_value.lower())
+
+    def parse_number_node(self, xml_elem: Element) -> int | float | None:
         if xml_elem is None:
             return None
-        text_value = self.parse_text_node(xml_elem).lower()
         try:
-            return int(text_value, base=get_int_base())
+            return self.parse_int_node(xml_elem)
         except ValueError:
             try:
-                return float(text_value)
+                return self.parse_float_node(xml_elem)
             except ValueError:
-                self._logger.warning(f'Cannot parse numeric node {xml_elem.tag}: "{text_value}", value will be None')
+                self._logger.warning(f'Cannot parse numeric node {xml_elem.tag}: "{self.parse_text_node(xml_elem)}", value will be None')
                 return None
+
+    @staticmethod
+    def parse_boolean_node(xml_elem: Element) -> bool | None:
+        if xml_elem is None:
+            return None
+        return _parse_boolean(xml_elem.text)
 
     @staticmethod
     def has_admin_data(xml_root: Element) -> bool:

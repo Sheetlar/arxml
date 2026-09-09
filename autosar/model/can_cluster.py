@@ -7,6 +7,7 @@ from autosar.model.communication_cluster import (
     FrameTriggering,
 )
 from autosar.model.element import ElementVariants
+from autosar.model.enums import CanAddressingModeType, CanFrameRxBehaviorEnum, CanFrameTxBehaviorEnum
 
 
 @dataclass
@@ -18,10 +19,10 @@ class RxIdentifierRange(ArObject):
 class CanFrameTriggering(FrameTriggering):
     def __init__(
             self,
-            can_addressing_mode: str,
+            can_addressing_mode: CanAddressingModeType,
+            can_frame_rx_behavior: CanFrameRxBehaviorEnum,
+            can_frame_tx_behavior: CanFrameTxBehaviorEnum,
             identifier: int | None = None,
-            can_frame_rx_behavior: str | None = None,
-            can_frame_tx_behavior: str | None = None,
             rx_mask: int | None = None,
             tx_mask: int | None = None,
             j1939_requestable: bool = False,
@@ -59,6 +60,10 @@ class CanCluster(CommunicationCluster):
         self.can_fd_baudrate = can_fd_baudrate
         self.can_xl_baudrate = can_xl_baudrate
         self.bus_off_recovery = bus_off_recovery
+
+    @property
+    def physical_channel(self) -> CanPhysicalChannel:
+        return self.physical_channels[0]
 
 
 class CanClusterVariants(ElementVariants[CanCluster]):

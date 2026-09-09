@@ -3,6 +3,7 @@ from typing import Iterable, TypeVar
 
 from autosar.model.ar_object import ArObject
 from autosar.model.element import Element
+from autosar.model.enums import ByteOrderEnum
 
 
 class AtpInstanceRef(ArObject):
@@ -300,6 +301,7 @@ class System(Element):
             self,
             fibex_element_refs: list[str] | None = None,
             mappings: Iterable[SystemMapping] | None = None,
+            container_header_byte_order: ByteOrderEnum | None = None,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -308,6 +310,7 @@ class System(Element):
             fibex_element_refs = []
         self.fibex_element_refs: list[str] = fibex_element_refs
         self.mappings = self._set_parent(mappings)
+        self.container_i_pdu_header_byte_order = container_header_byte_order
         self.ecu_extract_version: str | None = None
         self.system_version: str | None = None
         self.category: str | None = None

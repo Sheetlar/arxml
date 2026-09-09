@@ -1,6 +1,7 @@
 from xml.etree.ElementTree import Element
 
 from autosar.model.ar_object import ArObject
+from autosar.model.enums import ByteOrderEnum
 from autosar.parser.parser_base import ElementParser
 from autosar.model.system import (
     System,
@@ -61,6 +62,7 @@ class SystemParser(ElementParser):
         common_args = self.parse_common_tags(xml_elem)
         fibex_elements: list[str] | None = None
         mappings: list[SystemMapping] | None = None
+        byte_order: ByteOrderEnum | None = None
         for child_elem in xml_elem:
             match child_elem.tag:
                 case tag if tag in self.common_tags:
@@ -75,6 +77,8 @@ class SystemParser(ElementParser):
                     )
                 case 'SOFTWARE-COMPOSITION':
                     self.log_not_implemented(xml_elem, child_elem)
+                case 'CONTAINER-I-PDU-HEADER-BYTE-ORDER':
+                    byte_order = self.parse_enum_node(xml_elem, ByteOrderEnum)
                 case _:
                     self.log_unexpected(xml_elem, child_elem)
         if 'name' not in common_args:
@@ -83,6 +87,7 @@ class SystemParser(ElementParser):
         return System(
             fibex_element_refs=fibex_elements,
             mappings=mappings,
+            container_header_byte_order=byte_order,
             parent=parent,
             **common_args,
         )

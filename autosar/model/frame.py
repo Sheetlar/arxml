@@ -1,12 +1,13 @@
 from typing import Iterable, TypeVar
 
 from autosar.model.element import Element
+from autosar.model.enums import ByteOrderEnum
 
 
 class PduToFrameMapping(Element):
     def __init__(
             self,
-            packing_byte_order: str,
+            packing_byte_order: ByteOrderEnum,
             pdu_ref: str,
             start_position: int,
             update_indication_bit_position: int | None = None,

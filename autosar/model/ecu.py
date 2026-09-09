@@ -5,6 +5,7 @@ from autosar.model.ar_object import ArObject
 from autosar.model.base import DataFilter
 from autosar.model.communication_controller import CommunicationController
 from autosar.model.element import Element
+from autosar.model.enums import CommunicationDirectionType
 
 
 @dataclass
@@ -26,7 +27,7 @@ class EcuPartition(Element):
 class CommPort(Element):
     def __init__(
             self,
-            communication_direction: str,
+            communication_direction: CommunicationDirectionType,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)

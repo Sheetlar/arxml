@@ -28,8 +28,24 @@ from autosar.model.pdu import (
     J1939DcmIPdu,
     TransmissionModeDeclaration,
     ModeDrivenTransmissionModeCondition,
-    TransmissionModeCondition, TransmissionModeTiming, TimeRangeType, AbsoluteTolerance, RelativeTolerance, EventControlledTiming, CyclicTiming,
+    TransmissionModeCondition,
+    TransmissionModeTiming,
+    TimeRangeType,
+    AbsoluteTolerance,
+    RelativeTolerance,
+    EventControlledTiming,
+    CyclicTiming,
     ISignalIPduGroup,
+)
+from autosar.model.enums import (
+    ContainerIPduTriggerEnum,
+    ContainerIPduHeaderTypeEnum,
+    RxAcceptContainedIPduEnum,
+    ContainedIPduCollectionSemanticsEnum,
+    PduCollectionTriggerEnum,
+    ByteOrderEnum,
+    TransferPropertyEnum,
+    TriggerMode,
 )
 from autosar.parser.parser_base import ElementParser
 
@@ -118,11 +134,11 @@ class PduParser(ElementParser):
         triggering_props: list[ContainedIPduProps] | None = None
         triggering_refs: list[str] | None = None
         container_timeout: float | None = None
-        container_trigger: str | None = None
-        header_type: str | None = None
+        container_trigger: ContainerIPduTriggerEnum | None = None
+        header_type: ContainerIPduHeaderTypeEnum | None = None
         min_rx_size: int | None = None
         min_tx_size: int | None = None
-        rx_accept_contained_i_pdu: str | None = None
+        rx_accept_contained_i_pdu: RxAcceptContainedIPduEnum | None = None
         threshold_size: int | None = None
         for child_elem in xml_elem:
             match child_elem.tag:
@@ -135,15 +151,15 @@ class PduParser(ElementParser):
                 case 'CONTAINER-TIMEOUT':
                     container_timeout = self.parse_number_node(child_elem)
                 case 'CONTAINER-TRIGGER':
-                    container_trigger = self.parse_text_node(child_elem)
+                    container_trigger = self.parse_enum_node(child_elem, ContainerIPduTriggerEnum)
                 case 'HEADER-TYPE':
-                    header_type = self.parse_text_node(child_elem)
+                    header_type = self.parse_enum_node(child_elem, ContainerIPduHeaderTypeEnum)
                 case 'MINIMUM-RX-CONTAINER-QUEUE-SIZE':
                     min_rx_size = self.parse_int_node(child_elem)
                 case 'MINIMUM-TX-CONTAINER-QUEUE-SIZE':
                     min_tx_size = self.parse_int_node(child_elem)
                 case 'RX-ACCEPT-CONTAINED-I-PDU':
-                    rx_accept_contained_i_pdu = self.parse_text_node(child_elem)
+                    rx_accept_contained_i_pdu = self.parse_enum_node(child_elem, RxAcceptContainedIPduEnum)
                 case 'THRESHOLD-SIZE':
                     threshold_size = self.parse_int_node(child_elem)
                 case _:
@@ -226,7 +242,7 @@ class PduParser(ElementParser):
 
     def _parse_multiplexed_i_pdu(self, xml_elem: Element, parent: ArObject | None) -> MultiplexedIPdu:
         common_params = self._parse_pdu_common_params(xml_elem)
-        selector_field_byte_order: str | None = None
+        selector_field_byte_order: ByteOrderEnum | None = None
         selector_field_length: int | None = None
         selector_field_start_position: int | None = None
         dynamic_parts: list[DynamicPart] | None = None
@@ -237,7 +253,7 @@ class PduParser(ElementParser):
                 case tag if tag in self.common_tags or tag in self.pdu_common_tags:
                     pass
                 case 'SELECTOR-FIELD-BYTE-ORDER':
-                    selector_field_byte_order = self.parse_text_node(child_elem)
+                    selector_field_byte_order = self.parse_enum_node(child_elem, ByteOrderEnum)
                 case 'SELECTOR-FIELD-LENGTH':
                     selector_field_length = self.parse_int_node(child_elem)
                 case 'SELECTOR-FIELD-START-POSITION':
@@ -253,7 +269,7 @@ class PduParser(ElementParser):
                         {'STATIC-PART': self._parse_static_part},
                     )
                 case 'TRIGGER-MODE':
-                    trigger_mode = self.parse_text_node(child_elem)
+                    trigger_mode = self.parse_enum_node(child_elem, TriggerMode)
                 case _:
                     self.log_unexpected(xml_elem, child_elem)
         i_signal_i_pdu = MultiplexedIPdu(
@@ -380,14 +396,20 @@ class PduParser(ElementParser):
     def _parse_contained_i_pdu_props(self, xml_elem: Element | None) -> ContainedIPduProps | None:
         if xml_elem is None:
             return None
-        semantics = self.parse_text_node(xml_elem.find('COLLECTION-SEMANTICS'))
+        semantics = self.parse_enum_node(
+            xml_elem.find('COLLECTION-SEMANTICS'),
+            ContainedIPduCollectionSemanticsEnum,
+        )
         triggering_ref = self.parse_text_node(xml_elem.find('CONTAINED-PDU-TRIGGERING-REF'))
         long_header = self.parse_int_node(xml_elem.find('HEADER-ID-LONG-HEADER'))
         short_header = self.parse_int_node(xml_elem.find('HEADER-ID-SHORT-HEADER'))
         offset = self.parse_int_node(xml_elem.find('OFFSET'))
         priority = self.parse_int_node(xml_elem.find('PRIORITY'))
         timeout = self.parse_number_node(xml_elem.find('TIMEOUT'))
-        trigger = self.parse_text_node(xml_elem.find('TRIGGER'))
+        trigger = self.parse_enum_node(
+            xml_elem.find('TRIGGER'),
+            PduCollectionTriggerEnum,
+        )
         uib_position = self.parse_int_node(xml_elem.find('UPDATE-INDICATION-BIT-POSITION'))
         contained_props = ContainedIPduProps(
             collection_semantics=semantics,
@@ -406,9 +428,9 @@ class PduParser(ElementParser):
         common_args = self.parse_common_tags(xml_elem)
         i_signal_ref = self.parse_text_node(xml_elem.find('I-SIGNAL-REF'))
         i_signal_group_ref = self.parse_text_node(xml_elem.find('I-SIGNAL-GROUP-REF'))
-        byte_order = self.parse_text_node(xml_elem.find('PACKING-BYTE-ORDER'))
+        byte_order = self.parse_enum_node(xml_elem.find('PACKING-BYTE-ORDER'), ByteOrderEnum)
         start_pos = self.parse_int_node(xml_elem.find('START-POSITION'))
-        transfer_property = self.parse_text_node(xml_elem.find('TRANSFER-PROPERTY'))
+        transfer_property = self.parse_enum_node(xml_elem.find('TRANSFER-PROPERTY'), TransferPropertyEnum)
         uib_position = self.parse_int_node(xml_elem.find('UPDATE-INDICATION-BIT-POSITION'))
         mapping = ISignalToIPduMapping(
             i_signal_ref=i_signal_ref,
@@ -579,7 +601,7 @@ class PduParser(ElementParser):
         return part
 
     def _parse_segment_position(self, xml_elem: Element) -> SegmentPosition:
-        byte_order = self.parse_text_node(xml_elem.find('SEGMENT-BYTE-ORDER'))
+        byte_order = self.parse_enum_node(xml_elem.find('SEGMENT-BYTE-ORDER'), ByteOrderEnum)
         length = self.parse_int_node(xml_elem.find('SEGMENT-LENGTH'))
         position = self.parse_int_node(xml_elem.find('SEGMENT-POSITION'))
         segment_pos = SegmentPosition(

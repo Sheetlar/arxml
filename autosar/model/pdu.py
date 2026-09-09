@@ -4,6 +4,16 @@ from typing import Iterable
 from autosar.model.ar_object import ArObject
 from autosar.model.base import Describable, DataFilter
 from autosar.model.element import Element
+from autosar.model.enums import (
+    ByteOrderEnum,
+    ContainerIPduTriggerEnum,
+    ContainerIPduHeaderTypeEnum,
+    RxAcceptContainedIPduEnum,
+    ContainedIPduCollectionSemanticsEnum,
+    PduCollectionTriggerEnum,
+    TransferPropertyEnum,
+    TriggerMode,
+)
 
 
 @dataclass
@@ -102,14 +112,14 @@ class SecureCommunicationProps(ArObject):
 
 @dataclass
 class ContainedIPduProps(ArObject):
-    collection_semantics: str
+    collection_semantics: ContainedIPduCollectionSemanticsEnum
     contained_pdu_triggering_ref: str | None = None
     header_id_long_header: int | None = None
     header_id_short_header: int | None = None
     offset: int | None = None
     priority: int | None = None
     timeout: float | None = None
-    trigger: str | None = None
+    trigger: PduCollectionTriggerEnum | None = None
     update_indication_bit_position: int | None = None
 
     def __post_init__(self):
@@ -119,7 +129,7 @@ class ContainedIPduProps(ArObject):
 
 @dataclass
 class SegmentPosition(ArObject):
-    segment_byte_order: str
+    segment_byte_order: ByteOrderEnum
     segment_length: int
     segment_position: int
 
@@ -163,9 +173,9 @@ class ISignalToIPduMapping(Element):
             self,
             i_signal_ref: str | None = None,
             i_signal_group_ref: str | None = None,
-            packing_byte_order: str | None = None,
+            packing_byte_order: ByteOrderEnum | None = None,
             start_position: int | None = None,
-            transfer_property: str | None = None,
+            transfer_property: TransferPropertyEnum | None = None,
             update_indication_bit_position: int | None = None,
             *args, **kwargs,
     ):
@@ -241,11 +251,11 @@ class ContainerIPdu(IPdu):
             contained_i_pdu_triggering_props: list[ContainedIPduProps] | None = None,
             contained_pdu_triggering_refs: list[str] | None = None,
             container_timeout: float | None = None,
-            container_trigger: str | None = None,
-            header_type: str | None = None,
+            container_trigger: ContainerIPduTriggerEnum | None = None,
+            header_type: ContainerIPduHeaderTypeEnum | None = None,
             minimum_rx_container_queue_size: int | None = None,
             minimum_tx_container_queue_size: int | None = None,
-            rx_accept_contained_i_pdu: str | None = None,
+            rx_accept_contained_i_pdu: RxAcceptContainedIPduEnum | None = None,
             threshold_size: int | None = None,
             unused_bit_pattern: int | None = None,
             *args, **kwargs,
@@ -311,12 +321,12 @@ class J1939DcmIPdu(IPdu):
 class MultiplexedIPdu(IPdu):
     def __init__(
             self,
-            selector_field_byte_order: str | None = None,
+            selector_field_byte_order: ByteOrderEnum | None = None,
             selector_field_length: int | None = None,
             selector_field_start_position: int | None = None,
             dynamic_parts: list[DynamicPart] | None = None,
             static_parts: list[StaticPart] | None = None,
-            trigger_mode: str | None = None,
+            trigger_mode: TriggerMode | None = None,
             unused_bit_pattern: int | None = None,
             *args, **kwargs,
     ):

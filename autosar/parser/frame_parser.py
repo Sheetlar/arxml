@@ -2,6 +2,7 @@ from typing import Callable
 from xml.etree.ElementTree import Element
 
 from autosar import ArObject
+from autosar.model.enums import ByteOrderEnum
 from autosar.model.frame import (
     AnyFrame,
     PduToFrameMapping,
@@ -89,7 +90,7 @@ class FrameParser(ElementParser):
     def _parse_pdu_to_frame_mapping(self, xml_elem: Element) -> PduToFrameMapping:
         common_args = self.parse_common_tags(xml_elem)
         return PduToFrameMapping(
-            packing_byte_order=self.parse_text_node(xml_elem.find('PACKING-BYTE-ORDER')),
+            packing_byte_order=self.parse_enum_node(xml_elem.find('PACKING-BYTE-ORDER'), ByteOrderEnum),
             pdu_ref=self.parse_text_node(xml_elem.find('PDU-REF')),
             start_position=self.parse_int_node(xml_elem.find('START-POSITION')),
             update_indication_bit_position=self.parse_int_node(xml_elem.find('UPDATE-INDICATION-BIT-POSITION')),

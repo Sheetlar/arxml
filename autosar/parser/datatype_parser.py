@@ -281,7 +281,7 @@ class DataTypeParser(ElementParser):
         self.push()
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'BASE-TYPE-SIZE':
-                base_type_size = self.parse_text_node(xml_elem)
+                base_type_size = self.parse_int_node(xml_elem)
             elif xml_elem.tag == 'BASE-TYPE-ENCODING':
                 base_type_encoding = self.parse_text_node(xml_elem)
             elif xml_elem.tag == 'NATIVE-DECLARATION':

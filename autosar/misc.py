@@ -1,21 +1,29 @@
 import logging
 import sys
 from abc import ABC
-from typing import Iterable
+from typing import Iterable, Any, Mapping, TypeVar
+
+Tk = TypeVar('Tk')
+Tv = TypeVar('Tv')
 
 
 class HasRepr(ABC):
     _blacklist = ()
 
-    def _repr_filter(self, name: str):
-        return not name.startswith('_') and name not in self._blacklist
+    def _repr_filter(self, attr_name: str, attr_value: Any) -> bool:
+        """
+        :param attr_name: Attribute name
+        :param attr_value: Value of the attribute
+        :return: True if th given attribute should be displayed in repr, False otherwise
+        """
+        return not attr_name.startswith('_') and attr_name not in self._blacklist
 
     def __repr__(self):
         params = ', '.join(
             f'{name}={attr!r}'
             for name in dir(self)
-            if self._repr_filter(name)
             if not callable(attr := getattr(self, name))
+            if self._repr_filter(name, attr)
         )
         return f'{self.__class__.__name__}({params})'
 
@@ -109,3 +117,19 @@ class CustomFilter(logging.Filter):
         if not self._pass_whitelisted(record):
             return False
         return record.levelno in self.levels
+
+
+def not_none(value: Any) -> bool:
+    return value is not None
+
+
+def dict_sorted_by_keys(
+        mapping: Mapping[Tk, Tv] | Iterable[tuple[Tk, Tv]],
+) -> dict[Tk, Tv]:
+    if isinstance(mapping, Mapping):
+        mapping = mapping.items()
+    return dict(sorted(mapping, key=lambda i: i[0]))
+
+
+class NoAttr:
+    pass

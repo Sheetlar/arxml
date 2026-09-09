@@ -1,15 +1,15 @@
 from abc import ABC
-from typing import TYPE_CHECKING, TypeVar, TypeAlias
+from typing import TYPE_CHECKING, TypeVar, TypeAlias, Any
 
-from autosar.misc import HasLogger
+from autosar.misc import HasLogger, HasRepr
 
 if TYPE_CHECKING:
     from autosar.workspace import Workspace
 
 
-class ArObject(HasLogger, ABC):
+class ArObject(HasLogger, HasRepr, ABC):
     """Base class for all Autosar objects"""
-    _repr_exclude = ('parent', 'package_parser', 'package_writer')
+    _blacklist = ('parent', 'package_parser', 'package_writer')
     ref = None
     name = None
 
@@ -19,16 +19,8 @@ class ArObject(HasLogger, ABC):
     def find(self, *_) -> 'MaybeArObject':
         raise NotImplementedError
 
-    def __repr__(self):
-        params_str = ', '.join(
-            f'{n}={v!r}'
-            for n, v in vars(self).items()
-            if not callable(v)
-            and not n.startswith('_')
-            and n not in self._repr_exclude
-            and not isinstance(v, (list, dict, tuple))
-        )
-        return f'{self.__class__.__name__}({params_str})'
+    def _repr_filter(self, attr_name: str, attr_value: Any) -> bool:
+        return super()._repr_filter(attr_name, attr_value) and not isinstance(attr_value, (list, dict, tuple))
 
 
 AnyArObject = TypeVar('AnyArObject', bound=ArObject)

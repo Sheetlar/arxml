@@ -25,6 +25,7 @@ from autosar.model.ecu import (
     IPduMapping,
     TargetIPduRef,
 )
+from autosar.model.enums import CommunicationDirectionType
 from autosar.model.tcp_ip_props import TcpProps, EthTcpIpProps
 from autosar.parser.parser_base import ElementParser
 
@@ -300,7 +301,10 @@ class EcuParser(ElementParser):
             self._logger.error(f'Unexpected comm port tag: {xml_elem.tag}')
             return None
         common_args = self.parse_common_tags(xml_elem)
-        direction = self.parse_text_node(xml_elem.find('COMMUNICATION-DIRECTION'))
+        direction = self.parse_enum_node(
+            xml_elem.find('COMMUNICATION-DIRECTION'),
+            CommunicationDirectionType,
+        )
         port = port_type(
             communication_direction=direction,
             **common_args,

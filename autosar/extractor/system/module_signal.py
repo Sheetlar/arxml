@@ -1,68 +1,32 @@
-from itertools import chain
+from abc import ABC
 
-from autosar.extractor.data import DataType, Signal
 from autosar.extractor.conversion import (
-    ConstantConversion,
-    LinearConversion,
-    RationalConversion,
-    ConversionInterval,
-    NumericConversion,
-    MapConversion,
     AnyConversion,
+    LinearConversion,
+    NumericConversion,
+    ConversionInterval,
     NumericAndMapConversion,
+    ConstantConversion,
+    RationalConversion,
+    MapConversion,
     BitfieldConversion,
 )
-from autosar.extractor.topology import Ecu, CanFrame, CanChannel
-from autosar.model.ar_object import AnyArObject
-from autosar.model.can_cluster import CanClusterVariants, CanCluster, CanPhysicalChannel, CanFrameTriggering
+from autosar.extractor.data import Signal, DataType, Unit
+from autosar.extractor.system.extractor_base import AbstractExtractor, ArxmlExtractionError
 from autosar.model.compu import CompuScaleRationalFormula, CompuScaleConstantContents
-from autosar.model.datatype import SwBaseType, CompuMethod
-from autosar.model.ecu import EcuInstance
-from autosar.misc import HasLogger
-from autosar.model.signal import ISignal, SystemSignal
-from autosar.model.system import System
+from autosar.model.datatype import SwBaseType, CompuMethod, Unit as ArUnit
+from autosar.model.signal import ISignal, SystemSignal, ISignalGroup, SystemSignalGroup
 
 
-class ArxmlExtractionError(Exception):
-    pass
-
-
-class ExtractedSystem(HasLogger):
-    _comm_clusters = (CanClusterVariants,)
-
-    def __init__(
-            self,
-            ar_system: System,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.ar_system = ar_system
-        self._get_fibex_elements_map()
-        self._extract_ecus()
-        self._build_signals()
-        self._extract_topology()
-
-    def _find(self, ref: str) -> AnyArObject | None:
-        return self.ar_system.find(ref)
-
-    def _get_fibex_elements_map(self):
-        self.fibex_elements = {}
-        for fe_ref in self.ar_system.fibex_element_refs:
-            if (elem := self._find(fe_ref)) is None:
-                self._logger.warning(f'Cannot find fibex element {fe_ref}')
-                continue
-            if type(elem) not in self.fibex_elements:
-                self.fibex_elements[type(elem)] = []
-            self.fibex_elements[type(elem)].append(elem)
-
-    def _extract_ecus(self):
+class SignalExtractionModule(AbstractExtractor, ABC):
+    def _build_signal_groups(self):
+        self._signal_groups = []
         try:
-            self.ecus = tuple(
-                Ecu(identifier=ecu.ref, name=ecu.name)
-                for ecu in self.fibex_elements[EcuInstance]
-            )
+            groups: list[ISignalGroup] = self.fibex_elements[ISignalGroup]
         except KeyError:
-            raise ArxmlExtractionError('No ECU instances found')
+            self._logger.debug('No signal groups found')
+            return
+        return groups  # TODO: Handle groups
 
     def _build_signals(self):
         try:
@@ -70,11 +34,11 @@ class ExtractedSystem(HasLogger):
         except KeyError:
             raise ArxmlExtractionError('No signals found')
         self._logger.debug(f'Building {len(signals)} signals')
-        self._signals = []
+        self._signals: list[Signal] = []
         for signal in signals:
             match signal.data_type_policy.lower():
                 case 'legacy' | 'override':
-                    signal_name, _ = self._extract_signal(signal)
+                    signal_name, dt, compu, unit = self._extract_simple_signal(signal)
                 case 'network-representation-from-com-spec':
                     self._logger.warning(f'ComSpec is not supported, signal {signal.name} will be ignored')
                     continue
@@ -87,29 +51,49 @@ class ExtractedSystem(HasLogger):
 
             self._signals.append(Signal(
                 identifier=signal.ref,
+                alias=signal.system_signal_ref,
                 name=signal_name,
                 bit_length=signal.length,
-                np_dtype=...,
+                dtype=dt,
+                conversion=compu,
+                unit=unit,
             ))
-        return None
 
-    def _extract_signal(self, signal: ISignal):
+    def _extract_simple_signal(self, signal: ISignal):
         system_signal: SystemSignal = self._find(signal.system_signal_ref)
-        network_data_props = signal.network_representation_props.single
-        if network_data_props is None:
+        net_props = signal.network_representation_props.single
+        phys_props = system_signal.physical_props.single
+        if net_props is None or phys_props is None:
             self._logger.warning(f'Variable network props are not supported, skipping signal {signal.name}')
-            return system_signal.name, None
-        base_type: SwBaseType = self._find(network_data_props.base_type_ref)
-        compu: CompuMethod = self._find(network_data_props.compu_method_ref)
+            return system_signal.name, None, None, None
+        base_type: SwBaseType = self._find(net_props.base_type_ref)
+        compu: CompuMethod = self._find(phys_props.compu_method_ref)
+        try:
+            unit_ref = system_signal.physical_props.single.unit_ref or compu.unit_ref
+        except AttributeError:
+            unit_ref = compu.unit_ref
         dtype = DataType(
-            identifier=base_type.ref,
             name=base_type.name,
             declaration=base_type.native_declaration,
             size=base_type.size,
             encoding=base_type.type_encoding,
+            is_array=signal.i_signal_type.lower() == 'array',
         )
         conversion = self._extract_compu(compu)
-        return system_signal.name, ...
+        unit = self._extract_unit(unit_ref)
+        return system_signal.name, dtype, conversion, unit
+
+    def _extract_unit(self, unit_ref: str | None) -> Unit | None:
+        if unit_ref is None:
+            return None
+        unit: ArUnit | None = self._find(unit_ref)
+        if unit is None:
+            return None
+        return Unit(
+            symbol=unit.display_name,
+            unit_factor=unit.factor,
+            unit_offset=unit.offset,
+        )
 
     def _extract_compu(self, compu: CompuMethod) -> AnyConversion | None:
         match compu.category:
@@ -223,42 +207,3 @@ class ExtractedSystem(HasLogger):
             case _:
                 self._logger.warning(f'Unexpected CompuMethod category "{compu.category}", defaulting to IDENTICAL')
                 return None
-
-    def _extract_topology(self):
-        clusters = chain.from_iterable(
-            c for cls in self._comm_clusters
-            if (c := self.fibex_elements.get(cls, None)) is not None
-        )
-        for cluster in clusters:
-            if len(cluster) != 1:
-                self._logger.warning(f'Cannot extract communication cluster {cluster.name}: Expected 1 variant, got {len(cluster)}')
-                continue
-            cluster, = cluster
-            if isinstance(cluster, CanCluster):
-                self._extract_can_cluster(cluster)
-            else:
-                self._logger.warning(f'Cluster {cluster.name}: Cluster extraction for type {cluster.__class__.__name__} is not supported')
-
-    def _extract_can_cluster(self, cluster: CanCluster):
-        for channel in cluster.physical_channels:
-            if not isinstance(channel, CanPhysicalChannel):
-                self._logger.error(f'Channel {channel.name}: Unexpected channel type: '
-                                   f'Expected {CanPhysicalChannel.__name__}, got {channel.__class__.__name__}')
-                continue
-            frames = []
-            for frame_trig in channel.frame_triggerings:
-                if not isinstance(frame_trig, CanFrameTriggering):
-                    self._logger.error(f'Triggering {frame_trig.name}: Unexpected triggering type: '
-                                       f'Expected {CanFrameTriggering.__name__}, got {frame_trig.__class__.__name__}')
-                    continue
-                CanFrame(
-                    identifier=frame_trig.ref,
-                    name=frame_trig.name,
-                    frame_id=frame_trig.identifier,
-                    pdu=None,
-                    providers=(p.parent.parent.ref for p in map(self._find, frame_trig.frame_ports_refs) if p.communication_direction == 'OUT'),
-                    consumers=(p.parent.parent.ref for p in map(self._find, frame_trig.frame_ports_refs) if p.communication_direction == 'IN'),
-                )
-                frames.append(frame_trig.ref)
-            cn = CanChannel(identifier=channel.ref, name=channel.name, frames=frames)
-            raise RuntimeError  # dummy

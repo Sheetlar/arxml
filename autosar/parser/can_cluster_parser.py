@@ -1,3 +1,4 @@
+from typing import TypeAlias
 from xml.etree.ElementTree import Element
 
 from autosar.model.ar_object import ArObject
@@ -13,7 +14,12 @@ from autosar.model.communication_cluster import (
     PduTriggering,
     TriggerIPduSendCondition,
 )
+from autosar.model.enums import CanAddressingModeType, CanFrameRxBehaviorEnum, CanFrameTxBehaviorEnum
 from autosar.parser.parser_base import ElementParser
+
+OptStr: TypeAlias = str | None
+OptInt: TypeAlias = int | None
+CanClusterParams: TypeAlias = tuple[OptStr, OptStr, OptInt, OptInt, OptInt, list[CanPhysicalChannel]]
 
 
 class CanClusterParser(ElementParser):
@@ -26,7 +32,7 @@ class CanClusterParser(ElementParser):
         return None
 
     def _parse_can_cluster(self, xml_elem: Element, parent: ArObject | None) -> CanClusterVariants:
-        variation_point: list[tuple] = []
+        variation_point: list[CanClusterParams] = []
         common_args = self.parse_common_tags(xml_elem)
         for child_elem in xml_elem:
             match child_elem.tag:
@@ -35,7 +41,7 @@ class CanClusterParser(ElementParser):
                 case 'CAN-CLUSTER-VARIANTS':
                     variation_point = self.parse_variable_element_list(
                         child_elem,
-                        {'CAN-CLUSTER-CONDITIONAL': self._parse_can_cluster_variation},
+                        {'CAN-CLUSTER-CONDITIONAL': self._parse_can_cluster_variation},  # type: ignore
                     )
                 case _:
                     self.log_unexpected(xml_elem, child_elem)
@@ -58,7 +64,7 @@ class CanClusterParser(ElementParser):
         )
         return cluster
 
-    def _parse_can_cluster_variation(self, xml_elem: Element) -> tuple:
+    def _parse_can_cluster_variation(self, xml_elem: Element) -> CanClusterParams | None:
         protocol_name: str | None = None
         protocol_version: str | None = None
         baud_rate: int | None = None
@@ -86,6 +92,12 @@ class CanClusterParser(ElementParser):
                     self.log_not_implemented(xml_elem, child_elem)
                 case _:
                     self.log_unexpected(xml_elem, child_elem)
+        if physical_channels is None:
+            self.log_missing_required(xml_elem, 'PHYSICAL-CHANNELS')
+            return None
+        if (n := len(physical_channels)) != 1:
+            self._logger.error(f'CAN-CLUSTER: Expected exactly 1 PHYSICAL-CHANNEL, got {n}, ignoring')
+            return None
         return (
             protocol_name,
             protocol_version,
@@ -157,10 +169,10 @@ class CanClusterParser(ElementParser):
         frame_ref: str | None = None
         port_refs: list[str] | None = None
         pdu_trig_refs: list[str] | None = None
-        addressing_mode: str | None = None
+        addressing_mode: CanAddressingModeType | None = None
+        rx_behavior: CanFrameRxBehaviorEnum | None = None
+        tx_behavior: CanFrameTxBehaviorEnum | None = None
         identifier: int | None = None
-        rx_behavior: str | None = None
-        tx_behavior: str | None = None
         rx_mask: str | None = None
         tx_mask: str | None = None
         rx_id_range: RxIdentifierRange | None = None
@@ -172,7 +184,7 @@ class CanClusterParser(ElementParser):
                 case tag if tag in _NOT_IMPLEMENTED_TAGS:
                     self.log_not_implemented(xml_elem, child_elem)
                 case 'CAN-ADDRESSING-MODE':
-                    addressing_mode = self.parse_text_node(child_elem)
+                    addressing_mode = self.parse_enum_node(child_elem, CanAddressingModeType)
                 case 'IDENTIFIER':
                     identifier = self.parse_int_node(child_elem)
                 case 'FRAME-REF':
@@ -182,9 +194,9 @@ class CanClusterParser(ElementParser):
                 case 'PDU-TRIGGERINGS':
                     pdu_trig_refs = list(self.variation_child_string_nodes(child_elem, 'PDU-TRIGGERING-REF'))
                 case 'CAN-FRAME-RX-BEHAVIOR':
-                    rx_behavior = self.parse_text_node(child_elem)
+                    rx_behavior = self.parse_enum_node(child_elem, CanFrameRxBehaviorEnum)
                 case 'CAN-FRAME-TX-BEHAVIOR':
-                    tx_behavior = self.parse_text_node(child_elem)
+                    tx_behavior = self.parse_enum_node(child_elem, CanFrameTxBehaviorEnum)
                 case 'RX-MASK':
                     rx_mask = self.parse_text_node(child_elem)
                 case 'TX-MASK':
@@ -201,17 +213,23 @@ class CanClusterParser(ElementParser):
                     rx_id_range = RxIdentifierRange(lower_can_id=lower, upper_can_id=upper)
                 case _:
                     self.log_unexpected(xml_elem, child_elem)
-        if addressing_mode is None:
-            self.log_missing_required(xml_elem, 'CAN-ADDRESSING-MODE')
-            return None
         if frame_ref is None:
             self.log_missing_required(xml_elem, 'FRAME-REF')
             return None
+        if addressing_mode is None:
+            self.log_missing_required(xml_elem, 'CAN-ADDRESSING-MODE')
+            return None
+        if rx_behavior is None:
+            self.log_missing_required(xml_elem, 'CAN-FRAME-RX-BEHAVIOR')
+            return None
+        if tx_behavior is None:
+            self.log_missing_required(xml_elem, 'CAN-FRAME-TX-BEHAVIOR')
+            return None
         triggering = CanFrameTriggering(
             can_addressing_mode=addressing_mode,
-            identifier=identifier,
             can_frame_rx_behavior=rx_behavior,
             can_frame_tx_behavior=tx_behavior,
+            identifier=identifier,
             rx_mask=rx_mask,
             tx_mask=tx_mask,
             rx_identifier_range=rx_id_range,

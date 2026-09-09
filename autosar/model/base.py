@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Iterable, TYPE_CHECKING, TypeVar
 from xml.etree.ElementTree import ElementTree, Element
@@ -13,6 +14,15 @@ if TYPE_CHECKING:
     from autosar.model.element import Element as ArElement
 
 p_version = re.compile(r"(\d+)\.(\d+)\.(\d+)")
+
+
+class ArEnum(StrEnum):
+    # noinspection PyMethodParameters
+    def _generate_next_value_(name, start, count, last_values):
+        return name.replace('_', '-').upper()
+
+
+SomeEnum = TypeVar('SomeEnum', bound=ArEnum)
 
 
 class Limit:

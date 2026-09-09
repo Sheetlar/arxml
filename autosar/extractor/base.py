@@ -1,29 +1,48 @@
 from dataclasses import dataclass
-from typing import Self
+from typing import Self, Iterable
+
+from autosar.misc import NoAttr
 
 
 class SystemElement:
     _instances: dict[str, 'SystemElement'] = {}
+    _repr_attrs: Iterable[str] | None = None
 
-    def __new__(cls, identifier: str, *args, **kwargs):
+    def __new__(cls, identifier: str, *args, alias: str | None = None, **kwargs):
         if (inst := cls._instances.get(identifier, None)) is not None:
             return inst
         inst = object.__new__(cls)
         cls._instances[identifier] = inst
+        if alias is not None and alias not in cls._instances:
+            cls._instances[alias] = inst
         return inst
 
     def __init__(
             self,
             identifier: str,
             name: str,
-            *args, **kwargs,
+            *args,
+            alias: str | None = None,
+            **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self._identifier = identifier
+        self._alias = alias
         self.name = name
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self.name})'
+        return f'{self.__class__.__name__}(name={self.name!r}{self._attrs_str()})'
+
+    def _attrs_str(self) -> str:
+        if self._repr_attrs is None:
+            return ''
+        attrs = ', '.join(
+            f'{x}={v!r}' for x in self._repr_attrs
+            if (v := getattr(self, x, NoAttr)) is not NoAttr
+        )
+        if not attrs:
+            return ''
+        return f', {attrs}'
 
     @classmethod
     def get(cls, identifier: str) -> 'SystemElement':
@@ -66,3 +85,8 @@ class Interval:
             return cls(i2.min, i1.max)
         else:
             raise ValueError('Cannot concatenate disjoint intervals')
+
+
+class DescriptiveInteger(int):
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self})'
