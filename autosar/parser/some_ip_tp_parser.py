@@ -24,7 +24,7 @@ class SomeIpTpParser(ElementParser):
                 case tag if tag in self.common_tags:
                     pass
                 case 'COMMUNICATION-CLUSTER-REF':
-                    ref = self.parse_text_node(child_elem)
+                    ref = self._parse_text_node(child_elem)
                 case 'TP-CHANNELS':
                     channels = self.parse_variable_element_list(
                         child_elem,
@@ -48,7 +48,7 @@ class SomeIpTpParser(ElementParser):
 
     def _parse_channel(self, xml_elem: Element) -> SomeIpTPChannel:
         common_args = self.parse_common_tags(xml_elem)
-        separation_time = self.parse_number_node(xml_elem.find('SEPARATION-TIME'))
+        separation_time = self._parse_number_node(xml_elem.find('SEPARATION-TIME'))
         channel = SomeIpTPChannel(
             separation_time=separation_time,
             **common_args,
@@ -56,10 +56,10 @@ class SomeIpTpParser(ElementParser):
         return channel
 
     def _parse_connection(self, xml_elem: Element) -> SomeIpConnection:
-        separation_time = self.parse_number_node(xml_elem.find('SEPARATION-TIME'))
-        channel_ref = self.parse_text_node(xml_elem.find('TP-CHANNEL-REF'))
-        sdu_ref = self.parse_text_node(xml_elem.find('TP-SDU-REF'))
-        transport_ref = self.parse_text_node(xml_elem.find('TRANSPORT-PDU-REF'))
+        separation_time = self._parse_number_node(xml_elem.find('SEPARATION-TIME'))
+        channel_ref = self._parse_text_node(xml_elem.find('TP-CHANNEL-REF'))
+        sdu_ref = self._parse_text_node(xml_elem.find('TP-SDU-REF'))
+        transport_ref = self._parse_text_node(xml_elem.find('TRANSPORT-PDU-REF'))
         connection = SomeIpConnection(
             separation_time=separation_time,
             tp_channel_ref=channel_ref,

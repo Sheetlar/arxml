@@ -40,21 +40,21 @@ class CompuParser(BaseParser):
                 case tag if tag in self.compu_scale_contents_tags:
                     pass
                 case 'LOWER-LIMIT':
-                    lower_limit = self.parse_limit(child_elem)
+                    lower_limit = self._parse_limit(child_elem)
                 case 'UPPER-LIMIT':
-                    upper_limit = self.parse_limit(child_elem)
+                    upper_limit = self._parse_limit(child_elem)
                 case 'SHORT-LABEL':
-                    label = self.parse_text_node(child_elem)
+                    label = self._parse_text_node(child_elem)
                 case 'SYMBOL':
-                    symbol = self.parse_text_node(child_elem)
+                    symbol = self._parse_text_node(child_elem)
                 case 'MASK':
-                    mask = self.parse_int_node(child_elem)
+                    mask = self._parse_int_node(child_elem)
                 case 'DESC':
                     desc, _ = self.parse_desc_direct(child_elem)
                 case 'COMPU-INVERSE-VALUE':
                     inverse = self.parse_compu_const(xml_elem)
                 case 'A-2L-DISPLAY-TEXT':
-                    a2l = self.parse_text_node(child_elem)
+                    a2l = self._parse_text_node(child_elem)
                 case _:
                     self.log_unexpected(xml_elem, child_elem)
         contents = self._parse_compu_scale_contents(xml_elem)
@@ -77,11 +77,11 @@ class CompuParser(BaseParser):
         for child_elem in xml_elem:
             match child_elem.tag:
                 case 'VF':
-                    vfs.append(self.parse_number_node(child_elem))
+                    vfs.append(self._parse_number_node(child_elem))
                 case 'V':
-                    v = self.parse_number_node(child_elem)
+                    v = self._parse_number_node(child_elem)
                 case 'VT':
-                    vt = self.parse_text_node(child_elem)
+                    vt = self._parse_text_node(child_elem)
                 case _:
                     if is_wrapped:
                         self.log_unexpected(xml_elem, child_elem)
@@ -119,5 +119,5 @@ class CompuParser(BaseParser):
     def _parse_numerator_denominator(self, xml_elem: Element | None) -> CompuNumeratorDenominator | None:
         if xml_elem is None:
             return None
-        factors = list(map(self.parse_number_node, xml_elem.findall('V')))
+        factors = list(map(self._parse_number_node, xml_elem.findall('V')))
         return CompuNumeratorDenominator(vs=factors)

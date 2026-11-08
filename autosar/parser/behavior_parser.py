@@ -79,8 +79,8 @@ class BehaviorParser(ElementParser):
     def parse_internal_behavior(self, xml_root: Element, parent: ArObject) -> InternalBehavior | None:
         """AUTOSAR 3 Internal Behavior"""
         assert (xml_root.tag == 'INTERNAL-BEHAVIOR')
-        name = self.parse_text_node(xml_root.find('SHORT-NAME'))
-        component_ref = self.parse_text_node(xml_root.find('COMPONENT-REF'))
+        name = self._parse_text_node(xml_root.find('SHORT-NAME'))
+        component_ref = self._parse_text_node(xml_root.find('COMPONENT-REF'))
         multiple_instance = False
         xml_support_multiple_inst = xml_root.find('SUPPORTS-MULTIPLE-INSTANTIATION')
         if (xml_support_multiple_inst is not None) and (xml_support_multiple_inst.text == 'true'):
@@ -115,9 +115,9 @@ class BehaviorParser(ElementParser):
                 elif xml_node.tag == 'PORT-API-OPTIONS':
                     for xml_option in xml_node.findall('./PORT-API-OPTION'):
                         port_api_option = PortAPIOption(
-                            self.parse_text_node(xml_option.find('PORT-REF')),
-                            self.parse_boolean_node(xml_option.find('ENABLE-TAKE-ADDRESS')),
-                            self.parse_boolean_node(xml_option.find('INDIRECT-API')),
+                            self._parse_text_node(xml_option.find('PORT-REF')),
+                            self._parse_boolean_node(xml_option.find('ENABLE-TAKE-ADDRESS')),
+                            self._parse_boolean_node(xml_option.find('INDIRECT-API')),
                         )
                         if port_api_option is not None:
                             internal_behavior.port_api_options.append(port_api_option)
@@ -129,8 +129,8 @@ class BehaviorParser(ElementParser):
                 elif xml_node.tag == 'PER-INSTANCE-MEMORYS':
                     for xml_elem in xml_node.findall('./PER-INSTANCE-MEMORY'):
                         per_instance_memory = PerInstanceMemory(
-                            self.parse_text_node(xml_elem.find('SHORT-NAME')),
-                            self.parse_text_node(xml_elem.find('TYPE-DEFINITION')),
+                            self._parse_text_node(xml_elem.find('SHORT-NAME')),
+                            self._parse_text_node(xml_elem.find('TYPE-DEFINITION')),
                             internal_behavior,
                         )
                         internal_behavior.per_instance_memories.append(per_instance_memory)
@@ -155,7 +155,7 @@ class BehaviorParser(ElementParser):
                         if xml_elem.tag != 'EXCLUSIVE-AREA':
                             self._logger.error(f'Unexpected tag: {xml_elem.tag}')
                             continue
-                        exclusive_area = ExclusiveArea(self.parse_text_node(xml_elem.find('SHORT-NAME')), internal_behavior)
+                        exclusive_area = ExclusiveArea(self._parse_text_node(xml_elem.find('SHORT-NAME')), internal_behavior)
                         internal_behavior.exclusive_areas.append(exclusive_area)
                 else:
                     self._logger.warning(f'Unexpected tag: {xml_node.tag}')
@@ -164,11 +164,11 @@ class BehaviorParser(ElementParser):
     def parse_swc_internal_behavior(self, xml_root: Element, parent: ArObject) -> SwcInternalBehavior | None:
         """AUTOSAR 4 internal behavior"""
         assert (xml_root.tag == 'SWC-INTERNAL-BEHAVIOR')
-        name = self.parse_text_node(xml_root.find('SHORT-NAME'))
+        name = self._parse_text_node(xml_root.find('SHORT-NAME'))
         multiple_instance = False
         xml_support_multiple_inst = xml_root.find('SUPPORTS-MULTIPLE-INSTANTIATION')
         if xml_support_multiple_inst is not None:
-            multiple_instance = self.parse_boolean_node(xml_support_multiple_inst)
+            multiple_instance = self._parse_boolean_node(xml_support_multiple_inst)
             assert (multiple_instance is not None)
         ws = parent.root_ws()
         assert (ws is not None)
@@ -182,7 +182,7 @@ class BehaviorParser(ElementParser):
             elif xml_elem.tag == 'DATA-TYPE-MAPPING-REFS':
                 for xml_child in xml_elem.findall('./*'):
                     if xml_child.tag == 'DATA-TYPE-MAPPING-REF':
-                        tmp = self.parse_text_node(xml_child)
+                        tmp = self._parse_text_node(xml_child)
                         assert (tmp is not None)
                         internal_behavior.append_data_type_mapping_ref(tmp)
             elif xml_elem.tag == 'EVENTS':
@@ -212,9 +212,9 @@ class BehaviorParser(ElementParser):
             elif xml_elem.tag == 'PORT-API-OPTIONS':
                 for xml_option in xml_elem.findall('./PORT-API-OPTION'):
                     port_api_option = PortAPIOption(
-                        self.parse_text_node(xml_option.find('PORT-REF')),
-                        self.parse_boolean_node(xml_option.find('ENABLE-TAKE-ADDRESS')),
-                        self.parse_boolean_node(xml_option.find('INDIRECT-API')),
+                        self._parse_text_node(xml_option.find('PORT-REF')),
+                        self._parse_boolean_node(xml_option.find('ENABLE-TAKE-ADDRESS')),
+                        self._parse_boolean_node(xml_option.find('INDIRECT-API')),
                     )
                     if port_api_option is not None:
                         internal_behavior.port_api_options.append(port_api_option)
@@ -251,7 +251,7 @@ class BehaviorParser(ElementParser):
                     if xml_child.tag != 'EXCLUSIVE-AREA':
                         self._logger.error(f'Unexpected tag: {xml_elem.tag}')
                         continue
-                    exclusive_area = ExclusiveArea(self.parse_text_node(xml_child.find('SHORT-NAME')), internal_behavior)
+                    exclusive_area = ExclusiveArea(self._parse_text_node(xml_child.find('SHORT-NAME')), internal_behavior)
                     internal_behavior.exclusive_areas.append(exclusive_area)
             elif xml_elem.tag == 'PER-INSTANCE-PARAMETERS':
                 pass  # implement later
@@ -281,9 +281,9 @@ class BehaviorParser(ElementParser):
         if self.version < 4.0:
             for xml_elem in xml_root.findall('*'):
                 if xml_elem.tag == 'SHORT-NAME':
-                    name = self.parse_text_node(xml_elem)
+                    name = self._parse_text_node(xml_elem)
                 elif xml_elem.tag == 'CAN-BE-INVOKED-CONCURRENTLY':
-                    can_be_invoked_concurrently = self.parse_boolean_node(xml_elem)
+                    can_be_invoked_concurrently = self._parse_boolean_node(xml_elem)
                 elif xml_elem.tag == 'DATA-RECEIVE-POINTS':
                     xml_data_receive_points = xml_elem
                 elif xml_elem.tag == 'DATA-SEND-POINTS':
@@ -291,7 +291,7 @@ class BehaviorParser(ElementParser):
                 elif xml_elem.tag == 'SERVER-CALL-POINTS':
                     xml_server_call_points = xml_elem
                 elif xml_elem.tag == 'SYMBOL':
-                    symbol = self.parse_text_node(xml_elem)
+                    symbol = self._parse_text_node(xml_elem)
                 elif xml_elem.tag == 'CAN-ENTER-EXCLUSIVE-AREA-REFS':
                     xml_can_enter_exclusive_areas = xml_elem
                 elif xml_elem.tag == 'ADMIN-DATA':
@@ -301,9 +301,9 @@ class BehaviorParser(ElementParser):
         else:
             for xml_elem in xml_root.findall('*'):
                 if xml_elem.tag == 'SHORT-NAME':
-                    name = self.parse_text_node(xml_elem)
+                    name = self._parse_text_node(xml_elem)
                 elif xml_elem.tag == 'CAN-BE-INVOKED-CONCURRENTLY':
-                    can_be_invoked_concurrently = self.parse_boolean_node(xml_elem)
+                    can_be_invoked_concurrently = self._parse_boolean_node(xml_elem)
                 elif xml_elem.tag == 'MODE-ACCESS-POINTS':
                     xml_mode_access_points = xml_elem
                 elif xml_elem.tag == 'DATA-RECEIVE-POINT-BY-ARGUMENTS':
@@ -313,11 +313,11 @@ class BehaviorParser(ElementParser):
                 elif xml_elem.tag == 'SERVER-CALL-POINTS':
                     xml_server_call_points = xml_elem
                 elif xml_elem.tag == 'SYMBOL':
-                    symbol = self.parse_text_node(xml_elem)
+                    symbol = self._parse_text_node(xml_elem)
                 elif xml_elem.tag == 'CAN-ENTER-EXCLUSIVE-AREA-REFS':
                     xml_can_enter_exclusive_areas = xml_elem
                 elif xml_elem.tag == 'MINIMUM-START-INTERVAL':
-                    min_start_interval = self.parse_number_node(xml_elem)
+                    min_start_interval = self._parse_number_node(xml_elem)
                 elif xml_elem.tag == 'ADMIN-DATA':
                     admin_data = self.parse_admin_data_node(xml_elem)
                 elif xml_elem.tag == 'PARAMETER-ACCESSS':
@@ -344,7 +344,7 @@ class BehaviorParser(ElementParser):
         if xml_data_receive_points is not None:
             if self.version < 4.0:
                 for xml_data_point in xml_data_receive_points.findall('./DATA-RECEIVE-POINT'):
-                    name = self.parse_text_node(xml_data_point.find('SHORT-NAME'))
+                    name = self._parse_text_node(xml_data_point.find('SHORT-NAME'))
                     data_element_instance_ref = self.parse_data_element_instance_ref(
                         xml_data_point.find('DATA-ELEMENT-IREF'),
                         'R-PORT-PROTOTYPE-REF',
@@ -358,7 +358,7 @@ class BehaviorParser(ElementParser):
                         runnable_entity.append(data_receive_point)
             else:
                 for xml_variable_access in xml_data_receive_points.findall('VARIABLE-ACCESS'):
-                    name = self.parse_text_node(xml_variable_access.find('SHORT-NAME'))
+                    name = self._parse_text_node(xml_variable_access.find('SHORT-NAME'))
                     accessed_variable = self.parse_accessed_variable(xml_variable_access.find('./ACCESSED-VARIABLE'))
                     assert (accessed_variable is not None)
                     data_receive_point = DataReceivePoint(
@@ -370,7 +370,7 @@ class BehaviorParser(ElementParser):
         if xml_data_send_points is not None:
             if self.version < 4.0:
                 for xml_data_point in xml_data_send_points.findall('./DATA-SEND-POINT'):
-                    name = self.parse_text_node(xml_data_point.find('SHORT-NAME'))
+                    name = self._parse_text_node(xml_data_point.find('SHORT-NAME'))
                     data_element_instance_ref = self.parse_data_element_instance_ref(
                         xml_data_point.find('DATA-ELEMENT-IREF'),
                         'P-PORT-PROTOTYPE-REF',
@@ -384,7 +384,7 @@ class BehaviorParser(ElementParser):
                         runnable_entity.append(data_send_point)
             else:
                 for xml_variable_access in xml_data_send_points.findall('VARIABLE-ACCESS'):
-                    name = self.parse_text_node(xml_variable_access.find('SHORT-NAME'))
+                    name = self._parse_text_node(xml_variable_access.find('SHORT-NAME'))
                     accessed_variable = self.parse_accessed_variable(xml_variable_access.find('./ACCESSED-VARIABLE'))
                     assert (accessed_variable is not None)
                     data_send_point = DataSendPoint(
@@ -408,7 +408,7 @@ class BehaviorParser(ElementParser):
                     runnable_entity.server_call_points.append(sync_server_call_point)
         if xml_can_enter_exclusive_areas is not None:
             for xml_can_enter_exclusive_area_ref in xml_can_enter_exclusive_areas.findall('./CAN-ENTER-EXCLUSIVE-AREA-REF'):
-                runnable_entity.exclusive_area_refs.append(self.parse_text_node(xml_can_enter_exclusive_area_ref))
+                runnable_entity.exclusive_area_refs.append(self._parse_text_node(xml_can_enter_exclusive_area_ref))
         if self.version >= 4.0 and xml_parameter_access_points is not None:
             for xml_child in xml_parameter_access_points.findall('./*'):
                 if xml_child.tag != 'PARAMETER-ACCESS':
@@ -435,7 +435,7 @@ class BehaviorParser(ElementParser):
         mode_group_instance_ref = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'MODE-GROUP-IREF':
                 for child_elem in xml_elem.findall('./*'):
                     if child_elem.tag == 'R-MODE-GROUP-IN-ATOMIC-SWC-INSTANCE-REF':
@@ -459,7 +459,7 @@ class BehaviorParser(ElementParser):
         mode_group_instance_ref = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'MODE-GROUP-IREF':
                 mode_group_instance_ref = self._parse_provide_mode_group_instance_ref(xml_elem)
             else:
@@ -473,13 +473,13 @@ class BehaviorParser(ElementParser):
         (name, accessed_parameter) = (None, None)
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'ACCESSED-PARAMETER':
                 for xml_child in xml_elem.findall('./*'):
                     if xml_child.tag == 'AUTOSAR-PARAMETER-IREF':
                         accessed_parameter = self.parse_parameter_instance_ref(xml_child)
                     elif xml_child.tag == 'LOCAL-PARAMETER-REF':
-                        accessed_parameter = LocalParameterRef(self.parse_text_node(xml_child))
+                        accessed_parameter = LocalParameterRef(self._parse_text_node(xml_child))
                     else:
                         self._logger.warning(f'Unexpected tag: {xml_child.tag}')
             else:
@@ -495,9 +495,9 @@ class BehaviorParser(ElementParser):
         mode_group_ref = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'CONTEXT-R-PORT-REF':
-                require_port_ref = self.parse_text_node(xml_elem)
+                require_port_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'TARGET-MODE-GROUP-REF':
-                mode_group_ref = self.parse_text_node(xml_elem)
+                mode_group_ref = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         if require_port_ref is None:
@@ -516,9 +516,9 @@ class BehaviorParser(ElementParser):
         mode_group_ref = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'CONTEXT-P-PORT-REF':
-                provide_port_ref = self.parse_text_node(xml_elem)
+                provide_port_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'TARGET-MODE-GROUP-REF':
-                mode_group_ref = self.parse_text_node(xml_elem)
+                mode_group_ref = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         if provide_port_ref is None:
@@ -533,13 +533,13 @@ class BehaviorParser(ElementParser):
         """parses <MODE-IREF>"""
         assert (xml_root.tag == 'MODE-IREF')
         if self.version < 4.0:
-            mode_declaration_ref = self.parse_text_node(xml_root.find('MODE-DECLARATION-REF'))
-            mode_declaration_group_prototype_ref = self.parse_text_node(xml_root.find('MODE-DECLARATION-GROUP-PROTOTYPE-REF'))
-            require_port_prototype_ref = self.parse_text_node(xml_root.find('R-PORT-PROTOTYPE-REF'))
+            mode_declaration_ref = self._parse_text_node(xml_root.find('MODE-DECLARATION-REF'))
+            mode_declaration_group_prototype_ref = self._parse_text_node(xml_root.find('MODE-DECLARATION-GROUP-PROTOTYPE-REF'))
+            require_port_prototype_ref = self._parse_text_node(xml_root.find('R-PORT-PROTOTYPE-REF'))
         elif self.version >= 4.0:
-            mode_declaration_ref = self.parse_text_node(xml_root.find('TARGET-MODE-DECLARATION-REF'))
-            mode_declaration_group_prototype_ref = self.parse_text_node(xml_root.find('CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF'))
-            require_port_prototype_ref = self.parse_text_node(xml_root.find('CONTEXT-PORT-REF'))
+            mode_declaration_ref = self._parse_text_node(xml_root.find('TARGET-MODE-DECLARATION-REF'))
+            mode_declaration_group_prototype_ref = self._parse_text_node(xml_root.find('CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF'))
+            require_port_prototype_ref = self._parse_text_node(xml_root.find('CONTEXT-PORT-REF'))
         else:
             self._logger.error(f'Unsupported version: {self.version}')
             return None
@@ -548,8 +548,8 @@ class BehaviorParser(ElementParser):
     def parse_parameter_instance_ref(self, xml_root: Element) -> ParameterInstanceRef:
         """parses <AUTOSAR-PARAMETER-IREF>"""
         assert (xml_root.tag == 'AUTOSAR-PARAMETER-IREF')
-        port_ref = self.parse_text_node(xml_root.find('PORT-PROTOTYPE-REF'))
-        parameter_data_ref = self.parse_text_node(xml_root.find('TARGET-DATA-PROTOTYPE-REF'))
+        port_ref = self._parse_text_node(xml_root.find('PORT-PROTOTYPE-REF'))
+        parameter_data_ref = self._parse_text_node(xml_root.find('TARGET-DATA-PROTOTYPE-REF'))
         return ParameterInstanceRef(port_ref, parameter_data_ref)
 
     def _parse_mode_dependency(self, xml_root, *_) -> ModeDependency:
@@ -566,9 +566,9 @@ class BehaviorParser(ElementParser):
     def _parse_dependent_on_mode_instance_ref(self, xml_root: Element, *_) -> ModeDependencyRef:
         """parses <DEPENDENT-ON-MODE-IREF>"""
         assert (xml_root.tag == 'DEPENDENT-ON-MODE-IREF')
-        mode_declaration_ref = self.parse_text_node(xml_root.find('MODE-DECLARATION-REF'))
-        mode_declaration_group_prototype_ref = self.parse_text_node(xml_root.find('MODE-DECLARATION-GROUP-PROTOTYPE-REF'))
-        require_port_prototype_ref = self.parse_text_node(xml_root.find('R-PORT-PROTOTYPE-REF'))
+        mode_declaration_ref = self._parse_text_node(xml_root.find('MODE-DECLARATION-REF'))
+        mode_declaration_group_prototype_ref = self._parse_text_node(xml_root.find('MODE-DECLARATION-GROUP-PROTOTYPE-REF'))
+        require_port_prototype_ref = self._parse_text_node(xml_root.find('R-PORT-PROTOTYPE-REF'))
         return ModeDependencyRef(mode_declaration_ref, mode_declaration_group_prototype_ref, require_port_prototype_ref)
 
     def _parse_disabled_modes_instance_refs(self, xml_root: Element, *_) -> list[DisabledModeInstanceRef]:
@@ -591,11 +591,11 @@ class BehaviorParser(ElementParser):
         mode_declaration_ref = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'CONTEXT-PORT-REF':
-                require_port_prototype_ref = self.parse_text_node(xml_elem)
+                require_port_prototype_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF':
-                mode_declaration_group_prototype_ref = self.parse_text_node(xml_elem)
+                mode_declaration_group_prototype_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'TARGET-MODE-DECLARATION-REF':
-                mode_declaration_ref = self.parse_text_node(xml_elem)
+                mode_declaration_ref = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         if mode_declaration_ref is None or mode_declaration_group_prototype_ref is None or require_port_prototype_ref is None:
@@ -605,8 +605,8 @@ class BehaviorParser(ElementParser):
         return DisabledModeInstanceRef(mode_declaration_ref, mode_declaration_group_prototype_ref, require_port_prototype_ref)
 
     def parse_init_event(self, xml_node: Element, parent: ArObject | None = None) -> InitEvent:
-        name = self.parse_text_node(xml_node.find('SHORT-NAME'))
-        start_on_event_ref = self.parse_text_node(xml_node.find('START-ON-EVENT-REF'))
+        name = self._parse_text_node(xml_node.find('SHORT-NAME'))
+        start_on_event_ref = self._parse_text_node(xml_node.find('START-ON-EVENT-REF'))
         init_event = InitEvent(name, start_on_event_ref, parent)
         return init_event
 
@@ -614,15 +614,15 @@ class BehaviorParser(ElementParser):
         """parses AUTOSAR3 <MODE-SWITCH-EVENT>"""
         if self.version < 4.0:
             assert (xml_node.tag == 'MODE-SWITCH-EVENT')
-            name = self.parse_text_node(xml_node.find('SHORT-NAME'))
+            name = self._parse_text_node(xml_node.find('SHORT-NAME'))
             mode_inst_ref = self.parse_mode_instance_ref(xml_node.find('MODE-IREF'))
-            start_on_event_ref = self.parse_text_node(xml_node.find('START-ON-EVENT-REF'))
-            activation = self.parse_text_node(xml_node.find('ACTIVATION'))
+            start_on_event_ref = self._parse_text_node(xml_node.find('START-ON-EVENT-REF'))
+            activation = self._parse_text_node(xml_node.find('ACTIVATION'))
             mode_switch_event = ModeSwitchEvent(name, start_on_event_ref, activation, parent, self.version)
             mode_switch_event.mode_inst_ref = mode_inst_ref
         elif self.version >= 4.0:
             assert (xml_node.tag == 'SWC-MODE-SWITCH-EVENT')
-            name = self.parse_text_node(xml_node.find('SHORT-NAME'))
+            name = self._parse_text_node(xml_node.find('SHORT-NAME'))
             mode_instance_refs = []
             for xml_elem in xml_node.findall('./MODE-IREFS/*'):
                 if xml_elem.tag != 'MODE-IREF':
@@ -631,8 +631,8 @@ class BehaviorParser(ElementParser):
                 mode_instance_ref = self.parse_mode_instance_ref(xml_elem)
                 if mode_instance_ref is not None:
                     mode_instance_refs.append(mode_instance_ref)
-            start_on_event_ref = self.parse_text_node(xml_node.find('START-ON-EVENT-REF'))
-            activation = self.parse_text_node(xml_node.find('ACTIVATION'))
+            start_on_event_ref = self._parse_text_node(xml_node.find('START-ON-EVENT-REF'))
+            activation = self._parse_text_node(xml_node.find('ACTIVATION'))
             mode_switch_event = ModeSwitchEvent(name, start_on_event_ref, activation, parent, self.version)
             mode_switch_event.mode_inst_ref = mode_instance_refs[0]
         else:
@@ -651,13 +651,13 @@ class BehaviorParser(ElementParser):
         xml_disabled_mode_refs = None
         for xml_elem in xml_node.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'DISABLED-MODE-IREFS':
                 xml_disabled_mode_refs = xml_elem
             elif xml_elem.tag == 'START-ON-EVENT-REF':
-                start_on_event_ref = self.parse_text_node(xml_elem)
+                start_on_event_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'EVENT-SOURCE-REF':
-                event_source_ref = self.parse_text_node(xml_elem)
+                event_source_ref = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         if name is None:
@@ -675,15 +675,15 @@ class BehaviorParser(ElementParser):
         xml_disabled_mode_refs = None
         for xml_elem in xml_node.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif self.version >= 4.0 and xml_elem.tag == 'DISABLED-MODE-IREFS':
                 xml_disabled_mode_refs = xml_elem
             elif self.version < 4.0 and xml_elem.tag == 'MODE-DEPENDENCY':
                 xml_mode_dependency = xml_elem
             elif xml_elem.tag == 'START-ON-EVENT-REF':
-                start_on_event_ref = self.parse_text_node(xml_elem)
+                start_on_event_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'PERIOD':
-                period = self.parse_text_node(xml_elem)
+                period = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
 
@@ -698,8 +698,8 @@ class BehaviorParser(ElementParser):
         return timing_event
 
     def parse_data_received_event(self, xml_root: Element, parent: ArObject | None = None) -> DataReceivedEvent:
-        name = self.parse_text_node(xml_root.find('SHORT-NAME'))
-        start_on_event_ref = self.parse_text_node(xml_root.find('START-ON-EVENT-REF'))
+        name = self._parse_text_node(xml_root.find('SHORT-NAME'))
+        start_on_event_ref = self._parse_text_node(xml_root.find('START-ON-EVENT-REF'))
         port_tag = 'CONTEXT-R-PORT-REF' if self.version >= 4.0 else 'R-PORT-PROTOTYPE-REF'
         data_instance_ref = self.parse_data_instance_ref(xml_root.find('DATA-IREF'), port_tag)
         data_received_event = DataReceivedEvent(name, start_on_event_ref, parent)
@@ -716,9 +716,9 @@ class BehaviorParser(ElementParser):
         operation_instance_ref = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'START-ON-EVENT-REF':
-                start_on_event_ref = self.parse_text_node(xml_elem)
+                start_on_event_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'OPERATION-IREF':
                 port_tag = 'CONTEXT-P-PORT-REF' if self.version >= 4.0 else 'P-PORT-PROTOTYPE-REF'
                 operation_instance_ref = self.parse_operation_instance_ref(xml_elem, port_tag)
@@ -739,9 +739,9 @@ class BehaviorParser(ElementParser):
         data_elem_ref = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == port_tag:
-                port_ref = self.parse_text_node(xml_elem)
+                port_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == data_elem_tag:
-                data_elem_ref = self.parse_text_node(xml_elem)
+                data_elem_ref = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         return DataInstanceRef(port_ref, data_elem_ref)
@@ -759,8 +759,8 @@ class BehaviorParser(ElementParser):
         else:
             operation_tag = 'OPERATION-PROTOTYPE-REF'
         return OperationInstanceRef(
-            self.parse_text_node(xml_root.find(port_tag)),
-            self.parse_text_node(xml_root.find(operation_tag)),
+            self._parse_text_node(xml_root.find(port_tag)),
+            self._parse_text_node(xml_root.find(operation_tag)),
         )
 
     def parse_data_element_instance_ref(self, xml_root: Element, port_tag: str):
@@ -768,22 +768,22 @@ class BehaviorParser(ElementParser):
         assert (xml_root.tag == 'DATA-ELEMENT-IREF')
         assert (xml_root.find(port_tag) is not None)
         return DataElementInstanceRef(
-            self.parse_text_node(xml_root.find(port_tag)),
-            self.parse_text_node(xml_root.find('DATA-ELEMENT-PROTOTYPE-REF')),
+            self._parse_text_node(xml_root.find(port_tag)),
+            self._parse_text_node(xml_root.find('DATA-ELEMENT-PROTOTYPE-REF')),
         )
 
     def parse_swc_nv_block_needs(self, xml_root: Element) -> SwcNvBlockNeeds:
-        name = self.parse_text_node(xml_root.find('SHORT-NAME'))
-        number_of_data_sets = self.parse_int_node(xml_root.find('N-DATA-SETS'))
-        read_only = self.parse_boolean_node(xml_root.find('READONLY'))
-        reliability = self.parse_text_node(xml_root.find('RELIABILITY'))
-        resistant_to_changed_sw = self.parse_boolean_node(xml_root.find('RESISTANT-TO-CHANGED-SW'))
-        restore_at_start = self.parse_boolean_node(xml_root.find('RESTORE-AT-START'))
-        write_only_once = self.parse_boolean_node(xml_root.find('WRITE-ONLY-ONCE'))
-        writing_frequency = self.parse_int_node(xml_root.find('WRITING-FREQUENCY'))
-        writing_priority = self.parse_text_node(xml_root.find('WRITING-PRIORITY'))
-        default_block_ref = self.parse_text_node(xml_root.find('DEFAULT-BLOCK-REF'))
-        mirror_block_ref = self.parse_text_node(xml_root.find('MIRROR-BLOCK-REF'))
+        name = self._parse_text_node(xml_root.find('SHORT-NAME'))
+        number_of_data_sets = self._parse_int_node(xml_root.find('N-DATA-SETS'))
+        read_only = self._parse_boolean_node(xml_root.find('READONLY'))
+        reliability = self._parse_text_node(xml_root.find('RELIABILITY'))
+        resistant_to_changed_sw = self._parse_boolean_node(xml_root.find('RESISTANT-TO-CHANGED-SW'))
+        restore_at_start = self._parse_boolean_node(xml_root.find('RESTORE-AT-START'))
+        write_only_once = self._parse_boolean_node(xml_root.find('WRITE-ONLY-ONCE'))
+        writing_frequency = self._parse_int_node(xml_root.find('WRITING-FREQUENCY'))
+        writing_priority = self._parse_text_node(xml_root.find('WRITING-PRIORITY'))
+        default_block_ref = self._parse_text_node(xml_root.find('DEFAULT-BLOCK-REF'))
+        mirror_block_ref = self._parse_text_node(xml_root.find('MIRROR-BLOCK-REF'))
         service_call_ports = self.parse_service_call_ports(xml_root.find('SERVICE-CALL-PORTS'))
         assert (len(service_call_ports) > 0)
         swc_nv_block_needs = SwcNvBlockNeeds(
@@ -808,8 +808,8 @@ class BehaviorParser(ElementParser):
         service_call_ports = []
         for xml_node in xml_root.findall('ROLE-BASED-R-PORT-ASSIGNMENT'):
             role_based_r_port_assignment = RoleBasedRPortAssignment(
-                self.parse_text_node(xml_node.find('R-PORT-PROTOTYPE-REF')),
-                self.parse_text_node(xml_node.find('ROLE')),
+                self._parse_text_node(xml_node.find('R-PORT-PROTOTYPE-REF')),
+                self._parse_text_node(xml_node.find('ROLE')),
             )
             service_call_ports.append(role_based_r_port_assignment)
         return service_call_ports
@@ -818,15 +818,15 @@ class BehaviorParser(ElementParser):
         """
         parses <CALPRM-ELEMENT-PROTOTYPE>
         """
-        name = self.parse_text_node(xml_root.find('SHORT-NAME'))
+        name = self._parse_text_node(xml_root.find('SHORT-NAME'))
         admin_data = self.parse_admin_data_node(xml_root.find('ADMIN-DATA'))
-        type_ref = self.parse_text_node(xml_root.find('TYPE-TREF'))
+        type_ref = self._parse_text_node(xml_root.find('TYPE-TREF'))
         cal_prm_elem_prototype = CalPrmElemPrototype(name, type_ref, parent, admin_data)
         for xml_elem in xml_root.findall('./SW-DATA-DEF-PROPS/*'):
             if xml_elem.tag != 'SW-ADDR-METHOD-REF':
                 self._logger.error(f'Unexpected tag: {xml_elem.tag}')
                 continue
-            cal_prm_elem_prototype.sw_data_def_props.append(self.parse_text_node(xml_elem))
+            cal_prm_elem_prototype.sw_data_def_props.append(self._parse_text_node(xml_elem))
         return cal_prm_elem_prototype
 
     def parse_sync_server_call_point(self, xml_root: Element) -> SyncServerCallPoint | None:
@@ -840,20 +840,20 @@ class BehaviorParser(ElementParser):
         if self.version >= 4.0:
             for xml_elem in xml_root.findall('*'):
                 if xml_elem.tag == 'SHORT-NAME':
-                    name = self.parse_text_node(xml_elem)
+                    name = self._parse_text_node(xml_elem)
                 elif xml_elem.tag == 'OPERATION-IREF':
                     operation_instance_refs.append(self.parse_operation_instance_ref(
                         xml_elem,
                         'CONTEXT-R-PORT-REF',
                     ))
                 elif xml_elem.tag == 'TIMEOUT':
-                    timeout = self.parse_float_node(xml_elem)
+                    timeout = self._parse_float_node(xml_elem)
                 else:
                     self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         else:
             for xml_elem in xml_root.findall('*'):
                 if xml_elem.tag == 'SHORT-NAME':
-                    name = self.parse_text_node(xml_elem)
+                    name = self._parse_text_node(xml_elem)
                 elif xml_elem.tag == 'OPERATION-IREFS':
                     for xml_operation in xml_elem.findall('*'):
                         if xml_operation.tag != 'OPERATION-IREF':
@@ -864,7 +864,7 @@ class BehaviorParser(ElementParser):
                             'R-PORT-PROTOTYPE-REF',
                         ))
                 elif xml_elem.tag == 'TIMEOUT':
-                    timeout = self.parse_float_node(xml_elem)
+                    timeout = self._parse_float_node(xml_elem)
                 else:
                     self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         if name is None:
@@ -880,9 +880,9 @@ class BehaviorParser(ElementParser):
         assert (xml_port_prototype_ref is not None)
         assert (xml_target_data_prototype_ref is not None)
         return VariableAccess(
-            self.parse_text_node(xml_root.find('SHORT-NAME')),
-            self.parse_text_node(xml_port_prototype_ref),
-            self.parse_text_node(xml_target_data_prototype_ref),
+            self._parse_text_node(xml_root.find('SHORT-NAME')),
+            self._parse_text_node(xml_port_prototype_ref),
+            self._parse_text_node(xml_target_data_prototype_ref),
         )
 
     def parse_swc_service_dependency(self, xml_root: Element, parent: ArObject | None = None) -> SwcServiceDependency:
@@ -895,7 +895,7 @@ class BehaviorParser(ElementParser):
         role_based_port_assignments = []
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'DESC':
                 desc = self.parse_desc_direct(xml_elem)
             elif xml_elem.tag == 'ASSIGNED-DATAS':
@@ -948,14 +948,14 @@ class BehaviorParser(ElementParser):
             elif xml_elem.tag == 'INIT-VALUE':
                 for xml_child in xml_elem.findall('./*'):
                     if xml_child.tag == 'CONSTANT-REFERENCE':
-                        init_value_ref = self.parse_text_node(xml_child.find('./CONSTANT-REF'))
+                        init_value_ref = self._parse_text_node(xml_child.find('./CONSTANT-REF'))
                     else:
                         values = self.constant_parser.parse_value_v4(xml_elem, None)
                         if len(values) != 1:
                             self._logger.error(f'{xml_elem.tag} cannot cannot contain multiple elements')
                         init_value = values[0]
             elif xml_elem.tag == 'TYPE-TREF':
-                type_ref = self.parse_text_node(xml_elem)
+                type_ref = self._parse_text_node(xml_elem)
             else:
                 self.base_handler(xml_elem)
         obj = ParameterDataPrototype(
@@ -992,45 +992,45 @@ class BehaviorParser(ElementParser):
         self.push()
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'N-DATA-SETS':
-                config.number_of_data_sets = self.parse_int_node(xml_elem)
+                config.number_of_data_sets = self._parse_int_node(xml_elem)
             elif xml_elem.tag == 'N-ROM-BLOCKS':
-                config.number_of_rom_blocks = self.parse_int_node(xml_elem)
+                config.number_of_rom_blocks = self._parse_int_node(xml_elem)
             elif xml_elem.tag == 'RAM-BLOCK-STATUS-CONTROL':
-                config.ram_block_status_control = self.parse_text_node(xml_elem)
+                config.ram_block_status_control = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'RELIABILITY':
-                config.reliability = self.parse_text_node(xml_elem)
+                config.reliability = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'WRITING-PRIORITY':
-                config.writing_priority = self.parse_text_node(xml_elem)
+                config.writing_priority = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'WRITING-FREQUENCY':
-                config.writing_frequency = self.parse_int_node(xml_elem)
+                config.writing_frequency = self._parse_int_node(xml_elem)
             elif xml_elem.tag == 'CALC-RAM-BLOCK-CRC':
-                config.calc_ram_block_crc = self.parse_boolean_node(xml_elem)
+                config.calc_ram_block_crc = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'CHECK-STATIC-BLOCK-ID':
-                config.check_static_block_id = self.parse_boolean_node(xml_elem)
+                config.check_static_block_id = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'READONLY':
-                config.read_only = self.parse_boolean_node(xml_elem)
+                config.read_only = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'RESISTANT-TO-CHANGED-SW':
-                config.resistant_to_changed_sw = self.parse_boolean_node(xml_elem)
+                config.resistant_to_changed_sw = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'RESTORE-AT-START':
-                config.restore_at_startup = self.parse_boolean_node(xml_elem)
+                config.restore_at_startup = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'STORE-AT-SHUTDOWN':
-                config.store_at_shutdown = self.parse_boolean_node(xml_elem)
+                config.store_at_shutdown = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'WRITE-VERIFICATION':
-                config.write_verification = self.parse_boolean_node(xml_elem)
+                config.write_verification = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'WRITE-ONLY-ONCE':
-                config.write_only_once = self.parse_boolean_node(xml_elem)
+                config.write_only_once = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'USE-AUTO-VALIDATION-AT-SHUT-DOWN':
-                config.auto_validation_at_shutdown = self.parse_boolean_node(xml_elem)
+                config.auto_validation_at_shutdown = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'USE-CRC-COMP-MECHANISM':
-                config.use_crc_comp_mechanism = self.parse_boolean_node(xml_elem)
+                config.use_crc_comp_mechanism = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'STORE-EMERGENCY':
-                config.store_emergency = self.parse_boolean_node(xml_elem)
+                config.store_emergency = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'STORE-IMMEDIATE':
-                config.store_immediate = self.parse_boolean_node(xml_elem)
+                config.store_immediate = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'STORE-CYCLIC':
-                config.store_cyclic = self.parse_boolean_node(xml_elem)
+                config.store_cyclic = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'CYCLIC-WRITING-PERIOD':
-                config.cyclic_write_period = self.parse_float_node(xml_elem)
+                config.cyclic_write_period = self._parse_float_node(xml_elem)
             else:
                 self.base_handler(xml_elem)
 
@@ -1049,20 +1049,20 @@ class BehaviorParser(ElementParser):
         local_parameter_ref = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'ROLE':
-                role = self.parse_text_node(xml_elem)
+                role = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'USED-DATA-ELEMENT':
                 for xml_child in xml_elem.findall('./*'):
                     if xml_child.tag != 'LOCAL-VARIABLE-REF':
                         self._logger.error(f'Unexpected tag: {xml_child.tag}')
                         continue
-                    local_variable_ref = self.parse_text_node(xml_child)
+                    local_variable_ref = self._parse_text_node(xml_child)
             elif xml_elem.tag == 'USED-PARAMETER-ELEMENT':
                 pass
                 for xml_child in xml_elem.findall('./*'):
                     if xml_child.tag != 'LOCAL-PARAMETER-REF':
                         self._logger.error(f'Unexpected tag: {xml_child.tag}')
                         continue
-                    local_parameter_ref = LocalParameterRef(self.parse_text_node(xml_child))
+                    local_parameter_ref = LocalParameterRef(self._parse_text_node(xml_child))
             else:
                 raise NotImplementedError(xml_elem.tag)
         if role is None or (local_variable_ref is None and local_parameter_ref is None):
@@ -1075,9 +1075,9 @@ class BehaviorParser(ElementParser):
         role = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'PORT-PROTOTYPE-REF':
-                port_ref = self.parse_text_node(xml_elem)
+                port_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'ROLE':
-                port_ref = self.parse_text_node(xml_elem)
+                port_ref = self._parse_text_node(xml_elem)
             else:
                 self.base_handler(xml_elem)
         if port_ref is None:
@@ -1090,20 +1090,20 @@ class BehaviorParser(ElementParser):
         target_data_prototype_ref = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'LOCAL-VARIABLE-REF':
-                local_variable_ref = self.parse_text_node(xml_elem)
+                local_variable_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'AUTOSAR-VARIABLE-IREF' or xml_elem.tag == 'AUTOSAR-VARIABLE-IN-IMPL-DATATYPE':
                 xml_port_prototype_ref = xml_elem.find('./PORT-PROTOTYPE-REF')
                 xml_target_data_prototype_ref = xml_elem.find('./TARGET-DATA-PROTOTYPE-REF')
                 assert (xml_port_prototype_ref is not None)
                 assert (xml_target_data_prototype_ref is not None)
-                port_prototype_ref = self.parse_text_node(xml_port_prototype_ref)
-                target_data_prototype_ref = self.parse_text_node(xml_target_data_prototype_ref)
+                port_prototype_ref = self._parse_text_node(xml_port_prototype_ref)
+                target_data_prototype_ref = self._parse_text_node(xml_target_data_prototype_ref)
         return local_variable_ref, port_prototype_ref, target_data_prototype_ref
 
     def parse_nv_block_sw_cnv_block_descriptor(self, xml_root: Element, parent: ArObject):
         """AUTOSAR 4 NV-BLOCK-DESCRIPTOR"""
         assert (xml_root.tag == 'NV-BLOCK-DESCRIPTOR')
-        name = self.parse_text_node(xml_root.find('SHORT-NAME'))
+        name = self._parse_text_node(xml_root.find('SHORT-NAME'))
         ws = parent.root_ws()
         assert (ws is not None)
         if name is None:
@@ -1116,7 +1116,7 @@ class BehaviorParser(ElementParser):
             elif xml_elem.tag == 'DATA-TYPE-MAPPING-REFS':
                 for xml_child in xml_elem.findall('./*'):
                     if xml_child.tag == 'DATA-TYPE-MAPPING-REF':
-                        tmp = self.parse_text_node(xml_child)
+                        tmp = self._parse_text_node(xml_child)
                         assert (tmp is not None)
                         descriptor.data_type_mapping_refs.append(tmp)
             elif xml_elem.tag == 'NV-BLOCK-DATA-MAPPINGS':
@@ -1182,11 +1182,11 @@ class BehaviorParser(ElementParser):
                 # Cast the object to correct class.
                 descriptor.rom_block = NvBlockRomBlock.cast(data_element)
             elif xml_elem.tag == 'SUPPORT-DIRTY-FLAG':
-                dirty_flag = self.parse_boolean_node(xml_elem)
+                dirty_flag = self._parse_boolean_node(xml_elem)
                 if dirty_flag is not None:
                     descriptor.support_dirty_flag = dirty_flag
             elif xml_elem.tag == 'TIMING-EVENT-REF':
-                timing_ref = self.parse_text_node(xml_elem)
+                timing_ref = self._parse_text_node(xml_elem)
                 if timing_ref is None:
                     continue
                 timing_event = None

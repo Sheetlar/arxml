@@ -78,9 +78,9 @@ class TransformationParser(ElementParser, CompuParser):
                 case 'TRANSFORMER-CHAIN-REFS':
                     transformer_refs = list(self.child_string_nodes(child_elem))
                 case 'EXECUTE-DESPITE-DATA-UNAVAILABILITY':
-                    execute = self.parse_boolean_node(child_elem)
+                    execute = self._parse_boolean_node(child_elem)
                 case 'DATA-TRANSFORMATION-KIND':
-                    kind = self.parse_text_node(child_elem)
+                    kind = self._parse_text_node(child_elem)
                 case _:
                     self.log_unexpected(xml_elem, child_elem)
         transformation = DataTransformation(
@@ -105,17 +105,17 @@ class TransformationParser(ElementParser, CompuParser):
                 case tag if tag in self.common_tags:
                     pass
                 case 'PROTOCOL':
-                    protocol = self.parse_text_node(child_elem)
+                    protocol = self._parse_text_node(child_elem)
                 case 'VERSION':
-                    version = self.parse_text_node(child_elem)
+                    version = self._parse_text_node(child_elem)
                 case 'TRANSFORMER-CLASS':
-                    transformer_class = self.parse_text_node(child_elem)
+                    transformer_class = self._parse_text_node(child_elem)
                 case 'BUFFER-PROPERTIES':
                     buffer_properties = self._parse_buffer_properties(child_elem)
                 case 'HAS-INTERNAL-STATE':
-                    has_internal_state = self.parse_boolean_node(child_elem)
+                    has_internal_state = self._parse_boolean_node(child_elem)
                 case 'NEEDS-ORIGINAL-DATA':
-                    needs_original_data = self.parse_boolean_node(child_elem)
+                    needs_original_data = self._parse_boolean_node(child_elem)
                 case 'TRANSFORMATION-DESCRIPTIONS':
                     descriptions = self.parse_variable_element_list(child_elem, {
                         'END-TO-END-TRANSFORMATION-DESCRIPTION': self._parse_e2e_description,
@@ -137,11 +137,11 @@ class TransformationParser(ElementParser, CompuParser):
         return technology
 
     def _parse_buffer_properties(self, xml_elem: Element) -> BufferProperties | None:
-        length = self.parse_int_node(xml_elem.find('HEADER-LENGTH'))
+        length = self._parse_int_node(xml_elem.find('HEADER-LENGTH'))
         if length is None:
             self.log_missing_required(xml_elem, 'HEADER-LENGTH')
             return None
-        inplace = self.parse_boolean_node(xml_elem.find('IN-PLACE'))
+        inplace = self._parse_boolean_node(xml_elem.find('IN-PLACE'))
         if inplace is None:
             self.log_missing_required(xml_elem, 'IN-PLACE')
             return None
@@ -153,26 +153,26 @@ class TransformationParser(ElementParser, CompuParser):
         )
 
     def _parse_e2e_description(self, xml_elem: Element) -> EndToEndTransformationDescription:
-        counter_offset = self.parse_int_node(xml_elem.find('COUNTER-OFFSET'))
-        crc_offset = self.parse_int_node(xml_elem.find('CRC-OFFSET'))
-        offset = self.parse_int_node(xml_elem.find('OFFSET'))
-        data_id_mode = self.parse_text_node(xml_elem.find('DATA-ID-MODE'))
-        e2e_profile_compatibility_props_ref = self.parse_text_node(xml_elem.find('E-2-E-PROFILE-COMPATIBILITY-PROPS-REF'))
-        max_delta_counter = self.parse_int_node(xml_elem.find('MAX-DELTA-COUNTER'))
-        max_error_state_init = self.parse_int_node(xml_elem.find('MAX-ERROR-STATE-INIT'))
-        max_error_state_invalid = self.parse_int_node(xml_elem.find('MAX-ERROR-STATE-INVALID'))
-        max_error_state_valid = self.parse_int_node(xml_elem.find('MAX-ERROR-STATE-VALID'))
-        max_no_new_or_repeated_data = self.parse_int_node(xml_elem.find('MAX-NO-NEW-OR-REPEATED-DATA'))
-        min_ok_state_init = self.parse_int_node(xml_elem.find('MIN-OK-STATE-INIT'))
-        min_ok_state_invalid = self.parse_int_node(xml_elem.find('MIN-OK-STATE-INVALID'))
-        min_ok_state_valid = self.parse_int_node(xml_elem.find('MIN-OK-STATE-VALID'))
-        profile_behavior = self.parse_text_node(xml_elem.find('PROFILE-BEHAVIOR'))
-        profile_name = self.parse_text_node(xml_elem.find('PROFILE-NAME'))
-        sync_counter_init = self.parse_int_node(xml_elem.find('SYNC-COUNTER-INIT'))
-        upper_header_bits_to_shift = self.parse_int_node(xml_elem.find('UPPER-HEADER-BITS-TO-SHIFT'))
-        window_size_init = self.parse_int_node(xml_elem.find('WINDOW-SIZE-INIT'))
-        window_size_invalid = self.parse_int_node(xml_elem.find('WINDOW-SIZE-INVALID'))
-        window_size_valid = self.parse_int_node(xml_elem.find('WINDOW-SIZE-VALID'))
+        counter_offset = self._parse_int_node(xml_elem.find('COUNTER-OFFSET'))
+        crc_offset = self._parse_int_node(xml_elem.find('CRC-OFFSET'))
+        offset = self._parse_int_node(xml_elem.find('OFFSET'))
+        data_id_mode = self._parse_text_node(xml_elem.find('DATA-ID-MODE'))
+        e2e_profile_compatibility_props_ref = self._parse_text_node(xml_elem.find('E-2-E-PROFILE-COMPATIBILITY-PROPS-REF'))
+        max_delta_counter = self._parse_int_node(xml_elem.find('MAX-DELTA-COUNTER'))
+        max_error_state_init = self._parse_int_node(xml_elem.find('MAX-ERROR-STATE-INIT'))
+        max_error_state_invalid = self._parse_int_node(xml_elem.find('MAX-ERROR-STATE-INVALID'))
+        max_error_state_valid = self._parse_int_node(xml_elem.find('MAX-ERROR-STATE-VALID'))
+        max_no_new_or_repeated_data = self._parse_int_node(xml_elem.find('MAX-NO-NEW-OR-REPEATED-DATA'))
+        min_ok_state_init = self._parse_int_node(xml_elem.find('MIN-OK-STATE-INIT'))
+        min_ok_state_invalid = self._parse_int_node(xml_elem.find('MIN-OK-STATE-INVALID'))
+        min_ok_state_valid = self._parse_int_node(xml_elem.find('MIN-OK-STATE-VALID'))
+        profile_behavior = self._parse_text_node(xml_elem.find('PROFILE-BEHAVIOR'))
+        profile_name = self._parse_text_node(xml_elem.find('PROFILE-NAME'))
+        sync_counter_init = self._parse_int_node(xml_elem.find('SYNC-COUNTER-INIT'))
+        upper_header_bits_to_shift = self._parse_int_node(xml_elem.find('UPPER-HEADER-BITS-TO-SHIFT'))
+        window_size_init = self._parse_int_node(xml_elem.find('WINDOW-SIZE-INIT'))
+        window_size_invalid = self._parse_int_node(xml_elem.find('WINDOW-SIZE-INVALID'))
+        window_size_valid = self._parse_int_node(xml_elem.find('WINDOW-SIZE-VALID'))
         description = EndToEndTransformationDescription(
             counter_offset=counter_offset,
             crc_offset=crc_offset,
@@ -198,9 +198,9 @@ class TransformationParser(ElementParser, CompuParser):
         return description
 
     def _parse_some_ip_description(self, xml_elem: Element) -> SomeIpTransformationDescription:
-        alignment = self.parse_int_node(xml_elem.find('ALIGNMENT'))
-        byte_order = self.parse_text_node(xml_elem.find('BYTE-ORDER'))
-        version = self.parse_number_node(xml_elem.find('INTERFACE-VERSION'))
+        alignment = self._parse_int_node(xml_elem.find('ALIGNMENT'))
+        byte_order = self._parse_text_node(xml_elem.find('BYTE-ORDER'))
+        version = self._parse_number_node(xml_elem.find('INTERFACE-VERSION'))
         description = SomeIpTransformationDescription(
             alignment=alignment,
             byte_order=byte_order,
@@ -230,11 +230,11 @@ class TransformationParser(ElementParser, CompuParser):
     def _parse_someip_transformation_props(self, xml_elem: Element) -> SOMEIPTransformationProps:
         common_args = self.parse_common_tags(xml_elem)
         return SOMEIPTransformationProps(
-            alignment=self.parse_int_node(xml_elem.find('ALIGNMENT')),
-            size_of_array_length_field=self.parse_int_node(xml_elem.find('SIZE-OF-ARRAY-LENGTH-FIELD')),
-            size_of_string_length_field=self.parse_int_node(xml_elem.find('SIZE-OF-STRING-LENGTH-FIELD')),
-            size_of_struct_length_field=self.parse_int_node(xml_elem.find('SIZE-OF-STRUCT-LENGTH-FIELD')),
-            size_of_union_length_field=self.parse_int_node(xml_elem.find('SIZE-OF-UNION-LENGTH-FIELD')),
+            alignment=self._parse_int_node(xml_elem.find('ALIGNMENT')),
+            size_of_array_length_field=self._parse_int_node(xml_elem.find('SIZE-OF-ARRAY-LENGTH-FIELD')),
+            size_of_string_length_field=self._parse_int_node(xml_elem.find('SIZE-OF-STRING-LENGTH-FIELD')),
+            size_of_struct_length_field=self._parse_int_node(xml_elem.find('SIZE-OF-STRUCT-LENGTH-FIELD')),
+            size_of_union_length_field=self._parse_int_node(xml_elem.find('SIZE-OF-UNION-LENGTH-FIELD')),
             **common_args,
         )
 

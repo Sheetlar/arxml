@@ -1,10 +1,12 @@
-import traceback
+from xml.etree.ElementTree import Element
 
-from autosar.model.base import parse_text_node
-from autosar.model.element import Element
 from autosar.misc import HasLogger
+from autosar.model.element import Element as ArElement
 from autosar.model.package import Package
-from autosar.parser.parser_base import ElementParser
+from autosar.model.system import System
+from autosar.parser.element_parser import ElementParserSelector
+from autosar.parser.identifiable import IdentifiableParser
+from autosar.parser.parser_base import ElementParser, handler, multiple_with_check, not_implemented_handler
 
 
 class PackageParser(HasLogger):
@@ -26,50 +28,44 @@ class PackageParser(HasLogger):
                 self.switcher[tag_name] = element_parser
             self.registered_parsers[name] = element_parser
 
-    def load_xml(self, package: Package, xml_root):
-        """
-        Loads an XML package by repeatedly invoking its registered element parsers
-        """
-        assert (self.switcher is not None)
-        if xml_root.find('ELEMENTS'):
-            element_names = set([x.name for x in package.elements])
-            for xml_element in xml_root.findall('./ELEMENTS/*'):
-                try:
-                    parser_object = self.switcher.get(xml_element.tag)
-                    if parser_object is not None:
-                        element = parser_object.parse_element(xml_element, package)
-                        if element is None:
-                            self._logger.warning(f'No return value: {xml_element.tag}')
-                            continue
-                        element.parent = package
-                        if isinstance(element, Element):
-                            if element.name not in element_names:
-                                # ignore duplicated items
-                                package.append(element)
-                                element_names.add(element.name)
-                        else:
-                            raise ValueError(f'Parse error: {xml_element.tag}')
-                    else:
-                        package.unhandled_parser.add(xml_element.tag)
-                except Exception as e:
-                    self._logger.error(f'Error parsing element: {xml_element.tag}: {e!r}')
-                    self._logger.debug(traceback.format_exc())
-        if len(package.unhandled_parser) > 0:
-            unhandled_tags = ', '.join(package.unhandled_parser)
-            self._logger.warning(f'Unhandled elements of package {package.ref}: {unhandled_tags}')
 
-        if 3.0 <= self.version < 4.0:
-            if xml_root.find('SUB-PACKAGES'):
-                for xml_package in xml_root.findall('./SUB-PACKAGES/AR-PACKAGE'):
-                    name = xml_package.find("./SHORT-NAME").text
-                    sub_package = Package(name)
-                    package.append(sub_package)
-                    self.load_xml(sub_package, xml_package)
-        elif self.version >= 4.0:
-            for sub_package_xml in xml_root.findall('./AR-PACKAGES/AR-PACKAGE'):
-                name = parse_text_node(sub_package_xml.find("./SHORT-NAME"))
-                sub_package = package.find(name)
-                if sub_package is None:
-                    sub_package = Package(name)
-                    package.append(sub_package)
-                self.load_xml(sub_package, sub_package_xml)
+class BetterPackageParser(IdentifiableParser[Package]):
+    _returned_type = Package
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.found_systems: list[System] = []
+
+    @handler('AR-PACKAGES', param='packages')
+    @multiple_with_check
+    def _parse_package(self, xml_element: Element) -> Package | None:
+        pp = BetterPackageParser()
+        package = pp.parse_element(xml_element)
+        self.found_systems.extend(pp.found_systems)
+        return package
+
+    @handler('ELEMENTS')
+    def _parse_elements(self, xml_element: Element) -> list[ArElement]:
+        elements: list[ArElement] = []
+        not_implemented: set[str] = set()
+        unexpected: set[str] = set()
+        for child in xml_element:
+            try:
+                parser = ElementParserSelector(child.tag)
+                if (e := parser.parse_element(child)) is not None:
+                    elements.append(e)
+                    if isinstance(e, System):
+                        self.found_systems.append(e)
+            except NotImplementedError:
+                not_implemented.add(child.tag)
+            except NameError:
+                unexpected.add(child.tag)
+        if len(not_implemented) > 0:
+            self._logger.warning(f'Parser not implemented for element subclasses {self._tag_list(not_implemented)}')
+        if len(unexpected) > 0:
+            self._logger.warning(f'Unexpected tags in {xml_element.tag}: {self._tag_list(unexpected)}')
+        return elements
+
+    @not_implemented_handler('REFERENCE-BASES')
+    def _parse_ref_bases(self, xml_element: Element):
+        ...

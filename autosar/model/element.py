@@ -1,91 +1,11 @@
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 from autosar.model.ar_object import ArObject
-from autosar.model.atp_variation import Variants, T
-from autosar.model.base import AdminData, SwDataDefProps, create_admin_data
+from autosar.model.base import OldAdminData, SwDataDefProps, create_admin_data, Identifiable
 
 
-class Element(ArObject):
-    def __init__(
-            self,
-            name: str | None,
-            parent: ArObject | None = None,
-            admin_data: AdminData | dict | None = None,
-            category: str | None = None,
-            desc: str | None = None,
-            long_name: str | None = None,
-            uuid: str | None = None,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        if isinstance(admin_data, dict):
-            admin_data_obj = create_admin_data(admin_data)
-        else:
-            admin_data_obj = admin_data
-        if (admin_data_obj is not None) and not isinstance(admin_data_obj, AdminData):
-            raise ValueError('adminData must be of type dict or autosar.base.AdminData')
-        self.name = name
-        self.desc = desc
-        self.long_name = long_name
-        self.admin_data = admin_data_obj
-        self.category = category
-        self.uuid = uuid
-        self._parent = parent
-        self._find_sets: Sequence[list[Element] | Element | None] = ()
-
-    @property
-    def parent(self):
-        return self._parent
-
-    @parent.setter
-    def parent(self, obj: ArObject):
-        self._parent = obj
-        self._set_children_parent()
-
-    def _set_children_parent(self):
-        pass
-
-    def find(self, ref: str, role: str | None = None):
-        name, _, tail = ref.partition('/')
-        for subset in self._find_sets:
-            if subset is None:
-                continue
-            if not isinstance(subset, list) and subset.name == name:
-                if len(tail) > 0:
-                    return subset.find(tail)
-                return subset
-            for element in subset:
-                if element.name == name:
-                    if len(tail) > 0:
-                        return element.find(tail)
-                    return element
-        ws = self.root_ws()
-        return ws.find(ref, role)
-
-    @property
-    def ref(self):
-        if self.parent is not None and self.name is not None:
-            return f'{self.parent.ref}/{self.name}'
-        return None
-
-    def root_ws(self):
-        if self.parent is None:
-            return None
-        return self.parent.root_ws()
-
-    def __deepcopy__(self, memo):
-        raise NotImplementedError(type(self))
-
-    def _set_parent(self, sub_elements: Iterable[T] | None, parent: ArObject | None = None) -> list[T]:
-        if sub_elements is None:
-            return []
-        if parent is None:
-            parent = self
-        if not isinstance(sub_elements, list):
-            sub_elements = list(sub_elements)
-        for sub_element in sub_elements:
-            sub_element.parent = parent
-        return sub_elements
+class Element(Identifiable):
+    pass
 
 
 class LabelElement(ArObject):
@@ -95,7 +15,7 @@ class LabelElement(ArObject):
             self,
             label: str,
             parent: ArObject | None = None,
-            admin_data: AdminData | dict | None = None,
+            admin_data: OldAdminData | dict | None = None,
             category: str | None = None,
             *args, **kwargs,
     ):
@@ -104,7 +24,7 @@ class LabelElement(ArObject):
             admin_data_obj = create_admin_data(admin_data)
         else:
             admin_data_obj = admin_data
-        if (admin_data_obj is not None) and not isinstance(admin_data_obj, AdminData):
+        if (admin_data_obj is not None) and not isinstance(admin_data_obj, OldAdminData):
             raise ValueError('adminData must be of type dict or autosar.base.AdminData')
         self.label = label
         self.admin_data = admin_data_obj
@@ -140,7 +60,7 @@ class DataElement(Element):
             sw_impl_policy: str | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data, category)
         if isinstance(type_ref, str):
@@ -202,7 +122,7 @@ class ParameterDataPrototype(Element):
             sw_calibration_access: str | None = None,
             init_value: Any = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.type_ref = type_ref
@@ -220,18 +140,9 @@ class SoftwareAddressMethod(Element):
     Represents <SW-ADDR-METHOD> (AUTOSAR 3) (AUTOSAR 4)
     """
 
-    def __init__(self, name: str, parent: ArObject | None = None, admin_data: AdminData | None = None):
+    def __init__(self, name: str, parent: ArObject | None = None, admin_data: OldAdminData | None = None):
         super().__init__(name, parent, admin_data)
 
     @staticmethod
     def tag(*_):
         return 'SW-ADDR-METHOD'
-
-
-class ElementVariants(Element, Variants[T]):
-    def find(self, ref: str, role: str | None = None) -> Element | None:
-        for element_variant in self._variants:
-            elem = element_variant.find(ref)
-            if elem is not None:
-                return elem
-        return None

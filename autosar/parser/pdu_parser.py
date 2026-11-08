@@ -82,10 +82,10 @@ class PduParser(ElementParser):
 
     def _parse_pdu_common_params(self, xml_elem: Element) -> dict[str, ...]:
         element_params = self.parse_common_tags(xml_elem)
-        length = self.parse_int_node(xml_elem.find('LENGTH'))
-        has_dynamic_length = self.parse_boolean_node(xml_elem.find('HAS-DYNAMIC-LENGTH'))
+        length = self._parse_int_node(xml_elem.find('LENGTH'))
+        has_dynamic_length = self._parse_boolean_node(xml_elem.find('HAS-DYNAMIC-LENGTH'))
         contained_i_pdu_props = self._parse_contained_i_pdu_props(xml_elem.find('CONTAINED-I-PDU-PROPS'))
-        pattern = self.parse_int_node(xml_elem.find('UNUSED-BIT-PATTERN'))
+        pattern = self._parse_int_node(xml_elem.find('UNUSED-BIT-PATTERN'))
         common_params = {
             'length': length,
             'has_dynamic_length': has_dynamic_length,
@@ -108,8 +108,8 @@ class PduParser(ElementParser):
             xml_elem.find('I-SIGNAL-TO-I-PDU-MAPPINGS'),
             self._parse_i_signal_to_i_pdu_mapping,
         )
-        data_information = self.parse_boolean_node(xml_elem.find('NM-DATA-INFORMATION'))
-        vote_information = self.parse_boolean_node(xml_elem.find('NM-VOTE-INFORMATION'))
+        data_information = self._parse_boolean_node(xml_elem.find('NM-DATA-INFORMATION'))
+        vote_information = self._parse_boolean_node(xml_elem.find('NM-VOTE-INFORMATION'))
         nm_pdu = NMPdu(
             i_signal_to_i_pdu_mappings=mappings,
             nm_data_information=data_information,
@@ -121,7 +121,7 @@ class PduParser(ElementParser):
 
     def _parse_user_defined_pdu(self, xml_elem: Element, parent: ArObject | None) -> UserDefinedPdu:
         common_params = self._parse_pdu_common_params(xml_elem)
-        cdd_type = self.parse_text_node(xml_elem.find('CDD-TYPE'))
+        cdd_type = self._parse_text_node(xml_elem.find('CDD-TYPE'))
         pdu = UserDefinedPdu(
             cdd_type=cdd_type,
             parent=parent,
@@ -149,19 +149,19 @@ class PduParser(ElementParser):
                 case 'CONTAINED-PDU-TRIGGERING-REFS':
                     triggering_refs = list(self.child_string_nodes(child_elem))
                 case 'CONTAINER-TIMEOUT':
-                    container_timeout = self.parse_number_node(child_elem)
+                    container_timeout = self._parse_number_node(child_elem)
                 case 'CONTAINER-TRIGGER':
-                    container_trigger = self.parse_enum_node(child_elem, ContainerIPduTriggerEnum)
+                    container_trigger = self._parse_enum_node(child_elem, ContainerIPduTriggerEnum)
                 case 'HEADER-TYPE':
-                    header_type = self.parse_enum_node(child_elem, ContainerIPduHeaderTypeEnum)
+                    header_type = self._parse_enum_node(child_elem, ContainerIPduHeaderTypeEnum)
                 case 'MINIMUM-RX-CONTAINER-QUEUE-SIZE':
-                    min_rx_size = self.parse_int_node(child_elem)
+                    min_rx_size = self._parse_int_node(child_elem)
                 case 'MINIMUM-TX-CONTAINER-QUEUE-SIZE':
-                    min_tx_size = self.parse_int_node(child_elem)
+                    min_tx_size = self._parse_int_node(child_elem)
                 case 'RX-ACCEPT-CONTAINED-I-PDU':
-                    rx_accept_contained_i_pdu = self.parse_enum_node(child_elem, RxAcceptContainedIPduEnum)
+                    rx_accept_contained_i_pdu = self._parse_enum_node(child_elem, RxAcceptContainedIPduEnum)
                 case 'THRESHOLD-SIZE':
-                    threshold_size = self.parse_int_node(child_elem)
+                    threshold_size = self._parse_int_node(child_elem)
                 case _:
                     self._logger.warning(f'Unexpected tag for {xml_elem.tag}: {child_elem.tag}')
         i_signal_i_pdu = ContainerIPdu(
@@ -181,7 +181,7 @@ class PduParser(ElementParser):
 
     def _parse_dcm_i_pdu(self, xml_elem: Element, parent: ArObject | None) -> DcmIPdu:
         common_params = self._parse_pdu_common_params(xml_elem)
-        diag_type = self.parse_text_node(xml_elem.find('DIAG-PDU-TYPE'))
+        diag_type = self._parse_text_node(xml_elem.find('DIAG-PDU-TYPE'))
         pdu = DcmIPdu(
             diag_pdu_type=diag_type,
             parent=parent,
@@ -232,7 +232,7 @@ class PduParser(ElementParser):
 
     def _parse_j1939_dcm_i_pdu(self, xml_elem: Element, parent: ArObject | None) -> J1939DcmIPdu:
         common_params = self._parse_pdu_common_params(xml_elem)
-        msg_type = self.parse_int_node(xml_elem.find('DIAGNOSTIC-MESSAGE-TYPE'))
+        msg_type = self._parse_int_node(xml_elem.find('DIAGNOSTIC-MESSAGE-TYPE'))
         pdu = J1939DcmIPdu(
             diagnostic_message_type=msg_type,
             parent=parent,
@@ -253,11 +253,11 @@ class PduParser(ElementParser):
                 case tag if tag in self.common_tags or tag in self.pdu_common_tags:
                     pass
                 case 'SELECTOR-FIELD-BYTE-ORDER':
-                    selector_field_byte_order = self.parse_enum_node(child_elem, ByteOrderEnum)
+                    selector_field_byte_order = self._parse_enum_node(child_elem, ByteOrderEnum)
                 case 'SELECTOR-FIELD-LENGTH':
-                    selector_field_length = self.parse_int_node(child_elem)
+                    selector_field_length = self._parse_int_node(child_elem)
                 case 'SELECTOR-FIELD-START-POSITION':
-                    selector_field_start_position = self.parse_int_node(child_elem)
+                    selector_field_start_position = self._parse_int_node(child_elem)
                 case 'DYNAMIC-PARTS':
                     dynamic_parts = self.parse_variable_element_list(
                         child_elem,
@@ -269,7 +269,7 @@ class PduParser(ElementParser):
                         {'STATIC-PART': self._parse_static_part},
                     )
                 case 'TRIGGER-MODE':
-                    trigger_mode = self.parse_enum_node(child_elem, TriggerMode)
+                    trigger_mode = self._parse_enum_node(child_elem, TriggerMode)
                 case _:
                     self.log_unexpected(xml_elem, child_elem)
         i_signal_i_pdu = MultiplexedIPdu(
@@ -306,19 +306,19 @@ class PduParser(ElementParser):
                 case tag if tag in self.common_tags or tag in self.pdu_common_tags:
                     pass
                 case 'PAYLOAD-REF':
-                    payload_ref = self.parse_text_node(child_elem)
+                    payload_ref = self._parse_text_node(child_elem)
                 case 'SECURE-COMMUNICATION-PROPS':
-                    data_id = self.parse_int_node(child_elem.find('DATA-ID'))
-                    auth_retries = self.parse_int_node(child_elem.find('AUTHENTICATION-RETRIES'))
-                    freshness_len = self.parse_int_node(child_elem.find('AUTH-DATA-FRESHNESS-LENGTH'))
-                    freshness_pos = self.parse_int_node(child_elem.find('AUTH-DATA-FRESHNESS-START-POSITION'))
-                    auth_build_attempts = self.parse_int_node(child_elem.find('AUTHENTICATION-BUILD-ATTEMPTS'))
-                    freshness_value_id = self.parse_int_node(child_elem.find('FRESHNESS-VALUE-ID'))
-                    msg_link_len = self.parse_int_node(child_elem.find('MESSAGE-LINK-LENGTH'))
-                    msg_link_pos = self.parse_int_node(child_elem.find('MESSAGE-LINK-POSITION'))
-                    secondary_freshness_value_id = self.parse_int_node(child_elem.find('SECONDARY-FRESHNESS-VALUE-ID'))
-                    secured_area_len = self.parse_int_node(child_elem.find('SECURED-AREA-LENGTH'))
-                    secured_area_off = self.parse_int_node(child_elem.find('SECURED-AREA-OFFSET'))
+                    data_id = self._parse_int_node(child_elem.find('DATA-ID'))
+                    auth_retries = self._parse_int_node(child_elem.find('AUTHENTICATION-RETRIES'))
+                    freshness_len = self._parse_int_node(child_elem.find('AUTH-DATA-FRESHNESS-LENGTH'))
+                    freshness_pos = self._parse_int_node(child_elem.find('AUTH-DATA-FRESHNESS-START-POSITION'))
+                    auth_build_attempts = self._parse_int_node(child_elem.find('AUTHENTICATION-BUILD-ATTEMPTS'))
+                    freshness_value_id = self._parse_int_node(child_elem.find('FRESHNESS-VALUE-ID'))
+                    msg_link_len = self._parse_int_node(child_elem.find('MESSAGE-LINK-LENGTH'))
+                    msg_link_pos = self._parse_int_node(child_elem.find('MESSAGE-LINK-POSITION'))
+                    secondary_freshness_value_id = self._parse_int_node(child_elem.find('SECONDARY-FRESHNESS-VALUE-ID'))
+                    secured_area_len = self._parse_int_node(child_elem.find('SECURED-AREA-LENGTH'))
+                    secured_area_off = self._parse_int_node(child_elem.find('SECURED-AREA-OFFSET'))
                     secure_comm_props = SecureCommunicationProps(
                         data_id=data_id,
                         authentication_retries=auth_retries,
@@ -333,15 +333,15 @@ class PduParser(ElementParser):
                         secured_area_offset=secured_area_off,
                     )
                 case 'AUTHENTICATION-PROPS-REF':
-                    auth_props_ref = self.parse_text_node(child_elem)
+                    auth_props_ref = self._parse_text_node(child_elem)
                 case 'FRESHNESS-PROPS-REF':
-                    freshness_props_ref = self.parse_text_node(child_elem)
+                    freshness_props_ref = self._parse_text_node(child_elem)
                 case 'USE-AS-CRYPTOGRAPHIC-I-PDU':
-                    use_as_cryptographic_i_pdu = self.parse_boolean_node(child_elem)
+                    use_as_cryptographic_i_pdu = self._parse_boolean_node(child_elem)
                 case 'DYNAMIC-RUNTIME-LENGTH-HANDLING':
-                    dyn_runtime_length = self.parse_boolean_node(child_elem)
+                    dyn_runtime_length = self._parse_boolean_node(child_elem)
                 case 'USE-SECURED-PDU-HEADER':
-                    secured_header = self.parse_text_node(child_elem)
+                    secured_header = self._parse_text_node(child_elem)
                 case _:
                     self.log_unexpected(xml_elem, child_elem)
         if payload_ref is None:
@@ -365,7 +365,7 @@ class PduParser(ElementParser):
 
     def _parse_user_defined_i_pdu(self, xml_elem: Element, parent: ArObject | None) -> UserDefinedIPdu:
         common_params = self._parse_pdu_common_params(xml_elem)
-        cdd_type = self.parse_text_node(xml_elem.find('CDD-TYPE'))
+        cdd_type = self._parse_text_node(xml_elem.find('CDD-TYPE'))
         pdu = UserDefinedIPdu(
             cdd_type=cdd_type,
             parent=parent,
@@ -375,11 +375,11 @@ class PduParser(ElementParser):
 
     def _parse_i_signal_i_pdu_group(self, xml_elem: Element, parent: ArObject | None) -> ISignalIPduGroup | None:
         common_args = self.parse_common_tags(xml_elem)
-        comm_direction = self.parse_text_node(xml_elem.find('COMMUNICATION-DIRECTION'))
+        comm_direction = self._parse_text_node(xml_elem.find('COMMUNICATION-DIRECTION'))
         if comm_direction is None:
             self.log_missing_required(xml_elem, 'COMMUNICATION-DIRECTION')
             return None
-        comm_mode = self.parse_text_node(xml_elem.find('COMMUNICATION-MODE'))
+        comm_mode = self._parse_text_node(xml_elem.find('COMMUNICATION-MODE'))
         sub_group_refs = list(self.child_string_nodes(xml_elem.find('CONTAINED-I-SIGNAL-I-PDU-GROUP-REFS')))
         i_pdus = list(self.variation_child_string_nodes(xml_elem.find('I-SIGNAL-I-PDUS'), 'I-SIGNAL-I-PDU-REF'))
         nm_pdus = list(self.variation_child_string_nodes(xml_elem.find('NM-PDUS'), 'NM-PDU-REF'))
@@ -396,21 +396,21 @@ class PduParser(ElementParser):
     def _parse_contained_i_pdu_props(self, xml_elem: Element | None) -> ContainedIPduProps | None:
         if xml_elem is None:
             return None
-        semantics = self.parse_enum_node(
+        semantics = self._parse_enum_node(
             xml_elem.find('COLLECTION-SEMANTICS'),
             ContainedIPduCollectionSemanticsEnum,
         )
-        triggering_ref = self.parse_text_node(xml_elem.find('CONTAINED-PDU-TRIGGERING-REF'))
-        long_header = self.parse_int_node(xml_elem.find('HEADER-ID-LONG-HEADER'))
-        short_header = self.parse_int_node(xml_elem.find('HEADER-ID-SHORT-HEADER'))
-        offset = self.parse_int_node(xml_elem.find('OFFSET'))
-        priority = self.parse_int_node(xml_elem.find('PRIORITY'))
-        timeout = self.parse_number_node(xml_elem.find('TIMEOUT'))
-        trigger = self.parse_enum_node(
+        triggering_ref = self._parse_text_node(xml_elem.find('CONTAINED-PDU-TRIGGERING-REF'))
+        long_header = self._parse_int_node(xml_elem.find('HEADER-ID-LONG-HEADER'))
+        short_header = self._parse_int_node(xml_elem.find('HEADER-ID-SHORT-HEADER'))
+        offset = self._parse_int_node(xml_elem.find('OFFSET'))
+        priority = self._parse_int_node(xml_elem.find('PRIORITY'))
+        timeout = self._parse_number_node(xml_elem.find('TIMEOUT'))
+        trigger = self._parse_enum_node(
             xml_elem.find('TRIGGER'),
             PduCollectionTriggerEnum,
         )
-        uib_position = self.parse_int_node(xml_elem.find('UPDATE-INDICATION-BIT-POSITION'))
+        uib_position = self._parse_int_node(xml_elem.find('UPDATE-INDICATION-BIT-POSITION'))
         contained_props = ContainedIPduProps(
             collection_semantics=semantics,
             contained_pdu_triggering_ref=triggering_ref,
@@ -426,12 +426,12 @@ class PduParser(ElementParser):
 
     def _parse_i_signal_to_i_pdu_mapping(self, xml_elem: Element) -> ISignalToIPduMapping:
         common_args = self.parse_common_tags(xml_elem)
-        i_signal_ref = self.parse_text_node(xml_elem.find('I-SIGNAL-REF'))
-        i_signal_group_ref = self.parse_text_node(xml_elem.find('I-SIGNAL-GROUP-REF'))
-        byte_order = self.parse_enum_node(xml_elem.find('PACKING-BYTE-ORDER'), ByteOrderEnum)
-        start_pos = self.parse_int_node(xml_elem.find('START-POSITION'))
-        transfer_property = self.parse_enum_node(xml_elem.find('TRANSFER-PROPERTY'), TransferPropertyEnum)
-        uib_position = self.parse_int_node(xml_elem.find('UPDATE-INDICATION-BIT-POSITION'))
+        i_signal_ref = self._parse_text_node(xml_elem.find('I-SIGNAL-REF'))
+        i_signal_group_ref = self._parse_text_node(xml_elem.find('I-SIGNAL-GROUP-REF'))
+        byte_order = self._parse_enum_node(xml_elem.find('PACKING-BYTE-ORDER'), ByteOrderEnum)
+        start_pos = self._parse_int_node(xml_elem.find('START-POSITION'))
+        transfer_property = self._parse_enum_node(xml_elem.find('TRANSFER-PROPERTY'), TransferPropertyEnum)
+        uib_position = self._parse_int_node(xml_elem.find('UPDATE-INDICATION-BIT-POSITION'))
         mapping = ISignalToIPduMapping(
             i_signal_ref=i_signal_ref,
             i_signal_group_ref=i_signal_group_ref,
@@ -445,7 +445,7 @@ class PduParser(ElementParser):
 
     def _parse_i_pdu_timing(self, xml_elem: Element) -> IPduTiming:
         common_params = self._parse_pdu_common_params(xml_elem)
-        delay = self.parse_number_node(xml_elem.find('MINIMUM-DELAY'))
+        delay = self._parse_number_node(xml_elem.find('MINIMUM-DELAY'))
         transmission_elem = xml_elem.find('TRANSMISSION-MODE-DECLARATION')
         transmission = TransmissionModeDeclaration(
             mode_driven_false_conditions=self.parse_element_list(
@@ -487,7 +487,7 @@ class PduParser(ElementParser):
     def _parse_transmission_mode_condition(self, xml_elem: Element) -> TransmissionModeCondition | None:
         if xml_elem is None:
             return None
-        signal_ref = self.parse_text_node(xml_elem.find('I-SIGNAL-IN-I-PDU-REF'))
+        signal_ref = self._parse_text_node(xml_elem.find('I-SIGNAL-IN-I-PDU-REF'))
         data_filter = self.parse_data_filter(xml_elem.find('DATA-FILTER'))
         if signal_ref is None:
             self.log_missing_required(xml_elem, 'I-SIGNAL-IN-I-PDU-REF')
@@ -516,7 +516,7 @@ class PduParser(ElementParser):
         def get_event_controlled_timing() -> EventControlledTiming | None:
             if (ect_elem := xml_elem.find('EVENT-CONTROLLED-TIMING')) is None:
                 return None
-            if (num_of_reps := self.parse_int_node(ect_elem.find('NUMBER-OF-REPETITIONS'))) is None:
+            if (num_of_reps := self._parse_int_node(ect_elem.find('NUMBER-OF-REPETITIONS'))) is None:
                 self.log_missing_required(ect_elem, 'NUMBER-OF-REPETITIONS')
                 return None
             period = self._parse_time_range_type(ect_elem.find('REPETITION-PERIOD'))
@@ -537,7 +537,7 @@ class PduParser(ElementParser):
             if tolerance is None:
                 return None
             subclass_tag_prefix = tolerance.tag.removesuffix('-TOLERANCE')
-            tolerance_value = self.parse_number_node(tolerance.find(subclass_tag_prefix))
+            tolerance_value = self._parse_number_node(tolerance.find(subclass_tag_prefix))
             if subclass_tag_prefix == 'ABSOLUTE':
                 return AbsoluteTolerance(absolute=tolerance_value)
             if subclass_tag_prefix == 'RELATIVE':
@@ -547,7 +547,7 @@ class PduParser(ElementParser):
 
         if xml_elem is None:
             return None
-        value = self.parse_number_node(xml_elem.find('VALUE'))
+        value = self._parse_number_node(xml_elem.find('VALUE'))
         if value is None:
             self.log_missing_required(xml_elem, 'VALUE')
             return None
@@ -588,7 +588,7 @@ class PduParser(ElementParser):
                 case 'SEGMENT-POSITIONS':
                     positions = self.parse_element_list(child_elem, self._parse_segment_position)
                 case 'I-PDU-REF':
-                    ref = self.parse_text_node(child_elem.find('I-PDU-REF'))
+                    ref = self._parse_text_node(child_elem.find('I-PDU-REF'))
                 case _:
                     self.log_unexpected(xml_elem, child_elem)
         if ref is None:
@@ -601,9 +601,9 @@ class PduParser(ElementParser):
         return part
 
     def _parse_segment_position(self, xml_elem: Element) -> SegmentPosition:
-        byte_order = self.parse_enum_node(xml_elem.find('SEGMENT-BYTE-ORDER'), ByteOrderEnum)
-        length = self.parse_int_node(xml_elem.find('SEGMENT-LENGTH'))
-        position = self.parse_int_node(xml_elem.find('SEGMENT-POSITION'))
+        byte_order = self._parse_enum_node(xml_elem.find('SEGMENT-BYTE-ORDER'), ByteOrderEnum)
+        length = self._parse_int_node(xml_elem.find('SEGMENT-LENGTH'))
+        position = self._parse_int_node(xml_elem.find('SEGMENT-POSITION'))
         segment_pos = SegmentPosition(
             segment_byte_order=byte_order,
             segment_length=length,
@@ -612,9 +612,9 @@ class PduParser(ElementParser):
         return segment_pos
 
     def _parse_part_alternative(self, xml_elem: Element) -> DynamicPartAlternative:
-        ref = self.parse_text_node(xml_elem.find('I-PDU-REF'))
-        initial = self.parse_boolean_node(xml_elem.find('INITIAL-DYNAMIC-PART'))
-        field_code = self.parse_int_node(xml_elem.find('SELECTOR-FIELD-CODE'))
+        ref = self._parse_text_node(xml_elem.find('I-PDU-REF'))
+        initial = self._parse_boolean_node(xml_elem.find('INITIAL-DYNAMIC-PART'))
+        field_code = self._parse_int_node(xml_elem.find('SELECTOR-FIELD-CODE'))
         alternative = DynamicPartAlternative(
             i_pdu_ref=ref,
             initial_dynamic_part=initial,
@@ -638,7 +638,7 @@ class SoConSetParser(ElementParser):
         for child_elem in xml_elem.findall('./*'):
             match child_elem.tag:
                 case 'SHORT-NAME':
-                    name = self.parse_text_node(child_elem)
+                    name = self._parse_text_node(child_elem)
                 case 'I-PDU-IDENTIFIERS':
                     identifiers = self.parse_variable_element_list(
                         child_elem,
@@ -654,9 +654,9 @@ class SoConSetParser(ElementParser):
         return identifier_set
 
     def _parse_so_con_identifier(self, xml_elem: Element) -> SoConIPduIdentifier:
-        name = self.parse_text_node(xml_elem.find('SHORT-NAME'))
-        header_id = self.parse_int_node(xml_elem.find('HEADER-ID'))
-        triggering_ref = self.parse_text_node(xml_elem.find('PDU-TRIGGERING-REF'))
+        name = self._parse_text_node(xml_elem.find('SHORT-NAME'))
+        header_id = self._parse_int_node(xml_elem.find('HEADER-ID'))
+        triggering_ref = self._parse_text_node(xml_elem.find('PDU-TRIGGERING-REF'))
         identifier = SoConIPduIdentifier(
             name=name,
             header_id=header_id,

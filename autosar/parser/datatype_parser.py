@@ -79,7 +79,7 @@ class DataTypeParser(ElementParser):
                     if elem.tag != 'COMPU-METHOD-REF':
                         self._logger.error(f'Unexpected tag: {elem.tag}')
                         continue
-                    data_type.compu_method_ref = self.parse_text_node(elem)
+                    data_type.compu_method_ref = self._parse_text_node(elem)
             return data_type
 
     def parse_record_type(self, root: Element, parent: ArObject | None = None) -> RecordDataType | None:
@@ -87,8 +87,8 @@ class DataTypeParser(ElementParser):
             elements = []
             name = root.find("./SHORT-NAME").text
             for elem in root.findall('./ELEMENTS/RECORD-ELEMENT'):
-                elem_name = self.parse_text_node(elem.find("./SHORT-NAME"))
-                elem_type_ref = self.parse_text_node(elem.find("./TYPE-TREF"))
+                elem_name = self._parse_text_node(elem.find("./SHORT-NAME"))
+                elem_type_ref = self._parse_text_node(elem.find("./TYPE-TREF"))
                 elements.append(RecordTypeElement(elem_name, elem_type_ref))
             data_type = RecordDataType(name, elements, parent)
             self.parse_desc(root, data_type)
@@ -134,8 +134,8 @@ class DataTypeParser(ElementParser):
             if elem is not None:
                 max_val = elem.text
                 max_val_type = elem.attrib['INTERVAL-TYPE']
-            has_nan = self.parse_boolean_node(root.find("./ALLOW-NAN"))
-            encoding = self.parse_text_node(root.find("./ENCODING"))
+            has_nan = self._parse_boolean_node(root.find("./ALLOW-NAN"))
+            encoding = self._parse_text_node(root.find("./ENCODING"))
             data_type = RealDataType(name, min_val, max_val, min_val_type, max_val_type, has_nan, encoding, parent)
             self.parse_desc(root, data_type)
             return data_type
@@ -153,7 +153,7 @@ class DataTypeParser(ElementParser):
                     elif xml_child_elem.tag == 'PHYS-CONSTRS':
                         rules.append(self._parse_data_constraint_rule(xml_child_elem, 'physicalConstraint'))
                     elif xml_child_elem.tag == 'CONSTR-LEVEL':
-                        constraint_level = self.parse_int_node(xml_child_elem)
+                        constraint_level = self._parse_int_node(xml_child_elem)
                     else:
                         self._logger.warning(f'Unexpected tag: {xml_child_elem.tag}')
             else:
@@ -169,8 +169,8 @@ class DataTypeParser(ElementParser):
     ) -> dict[str, int | float | str | None]:
         lower_limit_xml = xml_elem.find('./LOWER-LIMIT')
         upper_limit_xml = xml_elem.find('./UPPER-LIMIT')
-        lower_limit = None if lower_limit_xml is None else self.parse_number_node(lower_limit_xml)
-        upper_limit = None if upper_limit_xml is None else self.parse_number_node(upper_limit_xml)
+        lower_limit = None if lower_limit_xml is None else self._parse_number_node(lower_limit_xml)
+        upper_limit = None if upper_limit_xml is None else self._parse_number_node(upper_limit_xml)
         lower_limit_type = 'CLOSED'
         upper_limit_type = 'CLOSED'
         key = 'INTERVAL-TYPE'
@@ -198,9 +198,9 @@ class DataTypeParser(ElementParser):
             if xml_elem.tag == 'SW-DATA-DEF-PROPS':
                 variant_props = self.parse_sw_data_def_props(xml_elem)
             elif xml_elem.tag == 'TYPE-EMITTER':
-                type_emitter = self.parse_text_node(xml_elem)
+                type_emitter = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'DYNAMIC-ARRAY-SIZE-PROFILE':
-                dynamic_array_size_profile = self.parse_text_node(xml_elem)
+                dynamic_array_size_profile = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'SUB-ELEMENTS':
                 sub_elements_xml = xml_elem
             elif xml_elem.tag == 'SYMBOL-PROPS':
@@ -254,9 +254,9 @@ class DataTypeParser(ElementParser):
             if xml_elem.tag == 'SW-DATA-DEF-PROPS':
                 variants = self.parse_sw_data_def_props(xml_elem)
             elif xml_elem.tag == 'ARRAY-SIZE':
-                array_size = self.parse_text_node(xml_elem)
+                array_size = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'ARRAY-SIZE-SEMANTICS':
-                array_size_semantics = self.parse_text_node(xml_elem)
+                array_size_semantics = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'SUB-ELEMENTS':
                 pass  # implement later
             else:
@@ -281,11 +281,11 @@ class DataTypeParser(ElementParser):
         self.push()
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'BASE-TYPE-SIZE':
-                base_type_size = self.parse_int_node(xml_elem)
+                base_type_size = self._parse_int_node(xml_elem)
             elif xml_elem.tag == 'BASE-TYPE-ENCODING':
-                base_type_encoding = self.parse_text_node(xml_elem)
+                base_type_encoding = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'NATIVE-DECLARATION':
-                native_declaration = self.parse_text_node(xml_elem)
+                native_declaration = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'MEM-ALIGNMENT':
                 pass  # implement later
             elif xml_elem.tag == 'BYTE-ORDER':
@@ -318,7 +318,7 @@ class DataTypeParser(ElementParser):
             if xml_elem.tag == 'ADMIN-DATA':
                 admin_data = self.parse_admin_data_node(xml_elem)
             elif xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'DATA-TYPE-MAPS':
                 for xml_child in xml_elem.findall('./*'):
                     if xml_child.tag != 'DATA-TYPE-MAP':
@@ -397,13 +397,13 @@ class DataTypeParser(ElementParser):
         self.push()
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'TYPE-TREF':
-                type_ref = self.parse_text_node(xml_elem)
+                type_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'ARRAY-SIZE-HANDLING':
-                size_handling = self.parse_text_node(xml_elem)
+                size_handling = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'ARRAY-SIZE-SEMANTICS':
-                size_semantics = self.parse_text_node(xml_elem)
+                size_semantics = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'MAX-NUMBER-OF-ELEMENTS':
-                array_size = self.parse_text_node(xml_elem)
+                array_size = self._parse_text_node(xml_elem)
             else:
                 self.default_handler(xml_elem)
         elem = ApplicationArrayElement(
@@ -450,7 +450,7 @@ class DataTypeParser(ElementParser):
         self.push()
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'TYPE-TREF':
-                type_ref = self.parse_text_node(xml_elem)
+                type_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'SW-DATA-DEF-PROPS':
                 # variant_props = self.parse_sw_data_def_props(xml_elem)
                 pass
@@ -466,9 +466,9 @@ class DataTypeParser(ElementParser):
         implementation_data_type_ref = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'APPLICATION-DATA-TYPE-REF':
-                application_data_type_ref = self.parse_text_node(xml_elem)
+                application_data_type_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'IMPLEMENTATION-DATA-TYPE-REF':
-                implementation_data_type_ref = self.parse_text_node(xml_elem)
+                implementation_data_type_ref = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         return DataTypeMap(application_data_type_ref, implementation_data_type_ref)
@@ -479,9 +479,9 @@ class DataTypeParser(ElementParser):
         implementation_data_type_ref = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'MODE-GROUP-REF':
-                mode_declaration_group_ref = self.parse_text_node(xml_elem)
+                mode_declaration_group_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'IMPLEMENTATION-DATA-TYPE-REF':
-                implementation_data_type_ref = self.parse_text_node(xml_elem)
+                implementation_data_type_ref = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         return ModeRequestTypeMap(mode_declaration_group_ref, implementation_data_type_ref)
@@ -510,7 +510,7 @@ class DataTypeSemanticsParser(ElementParser, CompuParser):
                 compu_phys_to_internal = self._parse_computation_xml(xml_elem)
                 assert (compu_phys_to_internal is not None)
             elif xml_elem.tag == 'UNIT-REF':
-                unit_ref = self.parse_text_node(xml_elem)
+                unit_ref = self._parse_text_node(xml_elem)
             else:
                 self.default_handler(xml_elem)
         compu_method = CompuMethod(
@@ -540,13 +540,13 @@ class DataTypeSemanticsParser(ElementParser, CompuParser):
             elif xml_elem.tag == 'COMPU-DEFAULT-VALUE':
                 for xml_child in xml_elem.findall('./*'):
                     if xml_child.tag == 'V':
-                        computation.default_value = self.parse_number_node(xml_child)
+                        computation.default_value = self._parse_number_node(xml_child)
                         break
                     elif xml_child.tag == 'VT':
-                        computation.default_value = self.parse_text_node(xml_child)
+                        computation.default_value = self._parse_text_node(xml_child)
                         break
                     elif xml_child.tag == 'VF':
-                        computation.default_value = self.parse_number_node(xml_child)
+                        computation.default_value = self._parse_number_node(xml_child)
                         break
                     else:
                         self._logger.warning(f'Unexpected tag: {xml_child.tag}')
@@ -568,11 +568,11 @@ class DataTypeUnitsParser(ElementParser):
         assert (xml_root.tag == 'UNIT')
         factor = None
         offset = None
-        name = self.parse_text_node(xml_root.find("./SHORT-NAME"))
-        display_name = self.parse_text_node(xml_root.find("./DISPLAY-NAME"))
+        name = self._parse_text_node(xml_root.find("./SHORT-NAME"))
+        display_name = self._parse_text_node(xml_root.find("./DISPLAY-NAME"))
         if self.version >= 4.0:
-            factor = self.parse_number_node(xml_root.find("./FACTOR-SI-TO-UNIT"))
-            offset = self.parse_number_node(xml_root.find("./OFFSET-SI-TO-UNIT"))
+            factor = self._parse_number_node(xml_root.find("./FACTOR-SI-TO-UNIT"))
+            offset = self._parse_number_node(xml_root.find("./OFFSET-SI-TO-UNIT"))
         return Unit(name, display_name, factor, offset, parent)
 
 
@@ -594,11 +594,11 @@ class BufferPropertiesParser(ElementParser):
                 case 'BUFFER-COMPUTATION':
                     computation = self._parse_buffer_computation(child_elem)
                 case 'HEADER-LENGTH':
-                    raw_hdr_len = self.parse_int_node(child_elem)
+                    raw_hdr_len = self._parse_int_node(child_elem)
                     if raw_hdr_len is not None:
                         header_len = raw_hdr_len
                 case 'IN-PLACE':
-                    in_place = self.parse_boolean_node(child_elem)
+                    in_place = self._parse_boolean_node(child_elem)
                 case _:
                     self._logger.warning(f'Unexpected tag: {child_elem.tag}')
         props = BufferProperties(
@@ -611,12 +611,12 @@ class BufferPropertiesParser(ElementParser):
     def _parse_buffer_computation(self, xml_elem: Element) -> BufferComputation:
         try:
             offset_elem, numerator_elem = xml_elem.findall('./COMPU-NUMERATOR/V')
-            offset = self.parse_int_node(offset_elem)
-            numerator = self.parse_number_node(numerator_elem)
+            offset = self._parse_int_node(offset_elem)
+            numerator = self._parse_number_node(numerator_elem)
         except ValueError:
             offset = None
             numerator = None
-        denominator = self.parse_int_node(xml_elem.find('./COMPU-DENOMINATOR/V'))
+        denominator = self._parse_int_node(xml_elem.find('./COMPU-DENOMINATOR/V'))
         computation = BufferComputation(
             offset=offset,
             numerator=numerator,

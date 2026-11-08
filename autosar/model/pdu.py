@@ -221,7 +221,10 @@ class NMPdu(Pdu):
         self.nm_vote_information = nm_vote_information
         self.unused_bit_pattern = unused_bit_pattern
         self.i_signal_to_i_pdu_mappings = self._set_parent(i_signal_to_i_pdu_mappings)
-        self._find_sets = (self.i_signal_to_i_pdu_mappings,)
+
+    @property
+    def _findable_children(self) -> Iterable[ArObject]:
+        yield from self.i_signal_to_i_pdu_mappings
 
 
 class UserDefinedPdu(Pdu):
@@ -305,7 +308,10 @@ class ISignalIPdu(IPdu):
         self.unused_bit_pattern = unused_bit_pattern
         self.i_pdu_timing_specifications = i_pdu_timing_specifications
         self.i_signal_to_pdu_mappings = self._set_parent(i_signal_to_pdu_mappings)
-        self._find_sets = (self.i_signal_to_pdu_mappings,)
+
+    @property
+    def _findable_children(self) -> Iterable[ArObject]:
+        yield from self.i_signal_to_pdu_mappings
 
 
 class J1939DcmIPdu(IPdu):
@@ -428,4 +434,7 @@ class SocketConnectionIPduIdentifierSet(Element):
     ):
         super().__init__(*args, **kwargs)
         self.i_pdu_identifiers = self._set_parent(i_pdu_identifiers)
-        self._find_sets = [self.i_pdu_identifiers]
+
+    @property
+    def _findable_children(self) -> Iterable[ArObject]:
+        yield from self.i_pdu_identifiers

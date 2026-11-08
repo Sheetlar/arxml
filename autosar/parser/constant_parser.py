@@ -134,9 +134,9 @@ class ConstantParser(ElementParser):
         value = None
         for xml_elem in xml_value.findall('./*'):
             if xml_elem.tag == 'SHORT-LABEL':
-                label = self.parse_text_node(xml_elem)
+                label = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'VALUE':
-                value = self.parse_text_node(xml_elem)
+                value = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         if value is None:
@@ -149,9 +149,9 @@ class ConstantParser(ElementParser):
         value = None
         for xml_elem in xml_value.findall('./*'):
             if xml_elem.tag == 'SHORT-LABEL':
-                label = self.parse_text_node(xml_elem)
+                label = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'VALUE':
-                value = self.parse_number_node(xml_elem)
+                value = self._parse_number_node(xml_elem)
             else:
                 raise NotImplementedError(xml_elem.tag)
 
@@ -165,7 +165,7 @@ class ConstantParser(ElementParser):
         xml_fields = None
         for xml_elem in xml_value.findall('./*'):
             if xml_elem.tag == 'SHORT-LABEL':
-                label = self.parse_text_node(xml_elem)
+                label = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'FIELDS':
                 xml_fields = xml_elem
             else:
@@ -182,7 +182,7 @@ class ConstantParser(ElementParser):
         xml_elements = None
         for xml_elem in xml_value.findall('./*'):
             if xml_elem.tag == 'SHORT-LABEL':
-                label = self.parse_text_node(xml_elem)
+                label = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'ELEMENTS':
                 xml_elements = xml_elem
             else:
@@ -200,9 +200,9 @@ class ConstantParser(ElementParser):
         self.push()
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'SHORT-LABEL':
-                label = self.parse_text_node(xml_elem)
+                label = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'CONSTANT-REF':
-                constant_ref = self.parse_text_node(xml_elem)
+                constant_ref = self._parse_text_node(xml_elem)
             else:
                 self.base_handler(xml_elem)
         if constant_ref is None:
@@ -220,9 +220,9 @@ class ConstantParser(ElementParser):
         category = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'SHORT-LABEL':
-                label = self.parse_text_node(xml_elem)
+                label = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'CATEGORY':
-                category = self.parse_text_node(xml_elem)
+                category = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'SW-VALUE-CONT':
                 sw_value_cont = self._parse_sw_value_cont(xml_elem)
             elif xml_elem.tag == 'SW-AXIS-CONTS':
@@ -239,13 +239,13 @@ class ConstantParser(ElementParser):
         value_list = []
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'UNIT-REF':
-                unit_ref = self.parse_text_node(xml_elem)
+                unit_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'SW-VALUES-PHYS':
                 for xml_child in xml_elem.findall('./*'):
                     if (xml_child.tag == 'V') or (xml_child.tag == 'VF'):
-                        value_list.append(self.parse_number_node(xml_child))
+                        value_list.append(self._parse_number_node(xml_child))
                     elif xml_child.tag == 'VT':
-                        value_list.append(self.parse_text_node(xml_child))
+                        value_list.append(self._parse_text_node(xml_child))
                     else:
                         self._logger.warning(f'Unexpected tag: {xml_child.tag}')
             else:
@@ -259,11 +259,11 @@ class ConstantParser(ElementParser):
         value_list = []
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'UNIT-REF':
-                unit_ref = self.parse_text_node(xml_elem)
+                unit_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'SW-VALUES-PHYS':
                 for xml_child in xml_elem.findall('./*'):
                     if xml_child.tag == 'V':
-                        value_list.append(self.parse_number_node(xml_child))
+                        value_list.append(self._parse_number_node(xml_child))
                     else:
                         self._logger.warning(f'Unexpected tag: {xml_child.tag}')
             else:

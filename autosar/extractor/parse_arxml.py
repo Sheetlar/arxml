@@ -1,13 +1,13 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-import autosar
 from autosar.extractor.system import ExtractedSystem
 from autosar.misc import setup_logger
+from autosar.workspace import Workspace
 
 
 def parse_arxml(arxml_file_path: Path):
-    ws = autosar.workspace()
+    ws = Workspace(version=4.0, patch=None, schema=None)
     ws.load_xml(arxml_file_path)
     extracted_systems = tuple(map(ExtractedSystem, ws.systems))
     return extracted_systems

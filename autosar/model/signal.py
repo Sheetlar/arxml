@@ -1,6 +1,6 @@
 from typing import TypeAlias
 
-from autosar import ArObject
+from autosar.model.ar_object import ArObject
 from autosar.model.atp_variation import Variants
 from autosar.model.base import Describable, SwDataDefPropsVariants, ValueSpecification
 from autosar.model.element import Element

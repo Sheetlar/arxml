@@ -1,5 +1,5 @@
 from autosar.model.ar_object import ArObject
-from autosar.model.base import AdminData
+from autosar.model.base import OldAdminData
 from autosar.model.element import (Element)
 
 
@@ -16,7 +16,7 @@ class ModeGroup(Element):
             name: str,
             type_ref: str,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.type_ref = type_ref
@@ -61,7 +61,7 @@ class ModeDeclarationGroup(Element):
             mode_declarations: list['ModeDeclaration'] | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data, category)
         self.initial_mode_ref = initial_mode_ref
@@ -107,7 +107,7 @@ class ModeDeclaration(Element):
             name: str,
             value: int | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.value = int(value) if value is not None else None

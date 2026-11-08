@@ -1,7 +1,8 @@
 import logging
 import sys
 from abc import ABC
-from typing import Iterable, Any, Mapping, TypeVar
+from enum import StrEnum
+from typing import Iterable, Any, Mapping, TypeVar, Sequence, Collection
 
 Tk = TypeVar('Tk')
 Tv = TypeVar('Tv')
@@ -10,21 +11,39 @@ Tv = TypeVar('Tv')
 class HasRepr(ABC):
     _blacklist = ()
 
-    def _repr_filter(self, attr_name: str, attr_value: Any) -> bool:
+    def _repr_name_filter(self, attr_name: str) -> bool:
         """
         :param attr_name: Attribute name
-        :param attr_value: Value of the attribute
         :return: True if th given attribute should be displayed in repr, False otherwise
         """
         return not attr_name.startswith('_') and attr_name not in self._blacklist
 
+    # noinspection method-may-be-static,unused-parameter
+    def _repr_value_filter(self, attr_value: Any) -> bool:
+        """
+        :param attr_value: Value of the attribute
+        :return: True if th given attribute should be displayed in repr, False otherwise
+        """
+        return True
+
+    def _repr_value_format(self, attr_value: Any) -> str:
+        """
+        :param attr_value: Value of the attribute
+        :return: Value to be displayed
+        """
+        return repr(attr_value)
+
+    def _repr_params_str(self, params: dict[str, Any]) -> str:
+        return ', '.join(f'{name}={self._repr_value_format(value)}' for name, value in params.items())
+
     def __repr__(self):
-        params = ', '.join(
-            f'{name}={attr!r}'
+        params = self._repr_params_str({
+            name: attr
             for name in dir(self)
+            if self._repr_name_filter(name)
             if not callable(attr := getattr(self, name))
-            if self._repr_filter(name, attr)
-        )
+            if self._repr_value_filter(attr)
+        })
         return f'{self.__class__.__name__}({params})'
 
 
@@ -37,8 +56,8 @@ class HasLogger(ABC):
 def setup_logger(
         level: int = logging.DEBUG,
         verbose: bool = True,
-        whitelist: str | Iterable[str] | None = None,
-        blacklist: str | Iterable[str] | None = None,
+        whitelist: str | Sequence[str] | None = None,
+        blacklist: str | Sequence[str] | None = None,
 ):
     if not verbose:
         level = logging.CRITICAL
@@ -47,10 +66,10 @@ def setup_logger(
     stdout_handler.setFormatter(formatter)
     stdout_handler.addFilter(
         CustomFilter(
-            [
+            {
                 logging.DEBUG,
                 logging.INFO,
-            ],
+            },
             name_whitelist=whitelist,
             name_blacklist=blacklist,
         )
@@ -59,20 +78,20 @@ def setup_logger(
     stderr_handler.setFormatter(formatter)
     stderr_handler.addFilter(
         CustomFilter(
-            [
+            {
                 logging.WARNING,
                 logging.ERROR,
                 logging.CRITICAL,
-            ],
+            },
             name_whitelist=whitelist,
             name_blacklist=blacklist,
         )
     )
     logging.basicConfig(
-        handlers=[
+        handlers=(
             stdout_handler,
             stderr_handler,
-        ],
+        ),
         level=level,
     )
 
@@ -80,13 +99,13 @@ def setup_logger(
 class CustomFilter(logging.Filter):
     def __init__(
             self,
-            levels: int | Iterable[int],
-            name_whitelist: str | Iterable[str] | None = None,
-            name_blacklist: str | Iterable[str] | None = None,
+            levels: int | Collection[int],
+            name_whitelist: str | Sequence[str] | None = None,
+            name_blacklist: str | Sequence[str] | None = None,
     ):
         super().__init__()
         if isinstance(levels, int):
-            levels = [levels]
+            levels = {levels}
         if isinstance(name_whitelist, str):
             name_whitelist = [name_whitelist]
         if isinstance(name_blacklist, str):
@@ -131,5 +150,19 @@ def dict_sorted_by_keys(
     return dict(sorted(mapping, key=lambda i: i[0]))
 
 
+class RawStrEnum(StrEnum):
+    """
+    Same to StrEnum, but auto() values are not lower-cased
+    """
+
+    # noinspection PyMethodParameters
+    def _generate_next_value_(name, start, count, last_values):
+        return name
+
+
 class NoAttr:
+    pass
+
+
+class Skip:
     pass

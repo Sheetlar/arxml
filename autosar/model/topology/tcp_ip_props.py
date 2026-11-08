@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 
-from autosar import ArObject
+from autosar.model.ar_object import ArObject
 from autosar.model.element import Element
 
 
 @dataclass
 class TcpProps(ArObject):
-    tcp_congestion_avoidance_avoidance_enabled: bool = False
+    tcp_congestion_avoidance_enabled: bool = False
     tcp_delayed_ack_timeout: int | float | None = None
     tcp_fast_recovery_enabled: bool = False
     tcp_fast_retransmit_enabled: bool = False
@@ -26,11 +26,18 @@ class TcpProps(ArObject):
     tcp_ttl: int | None = None
 
 
+@dataclass
+class UdpProps(ArObject):
+    tcp_ttl: int | None = None
+
+
 class EthTcpIpProps(Element):
     def __init__(
             self,
-            tcp_props: TcpProps,
+            tcp_props: TcpProps | None = None,
+            udp_props: UdpProps | None = None,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.tcp_props = tcp_props
+        self.udp_props = udp_props

@@ -1,7 +1,7 @@
 from typing import Iterable
 
 from autosar.model.ar_object import ArObject
-from autosar.model.base import AdminData
+from autosar.model.base import OldAdminData
 from autosar.model.element import Element, LabelElement
 
 
@@ -20,7 +20,7 @@ def initializer_string(constant: 'IntegerValue | RecordValue'):
 
 
 class Value(Element):
-    def __init__(self, name: str, parent: ArObject | None = None, admin_data: AdminData | None = None, category: str | None = None):
+    def __init__(self, name: str, parent: ArObject | None = None, admin_data: OldAdminData | None = None, category: str | None = None):
         super().__init__(name, parent, admin_data, category)
         self.type_ref: str | None = None
 
@@ -28,7 +28,7 @@ class Value(Element):
 class ValueAR4(LabelElement):
     """Same as Value but uses label as main identifier instead of name"""
 
-    def __init__(self, label: str, parent: ArObject | None = None, admin_data: AdminData | None = None, category: str | None = None):
+    def __init__(self, label: str, parent: ArObject | None = None, admin_data: OldAdminData | None = None, category: str | None = None):
         super().__init__(label, parent, admin_data, category)
 
 
@@ -120,9 +120,9 @@ class RecordValue(Value):
         super().__init__(name, parent)
         self.type_ref = type_ref
         if elements is None:
-            self.elements = []
+            self.elements: list = []
         else:
-            self.elements = list(elements)
+            self.elements: list = list(elements)
 
 
 class ArrayValue(Value):
@@ -140,9 +140,9 @@ class ArrayValue(Value):
         super().__init__(name, parent)
         self.type_ref = type_ref
         if elements is None:
-            self.elements = []
+            self.elements: list = []
         else:
-            self.elements = list(elements)
+            self.elements: list = list(elements)
 
 
 # AUTOSAR 4 constant values
@@ -157,7 +157,7 @@ class TextValue(ValueAR4):
             value: str | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(label, parent, admin_data, category)
         if value is None:
@@ -187,7 +187,7 @@ class NumericalValue(ValueAR4):
             value: int | float | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(label, parent, admin_data, category)
         if value is None:
@@ -223,7 +223,7 @@ class ApplicationValue(ValueAR4):
             sw_axis_cont: 'SwAxisCont | None' = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(label, parent, admin_data, category)
         if (sw_axis_cont is not None) and (not isinstance(sw_axis_cont, SwAxisCont)):
@@ -249,7 +249,7 @@ class ConstantReference(ValueAR4):
             value: str | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(label, parent, admin_data, category)
         self.value = value
@@ -267,14 +267,14 @@ class RecordValueAR4(ValueAR4):
             elements: Iterable | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(label, parent, admin_data, category)
         self.type_ref = type_ref
         if elements is None:
-            self.elements = []
+            self.elements: list = []
         else:
-            self.elements = list(elements)
+            self.elements: list = list(elements)
 
 
 class ArrayValueAR4(ValueAR4):
@@ -289,14 +289,14 @@ class ArrayValueAR4(ValueAR4):
             elements: Iterable | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(label, parent, admin_data, category)
         self.type_ref = type_ref
         if elements is None:
-            self.elements = []
+            self.elements: list = []
         else:
-            self.elements = list(elements)
+            self.elements: list = list(elements)
 
 
 # Common classes
@@ -305,7 +305,7 @@ class Constant(Element):
     def tag(*_):
         return 'CONSTANT-SPECIFICATION'
 
-    def __init__(self, name: str, value: Value | ValueAR4 | None = None, parent: ArObject | None = None, admin_data: AdminData | None = None):
+    def __init__(self, name: str, value: Value | ValueAR4 | None = None, parent: ArObject | None = None, admin_data: OldAdminData | None = None):
         super().__init__(name, parent, admin_data)
         self.value = value
         if value is not None:

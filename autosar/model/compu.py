@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import TypeVar
 
-from autosar import ArObject
+from autosar.model.ar_object import ArObject
 from autosar.model.base import Limit
 
 

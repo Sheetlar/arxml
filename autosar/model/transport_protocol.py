@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, TypeVar, Iterable
 
-from autosar import ArObject
+from autosar.model.ar_object import ArObject
 from autosar.model.element import Element
 
 
@@ -132,7 +132,12 @@ class CanTpConfig(TpConfig):
         self.tp_connections = tp_connections
         self.tp_ecus = tp_ecus
         self.tp_nodes = self._set_parent(tp_nodes)
-        self._find_sets = (self.tp_addresses, self.tp_channels, self.tp_nodes)
+
+    @property
+    def _findable_children(self) -> Iterable[ArObject]:
+        yield from self.tp_addresses
+        yield from self.tp_channels
+        yield from self.tp_nodes
 
 
 AnyTpConfig = TypeVar('AnyTpConfig', bound=TpConfig)

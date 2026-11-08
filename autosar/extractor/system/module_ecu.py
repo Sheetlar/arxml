@@ -2,7 +2,7 @@ from abc import ABC
 
 from autosar.extractor.system.extractor_base import AbstractExtractor, ArxmlExtractionError
 from autosar.extractor.topology import Ecu
-from autosar.model.ecu import EcuInstance
+from autosar.model.topology.ecu import EcuInstance
 
 
 class EcuExtractionModule(AbstractExtractor, ABC):

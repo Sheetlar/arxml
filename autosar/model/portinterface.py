@@ -1,8 +1,7 @@
 from typing import Iterable
 
-import autosar.model.base
 from autosar.model.ar_object import ArObject
-from autosar.model.base import AdminData
+from autosar.model.base import OldAdminData, InvalidDataTypeRef
 from autosar.model.element import (Element, DataElement, ParameterDataPrototype)
 from autosar.model.mode import ModeGroup
 
@@ -36,7 +35,7 @@ class PortInterface(Element):
             is_service: bool = False,
             service_kind: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.is_service = bool(is_service)
@@ -60,7 +59,7 @@ class SenderReceiverInterface(PortInterface):
             is_service: bool = False,
             service_kind: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, is_service, service_kind, parent, admin_data)
         self.data_elements: list[DataElement] = []
@@ -129,7 +128,7 @@ class ParameterInterface(PortInterface):
             is_service: bool = False,
             service_kind: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, is_service, service_kind, parent, admin_data)
         self.parameters: list[Element] = []
@@ -158,7 +157,7 @@ class ClientServerInterface(PortInterface):
             is_service: bool = False,
             service_kind: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, is_service, service_kind, parent, admin_data)
         self.operations: list[Operation] = []
@@ -341,7 +340,7 @@ class Argument(Element):
             sw_calibration_access: str | None = None,
             server_argument_impl_policy: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.type_ref = type_ref
@@ -366,10 +365,10 @@ class Argument(Element):
         assert (right_ws is not None)
         left_type = left_ws.find(self.type_ref)
         if left_type is None:
-            raise autosar.model.base.InvalidDataTypeRef(self.type_ref)
+            raise InvalidDataTypeRef(self.type_ref)
         right_type = right_ws.find(other.type_ref)
         if right_type is None:
-            raise autosar.model.base.InvalidDataTypeRef(other.type_ref)
+            raise InvalidDataTypeRef(other.type_ref)
         if self.direction != other.direction:
             return False
         if (self.sw_calibration_access is None and other.sw_calibration_access is not None) \
@@ -396,7 +395,7 @@ class ApplicationError(Element):
             name: str,
             error_code: int,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.error_code = error_code
@@ -423,7 +422,7 @@ class ModeSwitchInterface(PortInterface):
             name: str,
             is_service: bool = False,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         """
         Arguments:
@@ -465,7 +464,7 @@ class NvDataInterface(PortInterface):
             is_service: bool = False,
             service_kind: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, is_service, service_kind, parent, admin_data)
         self.nv_data: list[DataElement] = []
@@ -505,8 +504,11 @@ class TriggerInterface(PortInterface):
             service_kind: str | None = None,
             triggers: Iterable[Trigger] | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, is_service, service_kind, parent, admin_data)
         self.triggers = self._set_parent(triggers)
-        self._find_sets = [self.triggers]
+
+    @property
+    def _findable_children(self) -> Iterable[ArObject]:
+        yield from self.triggers

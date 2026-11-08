@@ -65,9 +65,9 @@ class PortInterfacePackageParser(ElementParser):
         self.push()
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'IS-SERVICE':
-                is_service = self.parse_boolean_node(xml_elem)
+                is_service = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'SERVICE-KIND' and self.version >= 4.0:
-                service_kind = self.parse_text_node(xml_elem)
+                service_kind = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'DATA-ELEMENTS':
                 data_elements = self._parse_data_elements(xml_elem)
             elif xml_elem.tag == 'MODE-GROUPS' and self.version < 4.0:
@@ -123,7 +123,7 @@ class PortInterfacePackageParser(ElementParser):
             type_ref = None
             for xml_child in xml_elem.findall('./*'):
                 if xml_child.tag == 'TYPE-TREF':
-                    type_ref = self.parse_text_node(xml_child)
+                    type_ref = self._parse_text_node(xml_child)
                 else:
                     self.default_handler(xml_child)
             if self.name is not None and type_ref is not None:
@@ -150,9 +150,9 @@ class PortInterfacePackageParser(ElementParser):
         self.push()
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'TYPE-TREF':
-                type_ref = self.parse_text_node(xml_elem)
+                type_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'IS-QUEUED':
-                is_queued = self.parse_boolean_node(xml_elem)
+                is_queued = self._parse_boolean_node(xml_elem)
             else:
                 self.default_handler(xml_elem)
         if self.name is None or type_ref is None:
@@ -167,9 +167,9 @@ class PortInterfacePackageParser(ElementParser):
         handle_invalid = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'DATA-ELEMENT-REF':
-                data_element_ref = self.parse_text_node(xml_elem)
+                data_element_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'HANDLE-INVALID':
-                handle_invalid = self.parse_text_node(xml_elem)
+                handle_invalid = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         if data_element_ref is None or handle_invalid is None:
@@ -194,13 +194,13 @@ class PortInterfacePackageParser(ElementParser):
                     parameter.admin_data = parse_admin_data_node(xml_elem.find('ADMIN-DATA'))
                 if xml_elem.find('SW-DATA-DEF-PROPS'):
                     for xml_item in xml_elem.findall('SW-DATA-DEF-PROPS/SW-ADDR-METHOD-REF'):
-                        parameter.sw_address_method_ref = self.parse_text_node(xml_item)
+                        parameter.sw_address_method_ref = self._parse_text_node(xml_item)
                 port_interface.append(parameter)
         return port_interface
 
     def parse_client_server_interface(self, xml_root: Element, parent: ArObject | None = None) -> ClientServerInterface | None:
         assert (xml_root.tag == 'CLIENT-SERVER-INTERFACE')
-        name = self.parse_text_node(xml_root.find('SHORT-NAME'))
+        name = self._parse_text_node(xml_root.find('SHORT-NAME'))
         if name is None:
             return None
         port_interface = ClientServerInterface(name, parent=parent)
@@ -212,7 +212,7 @@ class PortInterfacePackageParser(ElementParser):
             elif (xml_elem.tag == 'SHORT-NAME') or (xml_elem.tag == 'ADMIN-DATA'):
                 continue
             elif xml_elem.tag == 'IS-SERVICE':
-                if self.parse_text_node(xml_elem) == 'true':
+                if self._parse_text_node(xml_elem) == 'true':
                     port_interface.is_service = True
             elif xml_elem.tag == 'OPERATIONS':
                 for xml_child_item in xml_elem.findall('./*'):
@@ -228,7 +228,7 @@ class PortInterfacePackageParser(ElementParser):
                     application_error = self._parse_application_error(xml_error, port_interface)
                     port_interface.application_errors.append(application_error)
             elif xml_elem.tag == 'SERVICE-KIND':
-                port_interface.service_kind = self.parse_text_node(xml_elem)
+                port_interface.service_kind = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         return port_interface
@@ -240,11 +240,11 @@ class PortInterfacePackageParser(ElementParser):
         xml_parameters = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'ADMIN-DATA':
                 admin_data = self.parse_admin_data_node(xml_elem)
             elif xml_elem.tag == 'IS-SERVICE':
-                if self.parse_text_node(xml_elem) == 'true':
+                if self._parse_text_node(xml_elem) == 'true':
                     is_service = True
             elif xml_elem.tag == 'PARAMETERS':
                 xml_parameters = xml_elem
@@ -269,11 +269,11 @@ class PortInterfacePackageParser(ElementParser):
         xml_mode_group = None
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'ADMIN-DATA':
                 admin_data = self.parse_admin_data_node(xml_elem)
             elif xml_elem.tag == 'IS-SERVICE':
-                if self.parse_text_node(xml_elem) == 'true':
+                if self._parse_text_node(xml_elem) == 'true':
                     is_service = True
             elif xml_elem.tag == 'MODE-GROUP':
                 xml_mode_group = xml_elem
@@ -290,8 +290,8 @@ class PortInterfacePackageParser(ElementParser):
             assert (xml_mode_group.tag == "MODE-GROUP")
         else:
             assert (xml_mode_group.tag == "MODE-DECLARATION-GROUP-PROTOTYPE")
-        name = self.parse_text_node(xml_mode_group.find('SHORT-NAME'))
-        type_ref = self.parse_text_node(xml_mode_group.find('TYPE-TREF'))
+        name = self._parse_text_node(xml_mode_group.find('SHORT-NAME'))
+        type_ref = self._parse_text_node(xml_mode_group.find('TYPE-TREF'))
         return ModeGroup(name, type_ref, parent)
 
     def _parse_operation_prototype(self, xml_operation: Element, parent: ClientServerInterface) -> Operation | None:
@@ -303,7 +303,7 @@ class PortInterfacePackageParser(ElementParser):
             if xml_elem.tag == 'ADMIN-DATA':
                 pass  # implement later
             elif xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'DESC':
                 xml_desc = xml_elem
             elif xml_elem.tag == 'ARGUMENTS':
@@ -335,7 +335,7 @@ class PortInterfacePackageParser(ElementParser):
                 if xml_child.tag != 'POSSIBLE-ERROR-REF':
                     self._logger.error(f'Unexpected tag: {xml_child.tag}')
                     continue
-                operation.error_refs.append(self.parse_text_node(xml_child))
+                operation.error_refs.append(self._parse_text_node(xml_child))
         return operation
 
     def _parse_operation_argument_v3(self, xml_argument: Element, parent: ArObject) -> Argument | None:
@@ -344,11 +344,11 @@ class PortInterfacePackageParser(ElementParser):
         direction = None
         for xml_elem in xml_argument.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'TYPE-TREF':
-                type_ref = self.parse_text_node(xml_elem)
+                type_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'DIRECTION':
-                direction = self.parse_text_node(xml_elem)
+                direction = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         if name is None or type_ref is None or direction is None:
@@ -363,13 +363,13 @@ class PortInterfacePackageParser(ElementParser):
         self.push()
         for xml_elem in xml_argument.findall('./*'):
             if xml_elem.tag == 'TYPE-TREF':
-                type_ref = self.parse_text_node(xml_elem)
+                type_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'DIRECTION':
-                direction = self.parse_text_node(xml_elem)
+                direction = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'SW-DATA-DEF-PROPS':
                 props_variants = self.parse_sw_data_def_props(xml_elem)
             elif xml_elem.tag == 'SERVER-ARGUMENT-IMPL-POLICY':
-                server_argument_impl_policy = self.parse_text_node(xml_elem)
+                server_argument_impl_policy = self._parse_text_node(xml_elem)
             else:
                 self.base_handler(xml_elem)
         if self.name is None or type_ref is None or direction is None:
@@ -383,8 +383,8 @@ class PortInterfacePackageParser(ElementParser):
         return argument
 
     def _parse_application_error(self, xml_elem: Element, parent: ArObject) -> ApplicationError:
-        name = self.parse_text_node(xml_elem.find("./SHORT-NAME"))
-        error_code = self.parse_int_node(xml_elem.find("./ERROR-CODE"))
+        name = self._parse_text_node(xml_elem.find("./SHORT-NAME"))
+        error_code = self._parse_int_node(xml_elem.find("./ERROR-CODE"))
         return ApplicationError(name, error_code, parent)
 
     def _parse_parameter_data_prototype(self, xml_elem: Element, parent: ArObject) -> ParameterDataPrototype | None:
@@ -394,13 +394,13 @@ class PortInterfacePackageParser(ElementParser):
         props_variants = None
         for xml_elem in xml_elem.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
-                name = self.parse_text_node(xml_elem)
+                name = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'ADMIN-DATA':
                 admin_data = self.parse_admin_data_node(xml_elem)
             elif xml_elem.tag == 'SW-DATA-DEF-PROPS':
                 props_variants = self.parse_sw_data_def_props(xml_elem)
             elif xml_elem.tag == 'TYPE-TREF':
-                type_ref = self.parse_text_node(xml_elem)
+                type_ref = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         if name is None or type_ref is None:
@@ -419,9 +419,9 @@ class PortInterfacePackageParser(ElementParser):
         self.push()
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'IS-SERVICE':
-                is_service = self.parse_boolean_node(xml_elem)
+                is_service = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'SERVICE-KIND' and self.version >= 4.0:
-                service_kind = self.parse_text_node(xml_elem)
+                service_kind = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'NV-DATAS':
                 nv_datas = self._parse_data_elements(xml_elem)
             else:
@@ -443,7 +443,7 @@ class PortInterfacePackageParser(ElementParser):
         self.push()
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'IS-SERVICE':
-                is_service = self.parse_boolean_node(xml_elem)
+                is_service = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'TRIGGERS' and self.version >= 4.0:
                 triggers = self.parse_variable_element_list(
                     xml_elem,
@@ -465,8 +465,8 @@ class PortInterfacePackageParser(ElementParser):
         return trigger_interface
 
     def _parse_trigger(self, xml_elem: Element) -> Trigger:
-        name = self.parse_text_node(xml_elem.find('SHORT-NAME'))
-        policy = self.parse_text_node(xml_elem.find('SW-IMPL-POLICY'))
+        name = self._parse_text_node(xml_elem.find('SHORT-NAME'))
+        policy = self._parse_text_node(xml_elem.find('SW-IMPL-POLICY'))
         admin_data = self.parse_admin_data_node(xml_elem.find('ADMIN-DATA'))
         trigger = Trigger(name=name, sw_impl_policy=policy, admin_data=admin_data)
         return trigger

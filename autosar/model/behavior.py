@@ -4,7 +4,7 @@ import copy
 from typing import Iterable
 
 from autosar.model.ar_object import ArObject
-from autosar.model.base import AdminData
+from autosar.model.base import OldAdminData
 from autosar.model.base import (
     find_unique_name_in_list,
     split_ref,
@@ -351,7 +351,7 @@ class RunnableEntity(Element):
             invoke_concurrently: bool = False,
             symbol: str | None = None,
             parent: Element | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.invoke_concurrently = invoke_concurrently
@@ -732,7 +732,7 @@ class NvmBlockNeeds(Element):
             name: str,
             block_config: NvmBlockConfig | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         assert (block_config is None or isinstance(block_config, NvmBlockConfig))
@@ -771,7 +771,7 @@ class CalPrmElemPrototype(Element):
             name: str,
             type_ref: str,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.type_ref = type_ref
@@ -791,7 +791,7 @@ class CalPrmElemPrototype(Element):
 
 
 class ExclusiveArea(Element):
-    def __init__(self, name: str, parent: ArObject | None = None, admin_data: AdminData | None = None):
+    def __init__(self, name: str, parent: ArObject | None = None, admin_data: OldAdminData | None = None):
         super().__init__(name, parent, admin_data)
 
     def asdict(self):
@@ -836,7 +836,7 @@ class InternalBehaviorCommon(Element):
             component_ref: str,
             multiple_instance: bool = False,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         if not isinstance(component_ref, str):  # this is a helper, in case the user called the function with obj instead of obj.ref
@@ -900,7 +900,7 @@ class InternalBehaviorCommon(Element):
             exclusive_areas: str | Iterable[str] | None = None,
             mode_switch_point: str | list[str] | None = None,
             min_start_interval: int = 0,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         """
         Creates a new runnable and appends it to this InternalBehavior instance
@@ -1375,7 +1375,7 @@ class InternalBehavior(InternalBehaviorCommon):
         self.per_instance_memories.append(per_instance_memory)
         return per_instance_memory
 
-    def create_shared_cal_param(self, name: str, type_ref: str, sw_addr_method_ref: str, admin_data: AdminData | None = None):
+    def create_shared_cal_param(self, name: str, type_ref: str, sw_addr_method_ref: str, admin_data: OldAdminData | None = None):
         self._init_swc()
         ws = self.root_ws()
         data_type = ws.find(type_ref)
@@ -1554,7 +1554,7 @@ class SwcInternalBehavior(InternalBehaviorCommon):
             default_value_name: str | None = None,
             per_instance_memory_role: str = 'ramBlock',
             default_value_role: str = 'defaultValue',
-            block_admin_data: AdminData | None = None,
+            block_admin_data: OldAdminData | None = None,
     ):
         """
         AUTOSAR 4: Creates a ServiceNeeds object and appends it to the internal serviceDependencies list
@@ -1718,7 +1718,7 @@ class ServiceNeeds(Element):
             name: str | None = None,
             nvm_block_needs: NvmBlockNeeds | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.nvm_block_needs = nvm_block_needs
@@ -1734,7 +1734,7 @@ class NvmBlockServiceNeeds(ServiceNeeds):
             name: str,
             nvm_block_needs: NvmBlockNeeds | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         assert (nvm_block_needs is None or isinstance(nvm_block_needs, NvmBlockNeeds))
@@ -1751,7 +1751,7 @@ class SwcServiceDependency(Element):
             name: str | None = None,
             service_needs: ServiceNeeds | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.role_based_data_assignments: list[RoleBasedDataAssignment] = []
@@ -1824,7 +1824,7 @@ class ParameterDataPrototype(Element):
             init_value: str | None = None,
             init_value_ref: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.type_ref = type_ref
@@ -1874,7 +1874,7 @@ class ParameterAccessPoint(Element):
             name: str,
             accessed_parameter: LocalParameterRef | ParameterInstanceRef | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.accessed_parameter = accessed_parameter
@@ -1929,7 +1929,7 @@ class ModeSwitchPoint(Element):
             name: str,
             mode_group_instance_ref: ModeGroupInstanceRef | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self._mode_group_instance_ref = mode_group_instance_ref
@@ -2125,7 +2125,7 @@ class NvBlockRamBlock(DataElement):
             sw_impl_policy: str | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, type_ref, is_queued, sw_address_method_ref, sw_calibration_access, sw_impl_policy, category, parent, admin_data)
 
@@ -2156,7 +2156,7 @@ class NvBlockRomBlock(ParameterDataPrototype):
             init_value: str | None = None,
             init_value_ref: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(
             name=name,
@@ -2187,7 +2187,7 @@ class NvBlockDescriptor(Element):
     <NV-BLOCK-DESCRIPTOR>
     """
 
-    def __init__(self, name: str, parent: ArObject | None = None, admin_data: AdminData | None = None):
+    def __init__(self, name: str, parent: ArObject | None = None, admin_data: OldAdminData | None = None):
         super().__init__(name, parent, admin_data)
         self.data_type_mapping_refs: list[str] = []
         self.nv_block_data_mappings: list[NvBlockDataMapping] = []

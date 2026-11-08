@@ -25,7 +25,7 @@ class SignalExtractionModule(AbstractExtractor, ABC):
             groups: list[ISignalGroup] = self.fibex_elements[ISignalGroup]
         except KeyError:
             self._logger.debug('No signal groups found')
-            return
+            return None
         return groups  # TODO: Handle groups
 
     def _build_signals(self):

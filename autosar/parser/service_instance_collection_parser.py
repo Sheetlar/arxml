@@ -31,7 +31,7 @@ class ServiceInstanceCollectionParser(ElementParser):
         for child_element in xml_elem.findall('./*'):
             match child_element.tag:
                 case 'SHORT-NAME':
-                    name = self.parse_text_node(child_element)
+                    name = self._parse_text_node(child_element)
                 case 'SERVICE-INSTANCES':
                     service_instances = self.parse_variable_element_list(
                         child_element,
@@ -60,15 +60,15 @@ class ServiceInstanceCollectionParser(ElementParser):
         for elem in xml_element.findall('./*'):
             match elem.tag:
                 case 'SHORT-NAME':
-                    name = self.parse_text_node(elem)
+                    name = self._parse_text_node(elem)
                 case 'MAJOR-VERSION':
-                    major_version = self.parse_int_node(elem)
+                    major_version = self._parse_int_node(elem)
                 case 'MINOR-VERSION':
-                    minor_version = self.parse_number_node(elem)
+                    minor_version = self._parse_number_node(elem)
                 case 'SERVICE-IDENTIFIER':
-                    service_identifier = self.parse_int_node(elem)
+                    service_identifier = self._parse_int_node(elem)
                 case 'INSTANCE-IDENTIFIER':
-                    instance_identifier = self.parse_int_node(elem)
+                    instance_identifier = self._parse_int_node(elem)
                 case 'CONSUMED-EVENT-GROUPS':
                     consumed_event_groups = self.parse_variable_element_list(
                         elem,
@@ -105,15 +105,15 @@ class ServiceInstanceCollectionParser(ElementParser):
         for elem in xml_element.findall('./*'):
             match elem.tag:
                 case 'SHORT-NAME':
-                    name = self.parse_text_node(elem)
+                    name = self._parse_text_node(elem)
                 case 'MAJOR-VERSION':
-                    major_version = self.parse_int_node(elem)
+                    major_version = self._parse_int_node(elem)
                 case 'MINOR-VERSION':
-                    minor_version = self.parse_int_node(elem)
+                    minor_version = self._parse_int_node(elem)
                 case 'SERVICE-IDENTIFIER':
-                    service_identifier = self.parse_int_node(elem)
+                    service_identifier = self._parse_int_node(elem)
                 case 'INSTANCE-IDENTIFIER':
-                    instance_identifier = self.parse_int_node(elem)
+                    instance_identifier = self._parse_int_node(elem)
                 case 'EVENT-HANDLERS':
                     event_handlers = self.parse_variable_element_list(
                         elem,
@@ -146,9 +146,9 @@ class ServiceInstanceCollectionParser(ElementParser):
         for elem in xml_element.findall('./*'):
             match elem.tag:
                 case 'SHORT-NAME':
-                    name = self.parse_text_node(elem)
+                    name = self._parse_text_node(elem)
                 case 'EVENT-GROUP-IDENTIFIER':
-                    event_group_identifier = self.parse_int_node(elem)
+                    event_group_identifier = self._parse_int_node(elem)
                 case 'PDU-ACTIVATION-ROUTING-GROUPS':
                     activation_groups = self.parse_variable_element_list(
                         elem,
@@ -173,11 +173,11 @@ class ServiceInstanceCollectionParser(ElementParser):
         for elem in xml_element.findall('./*'):
             match elem.tag:
                 case 'SHORT-NAME':
-                    name = self.parse_text_node(elem)
+                    name = self._parse_text_node(elem)
                 case 'EVENT-GROUP-IDENTIFIER':
-                    event_group_identifier = self.parse_int_node(elem)
+                    event_group_identifier = self._parse_int_node(elem)
                 case 'MULTICAST-THRESHOLD':
-                    multicast_threshold = self.parse_int_node(elem)
+                    multicast_threshold = self._parse_int_node(elem)
                 case 'PDU-ACTIVATION-ROUTING-GROUPS':
                     activation_groups = self.parse_variable_element_list(
                         elem,
@@ -201,9 +201,9 @@ class ServiceInstanceCollectionParser(ElementParser):
         for elem in xml_elem.findall('./*'):
             match elem.tag:
                 case 'SHORT-NAME':
-                    name = self.parse_text_node(elem)
+                    name = self._parse_text_node(elem)
                 case 'APPLICATION-ENDPOINT-REF':
-                    app_endpoint_ref = self.parse_text_node(elem)
+                    app_endpoint_ref = self._parse_text_node(elem)
                 case _:
                     self._logger.warning(f'Unexpected tag: {elem.tag}')
         endpoint_ref = ApplicationEndpointRefConditional(
@@ -220,21 +220,21 @@ class ServiceInstanceCollectionParser(ElementParser):
         for elem in xml_elem.findall('./*'):
             match elem.tag:
                 case 'SHORT-NAME':
-                    name = self.parse_text_node(elem)
+                    name = self._parse_text_node(elem)
                 case 'EVENT-GROUP-CONTROL-TYPE':
-                    control_type = self.parse_text_node(elem)
+                    control_type = self._parse_text_node(elem)
                 case 'I-PDU-IDENTIFIER-UDP-REFS':
                     for child_elem in elem.findall('./*'):
                         if child_elem.tag != 'I-PDU-IDENTIFIER-UDP-REF':
                             self._logger.error(f'Unexpected tag for {elem.tag}: {child_elem.tag}')
                             continue
-                        udp_refs.append(self.parse_text_node(child_elem))
+                        udp_refs.append(self._parse_text_node(child_elem))
                 case 'I-PDU-IDENTIFIER-TCP-REFS':
                     for child_elem in elem.findall('./*'):
                         if child_elem.tag != 'I-PDU-IDENTIFIER-TCP-REF':
                             self._logger.error(f'Unexpected tag for {elem.tag}: {child_elem.tag}')
                             continue
-                        tcp_refs.append(self.parse_text_node(child_elem))
+                        tcp_refs.append(self._parse_text_node(child_elem))
                 case _:
                     self._logger.warning(f'Unexpected tag for {xml_elem.tag}: {elem.tag}')
         activation_group = PDUActivationRoutingGroup(

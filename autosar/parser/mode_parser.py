@@ -35,9 +35,9 @@ class ModeDeclarationParser(ElementParser):
 
     def parse_mode_declaration_group(self, xml_root: Element, parent: ArObject | None) -> ModeDeclarationGroup:
         assert (xml_root.tag == 'MODE-DECLARATION-GROUP')
-        name = self.parse_text_node(xml_root.find('./SHORT-NAME'))
-        category = self.parse_text_node(xml_root.find('./CATEGORY'))
-        initial_mode_ref = self.parse_text_node(xml_root.find('./INITIAL-MODE-REF'))
+        name = self._parse_text_node(xml_root.find('./SHORT-NAME'))
+        category = self._parse_text_node(xml_root.find('./CATEGORY'))
+        initial_mode_ref = self._parse_text_node(xml_root.find('./INITIAL-MODE-REF'))
         mode_declaration_group = ModeDeclarationGroup(
             name,
             initial_mode_ref,
@@ -58,11 +58,11 @@ class ModeDeclarationParser(ElementParser):
         assert (isinstance(parent, ModeDeclarationGroup))
         result = []
         for mode in xml_root.findall('./MODE-DECLARATION'):
-            declaration_name = self.parse_text_node(mode.find('./SHORT-NAME'))
+            declaration_name = self._parse_text_node(mode.find('./SHORT-NAME'))
             declaration_value = None
             declaration_value_xml = mode.find('./VALUE')
             if declaration_value_xml is not None:
-                declaration_value = self.parse_text_node(declaration_value_xml)
+                declaration_value = self._parse_text_node(declaration_value_xml)
             parent.mode_declarations.append(ModeDeclaration(
                 declaration_name,
                 declaration_value,

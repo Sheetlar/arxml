@@ -10,7 +10,6 @@ from autosar.model.port import Port, ProvidePort, RequirePort
 from autosar.model.portinterface import SenderReceiverInterface
 
 if TYPE_CHECKING:
-    from autosar import Template
     from autosar.model.behavior import InternalBehaviorCommon
 
 
@@ -149,17 +148,6 @@ class ComponentType(Element):
         self.require_ports.append(port)
         return port
 
-    def apply(self, template: Template, **kwargs):
-        """
-        Applies template to this component
-        This is typically used for port templates
-        """
-        if len(kwargs) == 0:
-            template.apply(self)
-        else:
-            template.apply(self, **kwargs)
-        template.usage_count += 1
-
     def copy_port(self, other_port: ProvidePort | RequirePort):
         """
         Adds a copy of a port (from another component)
@@ -261,7 +249,7 @@ class NvBlockComponent(AtomicSoftwareComponent):
 
     def __init__(self, name, parent=None):
         super().__init__(name, parent)
-        self.nv_block_descriptors = []
+        self.nv_block_descriptors: list = []
 
     def find(self, ref, **kwargs):
         parts = ref.partition('/')
@@ -452,8 +440,8 @@ class CompositionComponent(ComponentType):
         dict[str, list[tuple[ComponentPrototype, RequirePort]]],
         dict[str, list[tuple[ComponentPrototype, ProvidePort]]],
     ]:
-        require_ports = {}
-        provide_ports = {}
+        require_ports: dict[str, list] = {}
+        provide_ports: dict[str, list] = {}
         # build inner map
         for inner_component in self.components:
             actual_component = ws.find(inner_component.type_ref)

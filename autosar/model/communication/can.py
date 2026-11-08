@@ -1,12 +1,7 @@
 from dataclasses import dataclass
 
 from autosar.model.ar_object import ArObject
-from autosar.model.communication_cluster import (
-    PhysicalChannel,
-    CommunicationCluster,
-    FrameTriggering,
-)
-from autosar.model.element import ElementVariants
+from autosar.model.communication.frame import Frame, FrameTriggering
 from autosar.model.enums import CanAddressingModeType, CanFrameRxBehaviorEnum, CanFrameTxBehaviorEnum
 
 
@@ -14,6 +9,10 @@ from autosar.model.enums import CanAddressingModeType, CanFrameRxBehaviorEnum, C
 class RxIdentifierRange(ArObject):
     lower_can_id: int
     upper_can_id: int
+
+
+class CanFrame(Frame):
+    pass
 
 
 class CanFrameTriggering(FrameTriggering):
@@ -42,29 +41,3 @@ class CanFrameTriggering(FrameTriggering):
         self.rx_identifier_range = rx_identifier_range
         self.can_xl_frame_triggering_props = can_xl_frame_triggering_props
         self.absolutely_scheduled_timing = absolutely_scheduled_timing
-
-
-class CanPhysicalChannel(PhysicalChannel):
-    pass
-
-
-class CanCluster(CommunicationCluster):
-    def __init__(
-            self,
-            can_fd_baudrate: int | None = None,
-            can_xl_baudrate: int | None = None,
-            bus_off_recovery: None = None,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.can_fd_baudrate = can_fd_baudrate
-        self.can_xl_baudrate = can_xl_baudrate
-        self.bus_off_recovery = bus_off_recovery
-
-    @property
-    def physical_channel(self) -> CanPhysicalChannel:
-        return self.physical_channels[0]
-
-
-class CanClusterVariants(ElementVariants[CanCluster]):
-    pass

@@ -124,21 +124,21 @@ class ComponentTypeParser(ElementParser):
     def parse_software_component(self, xml_root: Element, parent: ArObject | None = None) -> ComponentType | None:
         handled_tags = ['SHORT-NAME']
         if xml_root.tag == 'APPLICATION-SOFTWARE-COMPONENT-TYPE':  # for AUTOSAR 3.x
-            component_type = ApplicationSoftwareComponent(self.parse_text_node(xml_root.find('SHORT-NAME')), parent)
+            component_type = ApplicationSoftwareComponent(self._parse_text_node(xml_root.find('SHORT-NAME')), parent)
         elif (xml_root.tag == 'COMPLEX-DEVICE-DRIVER-COMPONENT-TYPE') or (xml_root.tag == 'COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE'):
-            component_type = ComplexDeviceDriverComponent(self.parse_text_node(xml_root.find('SHORT-NAME')), parent)
+            component_type = ComplexDeviceDriverComponent(self._parse_text_node(xml_root.find('SHORT-NAME')), parent)
         elif xml_root.tag == 'APPLICATION-SW-COMPONENT-TYPE':  # for AUTOSAR 4.x
-            component_type = ApplicationSoftwareComponent(self.parse_text_node(xml_root.find('SHORT-NAME')), parent)
+            component_type = ApplicationSoftwareComponent(self._parse_text_node(xml_root.find('SHORT-NAME')), parent)
         elif (xml_root.tag == 'SERVICE-COMPONENT-TYPE') or (xml_root.tag == 'SERVICE-SW-COMPONENT-TYPE'):
-            component_type = ServiceComponent(self.parse_text_node(xml_root.find('SHORT-NAME')), parent)
+            component_type = ServiceComponent(self._parse_text_node(xml_root.find('SHORT-NAME')), parent)
         elif xml_root.tag == 'CALPRM-COMPONENT-TYPE':  # for AUTOSAR 3.x
-            component_type = ParameterComponent(self.parse_text_node(xml_root.find('SHORT-NAME')), parent)
+            component_type = ParameterComponent(self._parse_text_node(xml_root.find('SHORT-NAME')), parent)
         elif xml_root.tag == 'PARAMETER-SW-COMPONENT-TYPE':  # for AUTOSAR 4.x
-            component_type = ParameterComponent(self.parse_text_node(xml_root.find('SHORT-NAME')), parent)
+            component_type = ParameterComponent(self._parse_text_node(xml_root.find('SHORT-NAME')), parent)
         elif xml_root.tag == 'SENSOR-ACTUATOR-SW-COMPONENT-TYPE':  # for AUTOSAR 4.x
-            component_type = SensorActuatorComponent(self.parse_text_node(xml_root.find('SHORT-NAME')), parent)
+            component_type = SensorActuatorComponent(self._parse_text_node(xml_root.find('SHORT-NAME')), parent)
         elif xml_root.tag == 'NV-BLOCK-SW-COMPONENT-TYPE':  # for AUTOSAR 4.x
-            component_type = NvBlockComponent(self.parse_text_node(xml_root.find('SHORT-NAME')), parent)
+            component_type = NvBlockComponent(self._parse_text_node(xml_root.find('SHORT-NAME')), parent)
         else:
             self._logger.warning(f'Unexpected tag: {xml_root.tag}')
             return None
@@ -163,7 +163,7 @@ class ComponentTypeParser(ElementParser):
                     descriptor = self.behavior_parser.parse_nv_block_sw_cnv_block_descriptor(descriptor_xml, component_type)
                     component_type.nv_block_descriptors.append(descriptor)
             elif xml_elem.tag == 'CATEGORY':
-                component_type.category = self.parse_text_node(xml_elem)
+                component_type.category = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         return component_type
@@ -174,7 +174,7 @@ class ComponentTypeParser(ElementParser):
         for xml_port in xml_ports.findall('*'):
             if xml_port.tag == "R-PORT-PROTOTYPE":
                 port_name = xml_port.find('SHORT-NAME').text
-                port_interface_ref = self.parse_text_node(xml_port.find('REQUIRED-INTERFACE-TREF'))
+                port_interface_ref = self._parse_text_node(xml_port.find('REQUIRED-INTERFACE-TREF'))
                 port = RequirePort(port_name, port_interface_ref, auto_create_com_spec=False, parent=component_type)
                 if has_admin_data(xml_port):
                     port.admin_data = parse_admin_data_node(xml_port.find('ADMIN-DATA'))
@@ -188,20 +188,20 @@ class ComponentTypeParser(ElementParser):
                             data_elem_name = _get_data_elem_name_from_com_spec(xml_item, port_interface_ref)
                             com_spec = DataElementComSpec(data_elem_name)
                             if xml_item.find('./ALIVE-TIMEOUT') is not None:
-                                com_spec.alive_timeout = self.parse_text_node(xml_item.find('./ALIVE-TIMEOUT'))
+                                com_spec.alive_timeout = self._parse_text_node(xml_item.find('./ALIVE-TIMEOUT'))
                             if self.version >= 4.0:
                                 xml_elem = xml_item.find('./INIT-VALUE')
                                 if xml_elem is not None:
                                     com_spec.init_value, com_spec.init_value_ref = self._parse_ar4_init_value(xml_elem)
                             else:
                                 if xml_item.find('./INIT-VALUE-REF') is not None:
-                                    com_spec.init_value_ref = self.parse_text_node(xml_item.find('./INIT-VALUE-REF'))
+                                    com_spec.init_value_ref = self._parse_text_node(xml_item.find('./INIT-VALUE-REF'))
                             port.com_spec.append(com_spec)
                         elif xml_item.tag == 'QUEUED-RECEIVER-COM-SPEC':
                             data_elem_name = _get_data_elem_name_from_com_spec(xml_item, port_interface_ref)
                             com_spec = DataElementComSpec(data_elem_name)
                             if xml_item.find('./QUEUE-LENGTH') is not None:
-                                com_spec.queue_length = self.parse_text_node(xml_item.find('./QUEUE-LENGTH'))
+                                com_spec.queue_length = self._parse_text_node(xml_item.find('./QUEUE-LENGTH'))
                             port.com_spec.append(com_spec)
                         elif xml_item.tag == 'MODE-SWITCH-RECEIVER-COM-SPEC':
                             com_spec = self._parse_mode_switch_receiver_com_spec(xml_item)
@@ -219,7 +219,7 @@ class ComponentTypeParser(ElementParser):
                 component_type.require_ports.append(port)
             elif xml_port.tag == 'P-PORT-PROTOTYPE':
                 port_name = xml_port.find('SHORT-NAME').text
-                port_interface_ref = self.parse_text_node(xml_port.find('PROVIDED-INTERFACE-TREF'))
+                port_interface_ref = self._parse_text_node(xml_port.find('PROVIDED-INTERFACE-TREF'))
                 port = ProvidePort(port_name, port_interface_ref, auto_create_com_spec=False, parent=component_type)
                 if has_admin_data(xml_port):
                     port.admin_data = parse_admin_data_node(xml_port.find('ADMIN-DATA'))
@@ -228,7 +228,7 @@ class ComponentTypeParser(ElementParser):
                         if xml_item.tag == 'SERVER-COM-SPEC':
                             operation_name = _get_operation_name_from_com_spec(xml_item, port_interface_ref)
                             com_spec = OperationComSpec(operation_name)
-                            com_spec.queue_length = self.parse_int_node(xml_item.find('QUEUE-LENGTH'))
+                            com_spec.queue_length = self._parse_int_node(xml_item.find('QUEUE-LENGTH'))
                             port.com_spec.append(com_spec)
                         elif xml_item.tag == 'UNQUEUED-SENDER-COM-SPEC' or xml_item.tag == 'NONQUEUED-SENDER-COM-SPEC':
                             data_elem_name = _get_data_elem_name_from_com_spec(xml_item, port_interface_ref)
@@ -239,9 +239,9 @@ class ComponentTypeParser(ElementParser):
                                     com_spec.init_value, com_spec.init_value_ref = self._parse_ar4_init_value(xml_elem)
                             else:
                                 if xml_item.find('./INIT-VALUE-REF') is not None:
-                                    com_spec.init_value_ref = self.parse_text_node(xml_item.find('./INIT-VALUE-REF'))
+                                    com_spec.init_value_ref = self._parse_text_node(xml_item.find('./INIT-VALUE-REF'))
                             if xml_item.find('./CAN-INVALIDATE') is not None:
-                                com_spec.can_invalidate = True if self.parse_text_node(xml_item.find('./CAN-INVALIDATE')) == 'true' else False
+                                com_spec.can_invalidate = True if self._parse_text_node(xml_item.find('./CAN-INVALIDATE')) == 'true' else False
                             port.com_spec.append(com_spec)
                         elif xml_item.tag == 'QUEUED-SENDER-COM-SPEC':
                             data_elem_name = _get_data_elem_name_from_com_spec(xml_item, port_interface_ref)
@@ -270,7 +270,7 @@ class ComponentTypeParser(ElementParser):
         """
         assert (xml_root.tag == 'COMPOSITION-TYPE') or (xml_root.tag == 'COMPOSITION-SW-COMPONENT-TYPE')
         data_type_mapping_refs = None
-        swc = CompositionComponent(self.parse_text_node(xml_root.find('SHORT-NAME')), parent)
+        swc = CompositionComponent(self._parse_text_node(xml_root.find('SHORT-NAME')), parent)
         self.push()
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
@@ -288,7 +288,7 @@ class ComponentTypeParser(ElementParser):
                 data_type_mapping_refs = []
                 for xml_child in xml_elem.findall('./*'):
                     if xml_child.tag == 'DATA-TYPE-MAPPING-REF':
-                        tmp = self.parse_text_node(xml_child)
+                        tmp = self._parse_text_node(xml_child)
                         assert (tmp is not None)
                         data_type_mapping_refs.append(tmp)
             elif xml_elem.tag == 'PORT-GROUPS':
@@ -310,8 +310,8 @@ class ComponentTypeParser(ElementParser):
             if elem.tag != component_tag:
                 self._logger.error(f'Unexpected tag: {elem.tag}')
                 continue
-            name = self.parse_text_node(elem.find('SHORT-NAME'))
-            type_ref = self.parse_text_node(elem.find('TYPE-TREF'))
+            name = self._parse_text_node(elem.find('SHORT-NAME'))
+            type_ref = self._parse_text_node(elem.find('TYPE-TREF'))
             parent.components.append(ComponentPrototype(name, type_ref, parent))
 
     def parse_connectors_v3(self, xml_root: Element, parent: CompositionComponent):
@@ -321,21 +321,21 @@ class ComponentTypeParser(ElementParser):
         assert (xml_root.tag == 'CONNECTORS')
         for elem in xml_root.findall('./*'):
             if elem.tag == 'ASSEMBLY-CONNECTOR-PROTOTYPE':
-                name = self.parse_text_node(elem.find('SHORT-NAME'))
-                provider_component_ref = self.parse_text_node(elem.find('./PROVIDER-IREF/COMPONENT-PROTOTYPE-REF'))
-                provider_port_ref = self.parse_text_node(elem.find('./PROVIDER-IREF/P-PORT-PROTOTYPE-REF'))
-                requester_component_ref = self.parse_text_node(elem.find('./REQUESTER-IREF/COMPONENT-PROTOTYPE-REF'))
-                requester_port_ref = self.parse_text_node(elem.find('./REQUESTER-IREF/R-PORT-PROTOTYPE-REF'))
+                name = self._parse_text_node(elem.find('SHORT-NAME'))
+                provider_component_ref = self._parse_text_node(elem.find('./PROVIDER-IREF/COMPONENT-PROTOTYPE-REF'))
+                provider_port_ref = self._parse_text_node(elem.find('./PROVIDER-IREF/P-PORT-PROTOTYPE-REF'))
+                requester_component_ref = self._parse_text_node(elem.find('./REQUESTER-IREF/COMPONENT-PROTOTYPE-REF'))
+                requester_port_ref = self._parse_text_node(elem.find('./REQUESTER-IREF/R-PORT-PROTOTYPE-REF'))
                 parent.assembly_connectors.append(AssemblyConnector(
                     name,
                     ProviderInstanceRef(provider_component_ref, provider_port_ref),
                     RequesterInstanceRef(requester_component_ref, requester_port_ref),
                 ))
             elif elem.tag == 'DELEGATION-CONNECTOR-PROTOTYPE':
-                name = self.parse_text_node(elem.find('SHORT-NAME'))
-                inner_component_ref = self.parse_text_node(elem.find('./INNER-PORT-IREF/COMPONENT-PROTOTYPE-REF'))
-                inner_port_ref = self.parse_text_node(elem.find('./INNER-PORT-IREF/PORT-PROTOTYPE-REF'))
-                outer_port_ref = self.parse_text_node(elem.find('./OUTER-PORT-REF'))
+                name = self._parse_text_node(elem.find('SHORT-NAME'))
+                inner_component_ref = self._parse_text_node(elem.find('./INNER-PORT-IREF/COMPONENT-PROTOTYPE-REF'))
+                inner_port_ref = self._parse_text_node(elem.find('./INNER-PORT-IREF/PORT-PROTOTYPE-REF'))
+                outer_port_ref = self._parse_text_node(elem.find('./OUTER-PORT-REF'))
                 parent.delegation_connectors.append(DelegationConnector(
                     name,
                     InnerPortInstanceRef(inner_component_ref, inner_port_ref),
@@ -351,7 +351,7 @@ class ComponentTypeParser(ElementParser):
         assert (xml_root.tag == 'CONNECTORS')
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'ASSEMBLY-SW-CONNECTOR':
-                name = self.parse_text_node(xml_elem.find('SHORT-NAME'))
+                name = self._parse_text_node(xml_elem.find('SHORT-NAME'))
                 provider_component_ref = None
                 provider_port_ref = None
                 requester_component_ref = None
@@ -360,11 +360,11 @@ class ComponentTypeParser(ElementParser):
                     if xml_child.tag == 'SHORT-NAME':
                         continue
                     elif xml_child.tag == 'PROVIDER-IREF':
-                        provider_component_ref = self.parse_text_node(xml_child.find('./CONTEXT-COMPONENT-REF'))
-                        provider_port_ref = self.parse_text_node(xml_child.find('./TARGET-P-PORT-REF'))
+                        provider_component_ref = self._parse_text_node(xml_child.find('./CONTEXT-COMPONENT-REF'))
+                        provider_port_ref = self._parse_text_node(xml_child.find('./TARGET-P-PORT-REF'))
                     elif xml_child.tag == 'REQUESTER-IREF':
-                        requester_component_ref = self.parse_text_node(xml_child.find('./CONTEXT-COMPONENT-REF'))
-                        requester_port_ref = self.parse_text_node(xml_child.find('./TARGET-R-PORT-REF'))
+                        requester_component_ref = self._parse_text_node(xml_child.find('./CONTEXT-COMPONENT-REF'))
+                        requester_port_ref = self._parse_text_node(xml_child.find('./TARGET-R-PORT-REF'))
                     else:
                         self._logger.warning(f'Unexpected tag: {xml_child.tag}')
                         continue
@@ -386,16 +386,16 @@ class ComponentTypeParser(ElementParser):
                     RequesterInstanceRef(requester_component_ref, requester_port_ref),
                 ))
             elif xml_elem.tag == 'DELEGATION-SW-CONNECTOR':
-                name = self.parse_text_node(xml_elem.find('SHORT-NAME'))
+                name = self._parse_text_node(xml_elem.find('SHORT-NAME'))
                 inner_component_ref = None
                 inner_port_ref = None
                 for xml_child in xml_elem.findall('./INNER-PORT-IREF/*'):
                     if xml_child.tag == 'R-PORT-IN-COMPOSITION-INSTANCE-REF':
-                        inner_component_ref = self.parse_text_node(xml_child.find('./CONTEXT-COMPONENT-REF'))
-                        inner_port_ref = self.parse_text_node(xml_child.find('./TARGET-R-PORT-REF'))
+                        inner_component_ref = self._parse_text_node(xml_child.find('./CONTEXT-COMPONENT-REF'))
+                        inner_port_ref = self._parse_text_node(xml_child.find('./TARGET-R-PORT-REF'))
                     elif xml_child.tag == 'P-PORT-IN-COMPOSITION-INSTANCE-REF':
-                        inner_component_ref = self.parse_text_node(xml_child.find('./CONTEXT-COMPONENT-REF'))
-                        inner_port_ref = self.parse_text_node(xml_child.find('./TARGET-P-PORT-REF'))
+                        inner_component_ref = self._parse_text_node(xml_child.find('./CONTEXT-COMPONENT-REF'))
+                        inner_port_ref = self._parse_text_node(xml_child.find('./TARGET-P-PORT-REF'))
                     else:
                         self._logger.error(f'Unexpected tag: {xml_child.tag}')
                         continue
@@ -405,7 +405,7 @@ class ComponentTypeParser(ElementParser):
                 if inner_port_ref is None:
                     self._logger.error(f'R-PORT-IN-COMPOSITION-INSTANCE-REF/TARGET-R-PORT-REF is missing: item={name}' % name)
                     return
-                outer_port_ref = self.parse_text_node(xml_elem.find('./OUTER-PORT-REF'))
+                outer_port_ref = self._parse_text_node(xml_elem.find('./OUTER-PORT-REF'))
                 parent.delegation_connectors.append(DelegationConnector(
                     name,
                     InnerPortInstanceRef(inner_component_ref, inner_port_ref),
@@ -421,11 +421,11 @@ class ComponentTypeParser(ElementParser):
         assert (xml_root.tag == 'MODE-SWITCH-RECEIVER-COM-SPEC')
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'ENHANCED-MODE-API':
-                enhanced_mode = self.parse_boolean_node(xml_elem)
+                enhanced_mode = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'SUPPORTS-ASYNCHRONOUS-MODE-SWITCH':
-                support_async = self.parse_boolean_node(xml_elem)
+                support_async = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'MODE-GROUP-REF':
-                mode_group_ref = self.parse_text_node(xml_elem)
+                mode_group_ref = self._parse_text_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         return ModeSwitchComSpec(None, enhanced_mode, support_async, mode_group_ref=mode_group_ref)
@@ -438,17 +438,17 @@ class ComponentTypeParser(ElementParser):
         assert (xml_root.tag == 'MODE-SWITCH-SENDER-COM-SPEC')
         for xml_elem in xml_root.findall('./*'):
             if xml_elem.tag == 'ENHANCED-MODE-API':
-                enhanced_mode = self.parse_boolean_node(xml_elem)
+                enhanced_mode = self._parse_boolean_node(xml_elem)
             elif xml_elem.tag == 'MODE-GROUP-REF':
-                mode_group_ref = self.parse_text_node(xml_elem)
+                mode_group_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'MODE-SWITCHED-ACK':
                 for xml_child in xml_elem.findall('./*'):
                     if xml_child.tag == 'TIMEOUT':
-                        tmp = self.parse_float_node(xml_child)
+                        tmp = self._parse_float_node(xml_child)
                         if tmp is not None:
                             mode_switch_ack_timeout = int(tmp * 1000)  # We use milliseconds in our internal model
             elif xml_elem.tag == 'QUEUE-LENGTH':
-                queue_length = self.parse_int_node(xml_elem)
+                queue_length = self._parse_int_node(xml_elem)
             else:
                 self._logger.warning(f'Unexpected tag: {xml_elem.tag}')
         return ModeSwitchComSpec(None, enhanced_mode, None, queue_length, mode_switch_ack_timeout, mode_group_ref)
@@ -520,7 +520,7 @@ class ComponentTypeParser(ElementParser):
         init_value_ref = None
         for xml_child in xml_elem.findall('./*'):
             if xml_child.tag == 'CONSTANT-REFERENCE':
-                init_value_ref = self.parse_text_node(xml_child.find('./CONSTANT-REF'))
+                init_value_ref = self._parse_text_node(xml_child.find('./CONSTANT-REF'))
             else:
                 values = self.constant_parser.parse_value_v4(xml_elem, None)
                 if len(values) != 1:

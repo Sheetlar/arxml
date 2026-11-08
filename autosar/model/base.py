@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from enum import StrEnum
-from pathlib import Path
-from typing import Iterable, TYPE_CHECKING, TypeVar
-from xml.etree.ElementTree import ElementTree, Element
+from typing import Iterable, TYPE_CHECKING, TypeVar, Any
+from xml.etree.ElementTree import Element
 
-from autosar.model.ar_object import ArObject
+from autosar.model.admin_data import AdminData
+from autosar.model.ar_object import ArObject, ArObjectWithParent
 from autosar.model.atp_variation import Variants
+from autosar.model.enums import IntervalTypeEnum, DataFilterTypeEnum
+from autosar.model.languages_enum import LEnum
 
 if TYPE_CHECKING:
     from autosar.model.element import Element as ArElement
@@ -16,17 +17,8 @@ if TYPE_CHECKING:
 p_version = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 
 
-class ArEnum(StrEnum):
-    # noinspection PyMethodParameters
-    def _generate_next_value_(name, start, count, last_values):
-        return name.replace('_', '-').upper()
-
-
-SomeEnum = TypeVar('SomeEnum', bound=ArEnum)
-
-
 class Limit:
-    interval_type: str = 'CLOSED'
+    interval_type: str = IntervalTypeEnum.CLOSED
 
 
 class FloatLimit(float, Limit):
@@ -37,7 +29,80 @@ class IntLimit(int, Limit):
     pass
 
 
-class AdminData(ArObject):
+class LangStr(str):
+    language: LEnum | None = None
+
+
+@dataclass
+class ShortNameFragment(ArObject):
+    fragment: str
+    role: str
+
+
+class Referrable(ArObjectWithParent):
+    def __init__(
+            self,
+            name: str,
+            short_name_fragments: Iterable[ShortNameFragment] | None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.name = name
+        self.short_name_fragments = self.eval_children(short_name_fragments)
+
+    @property
+    def ref(self) -> str:
+        return f'{self.parent.namespace}/{self.name}'
+
+    @property
+    def namespace(self) -> str:
+        return self.ref
+
+    def _repr_params_str(self, params: dict[str, Any]) -> str:
+        name = params.pop('name', None)
+        params_str = super()._repr_params_str(params)
+        return f'{name=}, {params_str}'
+
+
+class Identifiable(Referrable):
+    def __init__(
+            self,
+            admin_data: AdminData | None = None,
+            category: str | None = None,
+            desc: LangStr | None = None,
+            long_name: LangStr | None = None,
+            uuid: str | None = None,
+            annotation: None = None,
+            introduction: None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.admin_data = admin_data
+        self.category = category
+        self.desc = desc
+        self.long_name = long_name
+        self.uuid = uuid
+        self.annotation = annotation
+        self.introduction = introduction
+
+
+class Describable(ArObject):
+    def __init__(
+            self,
+            admin_data: AdminData | None = None,
+            category: str | None = None,
+            desc: LangStr | None = None,
+            introduction: None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.admin_data = admin_data
+        self.category = category
+        self.desc = desc
+        self.introduction = introduction
+
+
+class OldAdminData(ArObject):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.special_data_groups: list[SpecialDataGroup] = []
@@ -126,36 +191,13 @@ class Describable(ArObject):
             self,
             desc: str | None = None,
             category: str | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.desc = desc
         self.category = category
         self.admin_data = admin_data
-
-
-def remove_namespace(doc: Element, namespace: str):
-    """Removes XML namespace in place."""
-    namespace = '{' + namespace + '}'
-    nsl = len(namespace)
-    for elem in doc.iter():
-        if elem.tag.startswith(namespace):
-            elem.tag = elem.tag[nsl:]
-
-
-def parse_xml_file(filename: Path, namespace: str | None = None):
-    arxml_tree = ElementTree()
-    arxml_tree.parse(filename)
-    arxml_root = arxml_tree.getroot()
-    if namespace is not None:
-        remove_namespace(arxml_root, namespace)
-    return arxml_root
-
-
-def get_xml_namespace(element: Element):
-    m = re.match(r'\{(.*)}', element.tag)
-    return m.group(1) if m else None
 
 
 def split_ref(ref: str):
@@ -169,14 +211,14 @@ def split_ref(ref: str):
 
 
 def has_admin_data(xml_root: Element):
-    return True if xml_root.find('ADMIN-DATA') is not None else False
+    return xml_root.find('ADMIN-DATA') is not None
 
 
 def parse_admin_data_node(xml_root: Element):
     if xml_root is None:
         return None
     assert (xml_root.tag == 'ADMIN-DATA')
-    admin_data = AdminData()
+    admin_data = OldAdminData()
     xml_sdgs = xml_root.find('./SDGS')
     if xml_sdgs is not None:
         for xmlElem in xml_sdgs.findall('./SDG'):
@@ -196,40 +238,8 @@ def parse_text_node(xml_elem: Element):
     return xml_elem.text if xml_elem is not None else None
 
 
-def parse_int_node(xml_elem: Element):
-    return int(xml_elem.text) if xml_elem is not None else None
-
-
-def parse_float_node(xml_elem: Element):
-    return float(xml_elem.text) if xml_elem is not None else None
-
-
-def parse_boolean_node(xml_elem: Element):
-    return parse_boolean(xml_elem.text) if xml_elem is not None else None
-
-
-def parse_boolean(value: str | None):
-    if value is None:
-        return None
-    if isinstance(value, str):
-        if value == 'true':
-            return True
-        elif value == 'false':
-            return False
-    raise ValueError(value)
-
-
-def index_by_name(lst: list, name: str):
-    assert (isinstance(lst, list))
-    assert (isinstance(name, str))
-    for i, item in enumerate(lst):
-        if item.name == name:
-            return i
-    raise ValueError(f'"{name}" not in list')
-
-
-def create_admin_data(data: dict[str, ...]):
-    admin_data = AdminData()
+def create_admin_data(data: dict[str, Any]):
+    admin_data = OldAdminData()
     sdg_gid: str | None = data.get('SDG_GID', None)
     if 'SDG' in data:
         group = SpecialDataGroup(sdg_gid)
@@ -281,36 +291,6 @@ def parse_autosar_version_and_schema(xml_root: Element):
                         return int(result.group(1)), int(result.group(2)), None, int(result.group(3)), schema_file
 
     return None, None, None, None, None
-
-
-def apply_filter(ref: str, filters: Iterable[Iterable[str]] | None):
-    if filters is None:
-        return True
-
-    if ref[0] == '/':
-        ref = ref[1:]
-    tmp = ref.split('/')
-
-    for f in filters:
-        match = True
-        for i, filter_elem in enumerate(f):
-            if i >= len(tmp):
-                return True
-            ref_elem = tmp[i]
-            if (filter_elem != '*') and (ref_elem != filter_elem):
-                match = False
-                break
-        if match:
-            return True
-    return False
-
-
-def prepare_filter(fstr: str):
-    if fstr[0] == '/':
-        fstr = fstr[1:]
-    if fstr[-1] == '/':
-        fstr += '*'
-    return fstr.split('/')
 
 
 def parse_version_string(version_string: str):
@@ -499,7 +479,7 @@ ValueSpecification = TypeVar('ValueSpecification', bound=AbstractValueSpecificat
 
 @dataclass
 class DataFilter(ArObject):
-    data_filter_type: str | None = None
+    data_filter_type: DataFilterTypeEnum | None = None
     mask: int | None = None
     max: int | None = None
     min: int | None = None

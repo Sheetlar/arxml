@@ -1,8 +1,10 @@
 *.pyc
 __pycache__/
-/dist/
-/build/
-/venv/
-/.vscode/
-/.idea/
-/*.egg-info
+dist/
+build/
+venv/
+.venv/
+.vscode/
+.idea/
+*.egg-info
+local_scripts/

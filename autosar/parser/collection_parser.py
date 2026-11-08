@@ -1,6 +1,6 @@
 from xml.etree.ElementTree import Element
 
-from autosar import ArObject
+from autosar.model.ar_object import ArObject
 from autosar.model.collection import Collection
 from autosar.parser.parser_base import ElementParser
 
@@ -22,12 +22,12 @@ class CollectionParser(ElementParser):
                 case tag if tag in self.common_tags:
                     pass
                 case 'ELEMENT-ROLE':
-                    role = self.parse_text_node(child_elem)
+                    role = self._parse_text_node(child_elem)
                 case 'ELEMENT-REFS':
                     for sub_elem in child_elem.findall('./*'):
                         if sub_elem.tag != 'ELEMENT-REF':
                             self._logger.error(f'Unexpected tag for {child_elem.tag}: {sub_elem.tag}')
-                        ref = self.parse_text_node(sub_elem)
+                        ref = self._parse_text_node(sub_elem)
                         if ref is not None:
                             refs.append(ref)
                 case _:

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Iterable, TypeVar
 
-from autosar import ArObject
+from autosar.model.ar_object import ArObject
 from autosar.model.base import Describable
 from autosar.model.compu import CompuScale
 from autosar.model.element import Element
@@ -106,7 +106,11 @@ class DataTransformationSet(Element):
         super().__init__(*args, **kwargs)
         self.data_transformations = self._set_parent(data_transformations)
         self.transformation_technologies = self._set_parent(transformation_technologies)
-        self._find_sets = (self.data_transformations, self.transformation_technologies)
+
+    @property
+    def _findable_children(self) -> Iterable[ArObject]:
+        yield from self.data_transformations
+        yield from self.transformation_technologies
 
 
 class TransformationProps(Element):
@@ -146,4 +150,7 @@ class TransformationPropsSet(Element):
     ):
         super().__init__(*args, **kwargs)
         self.transformation_props = self._set_parent(transformation_props)
-        self._find_sets = (self.transformation_props,)
+
+    @property
+    def _findable_children(self) -> Iterable[ArObject]:
+        yield from self.transformation_props

@@ -2,7 +2,7 @@ import copy
 from typing import Iterable
 
 from autosar.model.ar_object import ArObject
-from autosar.model.base import AdminData, DataConstraintError, SwDataDefProps, SwPointerTargetProps, SymbolProps, InvalidDataTypeRef
+from autosar.model.base import OldAdminData, DataConstraintError, SwDataDefProps, SwPointerTargetProps, SymbolProps, InvalidDataTypeRef
 from autosar.model.compu import CompuScale
 from autosar.model.element import Element
 
@@ -18,7 +18,7 @@ class RecordTypeElement(Element):
     def tag(*_):
         return 'RECORD-ELEMENT'
 
-    def __init__(self, name: str, type_ref: str, parent: ArObject | None = None, admin_data: AdminData | None = None):
+    def __init__(self, name: str, type_ref: str, parent: ArObject | None = None, admin_data: OldAdminData | None = None):
         super().__init__(name, parent, admin_data)
         self.type_ref = type_ref
 
@@ -72,7 +72,7 @@ class DataType(Element):
     Base type for DataType (AUTOSAR3)
     """
 
-    def __init__(self, name: str, parent: ArObject | None = None, admin_data: AdminData | None = None):
+    def __init__(self, name: str, parent: ArObject | None = None, admin_data: OldAdminData | None = None):
         super().__init__(name, parent, admin_data)
 
     @property
@@ -96,7 +96,7 @@ class IntegerDataType(DataType):
             max_val: int = 0,
             compu_method_ref: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.min_val = int(min_val)
@@ -162,7 +162,7 @@ class RecordDataType(DataType):
             name: str,
             elements: Iterable[RecordTypeElement] | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.elements = []
@@ -208,7 +208,7 @@ class ArrayDataType(DataType):
             type_ref: str,
             length: int,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.type_ref = type_ref
@@ -224,7 +224,7 @@ class BooleanDataType(DataType):
     def tag(*_):
         return 'BOOLEAN-TYPE'
 
-    def __init__(self, name: str, parent: ArObject | None = None, admin_data: AdminData | None = None):
+    def __init__(self, name: str, parent: ArObject | None = None, admin_data: OldAdminData | None = None):
         super().__init__(name, parent, admin_data)
 
 
@@ -243,7 +243,7 @@ class StringDataType(DataType):
             length: int,
             encoding: str,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.length = length
@@ -290,7 +290,7 @@ class RealDataType(DataType):
             has_nan: bool = False,
             encoding: str = 'SINGLE',
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.min_val = min_val
@@ -444,7 +444,7 @@ class CompuMethod(Element):
             unit_ref: str | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data, category)
         self.unit_ref = unit_ref
@@ -521,7 +521,7 @@ class DataConstraint(Element):
             rules: Iterable[dict[str, int | float | str]],
             constraint_level: int | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.level = constraint_level
@@ -644,7 +644,7 @@ class ImplementationDataType(Element, ImplementationDataTypeBase):
             type_emitter: str | None = None,
             category: str = 'VALUE',
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data, category)
         self.dynamic_array_size_profile = dynamic_array_size_profile
@@ -699,7 +699,7 @@ class SwBaseType(Element):
             native_declaration: str | None = None,
             category: str = 'FIXED_LENGTH',
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data, category)
         self.size = size
@@ -720,7 +720,7 @@ class ImplementationDataTypeElement(Element, ImplementationDataTypeBase):
             array_size_semantics: str | None = None,
             variant_props: SwDataDefProps | SwPointerTargetProps | Iterable[SwDataDefProps | SwPointerTargetProps] | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data, category)
         self.array_size = array_size
@@ -765,7 +765,7 @@ class ApplicationDataType(Element):
             variant_props: SwDataDefProps | Iterable[SwDataDefProps] | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data, category)
         self.variant_props: list[SwDataDefProps] = []
@@ -812,7 +812,7 @@ class ApplicationPrimitiveDataType(ApplicationDataType):
             variant_props: SwDataDefProps | Iterable[SwDataDefProps] | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, variant_props, category, parent, admin_data)
 
@@ -836,7 +836,7 @@ class ApplicationArrayDataType(ApplicationDataType):
             variant_props: SwDataDefProps | Iterable[SwDataDefProps] | None = None,
             category: str | None = 'ARRAY',
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, variant_props, category, parent, admin_data)
         if element is None or isinstance(element, ApplicationArrayElement):
@@ -872,7 +872,7 @@ class ApplicationArrayElement(Element):
             size_semantics: str = 'FIXED-SIZE',
             category: str = 'VALUE',
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data, category)
         self.type_ref = type_ref
@@ -900,7 +900,7 @@ class ApplicationRecordDataType(ApplicationDataType):
             variant_props: SwDataDefProps | Iterable[SwDataDefProps] | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, variant_props, category, parent, admin_data)
         if elements is None:
@@ -916,7 +916,7 @@ class ApplicationRecordDataType(ApplicationDataType):
         element.parent = self
         self.elements.append(element)
 
-    def create_element(self, name: str, type_ref: str, category: str = 'VALUE', admin_data: AdminData | None = None):
+    def create_element(self, name: str, type_ref: str, category: str = 'VALUE', admin_data: OldAdminData | None = None):
         """
         Creates a new instance of ApplicationRecordElement and appends it to internal elements list
         """
@@ -939,7 +939,7 @@ class ApplicationRecordElement(Element):
             type_ref: str,
             category: str = None,
             parent: ArObject | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data, category)
         if not isinstance(type_ref, str):
@@ -952,7 +952,7 @@ class DataTypeMappingSet(Element):
     def tag(*_):
         return 'DATA-TYPE-MAPPING-SET'
 
-    def __init__(self, name: str, parent: ArObject | None = None, admin_data: AdminData | None = None):
+    def __init__(self, name: str, parent: ArObject | None = None, admin_data: OldAdminData | None = None):
         super().__init__(name, parent, admin_data)
         self.application_type_map: dict[str, str] = {}  # applicationDataTypeRef to implementationDataTypeRef dictionary
         self.mode_request_map: dict[str, str] = {}  # modeDeclarationGroupRef to implementationDataTypeRef dictionary

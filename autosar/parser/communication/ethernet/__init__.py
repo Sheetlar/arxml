@@ -1,0 +1,2 @@
+from autosar.parser.communication.ethernet.network_endpoint import NetworkEndpointParser
+from autosar.parser.communication.ethernet.socket_address import SoAdConfigParser, SocketAddressParser

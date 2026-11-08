@@ -43,7 +43,7 @@ class TransportProtocolParser(ElementParser):
                 case tag if tag in self.common_tags:
                     pass
                 case 'COMMUNICATION-CLUSTER-REF':
-                    cluster_ref = self.parse_text_node(child_elem)
+                    cluster_ref = self._parse_text_node(child_elem)
                 case 'TP-ADDRESSS':
                     addresses = self.parse_element_list(
                         child_elem,
@@ -89,51 +89,51 @@ class TransportProtocolParser(ElementParser):
 
     def _parse_can_tp_address(self, xml_elem: Element) -> CanTpAddress:
         return CanTpAddress(
-            tp_address=self.parse_int_node(xml_elem.find('TP-ADDRESS')),
-            tp_address_extension_value=self.parse_int_node(xml_elem.find('TP-ADDRESS-EXTENSION-VALUE')),
+            tp_address=self._parse_int_node(xml_elem.find('TP-ADDRESS')),
+            tp_address_extension_value=self._parse_int_node(xml_elem.find('TP-ADDRESS-EXTENSION-VALUE')),
             **self.parse_common_tags(xml_elem),
         )
 
     def _parse_can_tp_channel(self, xml_elem: Element) -> CanTpChannel:
         return CanTpChannel(
-            channel_id=self.parse_int_node(xml_elem.find('CHANNEL-ID')),
-            channel_mode=self.parse_text_node(xml_elem.find('CHANNEL-MODE')),
+            channel_id=self._parse_int_node(xml_elem.find('CHANNEL-ID')),
+            channel_mode=self._parse_text_node(xml_elem.find('CHANNEL-MODE')),
             **self.parse_common_tags(xml_elem),
         )
 
     def _parse_can_tp_connection(self, xml_elem: Element) -> CanTpConnection:
         return CanTpConnection(
-            addressing_format=self.parse_text_node(xml_elem.find('ADDRESSING-FORMAT')),
-            can_tp_channel_ref=self.parse_text_node(xml_elem.find('CAN-TP-CHANNEL-REF')),
-            data_pdu_ref=self.parse_text_node(xml_elem.find('DATA-PDU-REF')),
-            padding_activation=self.parse_boolean_node(xml_elem.find('PADDING-ACTIVATION')),
-            tp_sdu_ref=self.parse_text_node(xml_elem.find('TP-SDU-REF')),
-            cancellation=self.parse_boolean_node(xml_elem.find('CANCELLATION')),
-            flow_control_pdu_ref=self.parse_text_node(xml_elem.find('FLOW-CONTROL-PDU-REF')),
-            max_block_size=self.parse_int_node(xml_elem.find('MAX-BLOCK-SIZE')),
-            multicast_ref=self.parse_text_node(xml_elem.find('MULTICAST-REF')),
+            addressing_format=self._parse_text_node(xml_elem.find('ADDRESSING-FORMAT')),
+            can_tp_channel_ref=self._parse_text_node(xml_elem.find('CAN-TP-CHANNEL-REF')),
+            data_pdu_ref=self._parse_text_node(xml_elem.find('DATA-PDU-REF')),
+            padding_activation=self._parse_boolean_node(xml_elem.find('PADDING-ACTIVATION')),
+            tp_sdu_ref=self._parse_text_node(xml_elem.find('TP-SDU-REF')),
+            cancellation=self._parse_boolean_node(xml_elem.find('CANCELLATION')),
+            flow_control_pdu_ref=self._parse_text_node(xml_elem.find('FLOW-CONTROL-PDU-REF')),
+            max_block_size=self._parse_int_node(xml_elem.find('MAX-BLOCK-SIZE')),
+            multicast_ref=self._parse_text_node(xml_elem.find('MULTICAST-REF')),
             receiver_refs=list(self.child_string_nodes(xml_elem.find('RECEIVER-REFS'))),
-            ta_type=self.parse_text_node(xml_elem.find('TA-TYPE')),
-            timeout_br=self.parse_number_node(xml_elem.find('TIMEOUT-BR')),
-            timeout_bs=self.parse_number_node(xml_elem.find('TIMEOUT-BS')),
-            timeout_cr=self.parse_number_node(xml_elem.find('TIMEOUT-CR')),
-            timeout_cs=self.parse_number_node(xml_elem.find('TIMEOUT-CS')),
-            transmitter_ref=self.parse_text_node(xml_elem.find('TRANSMITTER-REF')),
+            ta_type=self._parse_text_node(xml_elem.find('TA-TYPE')),
+            timeout_br=self._parse_number_node(xml_elem.find('TIMEOUT-BR')),
+            timeout_bs=self._parse_number_node(xml_elem.find('TIMEOUT-BS')),
+            timeout_cr=self._parse_number_node(xml_elem.find('TIMEOUT-CR')),
+            timeout_cs=self._parse_number_node(xml_elem.find('TIMEOUT-CS')),
+            transmitter_ref=self._parse_text_node(xml_elem.find('TRANSMITTER-REF')),
         )
 
     def _parse_can_tp_ecu(self, xml_elem: Element) -> CanTpEcu:
         return CanTpEcu(
-            ecu_instance_ref=self.parse_text_node(xml_elem.find('ECU-INSTANCE-REF')),
-            cycle_time_main_function=self.parse_number_node(xml_elem.find('CYCLE-TIME-MAIN-FUNCTION')),
+            ecu_instance_ref=self._parse_text_node(xml_elem.find('ECU-INSTANCE-REF')),
+            cycle_time_main_function=self._parse_number_node(xml_elem.find('CYCLE-TIME-MAIN-FUNCTION')),
         )
 
     def _parse_can_tp_node(self, xml_elem: Element) -> CanTpNode:
         return CanTpNode(
-            connector_ref=self.parse_text_node(xml_elem.find('CONNECTOR-REF')),
-            tp_address_ref=self.parse_text_node(xml_elem.find('TP-ADDRESS-REF')),
-            max_fc_wait=self.parse_int_node(xml_elem.find('MAX-FC-WAIT')),
-            st_min=self.parse_number_node(xml_elem.find('ST-MIN')),
-            timeout_ar=self.parse_number_node(xml_elem.find('TIMEOUT-AR')),
-            timeout_as=self.parse_number_node(xml_elem.find('TIMEOUT-AS')),
+            connector_ref=self._parse_text_node(xml_elem.find('CONNECTOR-REF')),
+            tp_address_ref=self._parse_text_node(xml_elem.find('TP-ADDRESS-REF')),
+            max_fc_wait=self._parse_int_node(xml_elem.find('MAX-FC-WAIT')),
+            st_min=self._parse_number_node(xml_elem.find('ST-MIN')),
+            timeout_ar=self._parse_number_node(xml_elem.find('TIMEOUT-AR')),
+            timeout_as=self._parse_number_node(xml_elem.find('TIMEOUT-AS')),
             **self.parse_common_tags(xml_elem),
         )

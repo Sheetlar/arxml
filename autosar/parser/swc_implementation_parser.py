@@ -28,8 +28,8 @@ class SwcImplementationParser(ElementParser):
         assert (xml_element.tag == 'SWC-IMPLEMENTATION')
         ws = parent.root_ws()
         assert (ws is not None)
-        name = self.parse_text_node(xml_element.find('SHORT-NAME'))
-        behavior_ref = self.parse_text_node(xml_element.find('BEHAVIOR-REF'))
+        name = self._parse_text_node(xml_element.find('SHORT-NAME'))
+        behavior_ref = self._parse_text_node(xml_element.find('BEHAVIOR-REF'))
         implementation = SwcImplementation(name, behavior_ref, parent=parent)
         self.push()
         for xml_elem in xml_element.findall('./*'):
@@ -64,7 +64,7 @@ class SwcImplementationParser(ElementParser):
                 # TODO: Implement later
                 continue
             elif xml_elem.tag == 'PROGRAMMING-LANGUAGE':
-                implementation.programming_language = self.parse_text_node(xml_elem)
+                implementation.programming_language = self._parse_text_node(xml_elem)
                 continue
             elif xml_elem.tag == 'REQUIRED-ARTIFACTS':
                 # TODO: Implement later
@@ -75,14 +75,14 @@ class SwcImplementationParser(ElementParser):
             elif xml_elem.tag == 'RESOURCE-CONSUMPTION':
                 implementation.resource_consumption = self.parse_resource_consumption(xml_elem, parent=implementation)
             elif xml_elem.tag == 'SW-VERSION':
-                implementation.sw_version = self.parse_text_node(xml_elem)
+                implementation.sw_version = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'SWC-BSW-MAPPING-REF':
                 # TODO: Implement later
                 continue
             elif xml_elem.tag == 'USED-CODE-GENERATOR':
-                implementation.use_code_generator = self.parse_text_node(xml_elem)
+                implementation.use_code_generator = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'VENDOR-ID':
-                implementation.vendor_id = self.parse_int_node(xml_elem)
+                implementation.vendor_id = self._parse_int_node(xml_elem)
             else:
                 self.default_handler(xml_elem)
         self.pop(implementation)
@@ -99,7 +99,7 @@ class SwcImplementationParser(ElementParser):
         Parser for implementation code descriptor.
         """
         assert (xml_element.tag == 'CODE')
-        name = self.parse_text_node(xml_element.find('SHORT-NAME'))
+        name = self._parse_text_node(xml_element.find('SHORT-NAME'))
         code = SwcImplementationCodeDescriptor(name, parent=parent)
         self.push()
         for xml_elem in xml_element.findall('./*'):
@@ -112,23 +112,23 @@ class SwcImplementationParser(ElementParser):
                         engineering_object = EngineeringObject(code)
                         for elem in desc_elem.findall('./*'):
                             if elem.tag == 'SHORT-LABEL':
-                                engineering_object.short_label = self.parse_text_node(elem)
+                                engineering_object.short_label = self._parse_text_node(elem)
                             elif elem.tag == 'CATEGORY':
-                                engineering_object.category = self.parse_text_node(elem)
+                                engineering_object.category = self._parse_text_node(elem)
                             elif elem.tag == 'REVISION-LABELS':
                                 engineering_object.revision_labels = []
                                 for label_elem in elem.findall('./*'):
                                     if label_elem.tag == 'REVISION-LABEL':
-                                        engineering_object.revision_labels.append(self.parse_text_node(label_elem))
+                                        engineering_object.revision_labels.append(self._parse_text_node(label_elem))
                             elif elem.tag == 'DOMAIN':
-                                engineering_object.domain = self.parse_text_node(elem)
+                                engineering_object.domain = self._parse_text_node(elem)
                         code.artifact_descriptors.append(engineering_object)
             elif xml_elem.tag == 'CALLBACK-HEADER-REFS':
                 # TODO: Implement later
                 continue
             elif xml_elem.tag == 'TYPE':
                 # Only valid in Autosar 3.
-                code.type = self.parse_text_node(xml_elem)
+                code.type = self._parse_text_node(xml_elem)
             else:
                 self.default_handler(xml_elem)
         self.pop(code)
@@ -139,7 +139,7 @@ class SwcImplementationParser(ElementParser):
         Parser for implementation resource consumption.
         """
         assert (xml_element.tag == 'RESOURCE-CONSUMPTION')
-        name = self.parse_text_node(xml_element.find('SHORT-NAME'))
+        name = self._parse_text_node(xml_element.find('SHORT-NAME'))
         res = ResourceConsumption(name, parent=parent)
         self.push()
         for xml_elem in xml_element.findall('./*'):
@@ -171,32 +171,32 @@ class SwcImplementationParser(ElementParser):
         Parser for memory section.
         """
         assert (xml_element.tag == 'MEMORY-SECTION')
-        name = self.parse_text_node(xml_element.find('SHORT-NAME'))
+        name = self._parse_text_node(xml_element.find('SHORT-NAME'))
         section = MemorySection(name, parent=parent)
         self.push()
         for xml_elem in xml_element.findall('./*'):
             if xml_elem.tag == 'SHORT-NAME':
                 continue
             elif xml_elem.tag == 'ALIGNMENT':
-                section.alignment = self.parse_text_node(xml_elem)
+                section.alignment = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'EXECUTABLE-ENTITY-REFS':
                 # TODO: Implement later
                 continue
             elif xml_elem.tag == 'MEM-CLASS-SYMBOL':
-                section.mem_class_symbol = self.parse_text_node(xml_elem)
+                section.mem_class_symbol = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'OPTIONS':
                 section.options = []
                 for xml_option in xml_elem.findall('./*'):
-                    section.options.append(self.parse_text_node(xml_option))
+                    section.options.append(self._parse_text_node(xml_option))
             elif xml_elem.tag == 'PREFIX-REF':
                 # TODO: Implement later
                 continue
             elif xml_elem.tag == 'SIZE':
-                section.size = self.parse_int_node(xml_elem)
+                section.size = self._parse_int_node(xml_elem)
             elif xml_elem.tag == 'SW-ADDRMETHOD-REF':
-                section.sw_addr_method_ref = self.parse_text_node(xml_elem)
+                section.sw_addr_method_ref = self._parse_text_node(xml_elem)
             elif xml_elem.tag == 'SYMBOL':
-                section.symbol = self.parse_text_node(xml_elem)
+                section.symbol = self._parse_text_node(xml_elem)
             else:
                 self.default_handler(xml_elem)
         self.pop(section)

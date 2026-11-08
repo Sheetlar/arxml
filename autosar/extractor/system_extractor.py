@@ -2,11 +2,12 @@ import itertools
 from dataclasses import dataclass
 from typing import Iterable
 
-from autosar.model.base import AdminData
+from autosar.model.base import OldAdminData
+from autosar.model.communication.communication_cluster import PduTriggering
 from autosar.model.transformation import TransformationTechnology
-from autosar.model.ecu import EcuInstance
+from autosar.model.topology.ecu import EcuInstance
 from autosar.model.element import DataElement
-from autosar.model.ethernet_cluster import ApplicationEndpoint, NetworkEndpoint, PduTriggering
+from autosar.model.communication.ethernet import ApplicationEndpoint, NetworkEndpoint
 from autosar.extractor.common import Event, SomeIpFeature
 from autosar.extractor.data_type_extractor import ExtractedDataType
 from autosar.misc import HasLogger
@@ -224,7 +225,7 @@ class SystemExtractor(HasLogger):
         return {(service_id, i, version): t for s, t, i in events}
 
     @staticmethod
-    def service_method_from_admin_data(admin_data: AdminData) -> str | None:
+    def service_method_from_admin_data(admin_data: OldAdminData) -> str | None:
         service_name_sd = admin_data.find('SYMPHONY_SOMEIPFEATURE_DATA/Service/Name')
         method_name_sd = admin_data.find('SYMPHONY_SOMEIPFEATURE_DATA/SomeipFeature/Name')
         if service_name_sd is None or method_name_sd is None:

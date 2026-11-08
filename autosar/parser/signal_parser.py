@@ -54,7 +54,7 @@ class SignalParser(ElementParser):
                 case 'SYSTEM-SIGNAL-REFS':
                     system_signal_refs = list(self.child_string_nodes(child_elem))
                 case 'TRANSFORMING-SYSTEM-SIGNAL-REF':
-                    transforming_signal_ref = self.parse_text_node(child_elem)
+                    transforming_signal_ref = self._parse_text_node(child_elem)
                 case _:
                     self.log_unexpected(xml_elem, child_elem)
         return SystemSignalGroup(
@@ -73,7 +73,7 @@ class SignalParser(ElementParser):
                 case tag if tag in self.common_tags:
                     pass
                 case 'DYNAMIC-LENGTH':
-                    dynamic_length = self.parse_boolean_node(child_elem)
+                    dynamic_length = self._parse_boolean_node(child_elem)
                 case 'PHYSICAL-PROPS':
                     physical_props = self.parse_sw_data_def_props(child_elem)
                 case _:
@@ -102,15 +102,15 @@ class SignalParser(ElementParser):
                 case tag if tag in self.common_tags:
                     pass
                 case 'SYSTEM-SIGNAL-REF':
-                    system_signal_ref = self.parse_text_node(child_elem)
+                    system_signal_ref = self._parse_text_node(child_elem)
                 case 'DATA-TYPE-POLICY':
-                    data_type_policy = self.parse_text_node(child_elem)
+                    data_type_policy = self._parse_text_node(child_elem)
                 case 'LENGTH':
-                    length = self.parse_int_node(child_elem)
+                    length = self._parse_int_node(child_elem)
                 case 'I-SIGNAL-TYPE':
-                    i_signal_type = self.parse_text_node(child_elem)
+                    i_signal_type = self._parse_text_node(child_elem)
                 case 'I-SIGNAL-PROPS':
-                    i_signal_props = ISignalProps(self.parse_text_node(
+                    i_signal_props = ISignalProps(self._parse_text_node(
                         child_elem.find('HANDLE-OUT-OF-RANGE'),
                     ))
                 case 'DATA-TRANSFORMATIONS':
@@ -158,7 +158,7 @@ class SignalParser(ElementParser):
                 case 'I-SIGNAL-REFS':
                     signal_refs = list(self.child_string_nodes(xml_elem))
                 case 'SYSTEM-SIGNAL-GROUP-REF':
-                    system_signal_group_ref = self.parse_text_node(child_elem)
+                    system_signal_group_ref = self._parse_text_node(child_elem)
                 case 'COM-BASED-SIGNAL-GROUP-TRANSFORMATIONS':
                     group_transformations = list(self.variation_child_string_nodes(xml_elem, 'DATA-TRANSFORMATION-REF'))
                 case 'TRANSFORMATION-I-SIGNAL-PROPSS':
@@ -182,26 +182,26 @@ class SignalParser(ElementParser):
     def _parse_some_ip_transformation_props(self, xml_elem: Element) -> SomeIpTransformationISignalPropsVariants | None:
         def variants():
             for variant_elem in variants_elem.findall('SOMEIP-TRANSFORMATION-I-SIGNAL-PROPS-CONDITIONAL'):
-                transformer_ref = self.parse_text_node(variant_elem.find('TRANSFORMER-REF'))
+                transformer_ref = self._parse_text_node(variant_elem.find('TRANSFORMER-REF'))
                 if transformer_ref is None:
                     self.log_missing_required(variant_elem, 'TRANSFORMER-REF')
                     continue
                 common_args = self.parse_common_tags(variant_elem)
                 yield SomeIpTransformationISignalProps(
                     transformer_ref=transformer_ref,
-                    cs_error_reaction=self.parse_text_node(variant_elem.find('CS-ERROR-REACTION')),
-                    message_type=self.parse_text_node(variant_elem.find('MESSAGE-TYPE')),
-                    interface_version=self.parse_int_node(variant_elem.find('INTERFACE-VERSION')),
-                    is_dynamic_length_field_size=self.parse_boolean_node(variant_elem.find('IS-DYNAMIC-LENGTH-FIELD-SIZE')),
-                    session_handling_sr=self.parse_text_node(variant_elem.find('SESSION-HANDLING-SR')),
-                    size_of_array_length_fields=self.parse_int_node(variant_elem.find('SIZE-OF-ARRAY-LENGTH-FIELDS')),
-                    size_of_string_length_fields=self.parse_int_node(variant_elem.find('SIZE-OF-STRING-LENGTH-FIELDS')),
-                    size_of_struct_length_fields=self.parse_int_node(variant_elem.find('SIZE-OF-STRUCT-LENGTH-FIELDS')),
-                    size_of_union_length_fields=self.parse_int_node(variant_elem.find('SIZE-OF-UNION-LENGTH-FIELDS')),
+                    cs_error_reaction=self._parse_text_node(variant_elem.find('CS-ERROR-REACTION')),
+                    message_type=self._parse_text_node(variant_elem.find('MESSAGE-TYPE')),
+                    interface_version=self._parse_int_node(variant_elem.find('INTERFACE-VERSION')),
+                    is_dynamic_length_field_size=self._parse_boolean_node(variant_elem.find('IS-DYNAMIC-LENGTH-FIELD-SIZE')),
+                    session_handling_sr=self._parse_text_node(variant_elem.find('SESSION-HANDLING-SR')),
+                    size_of_array_length_fields=self._parse_int_node(variant_elem.find('SIZE-OF-ARRAY-LENGTH-FIELDS')),
+                    size_of_string_length_fields=self._parse_int_node(variant_elem.find('SIZE-OF-STRING-LENGTH-FIELDS')),
+                    size_of_struct_length_fields=self._parse_int_node(variant_elem.find('SIZE-OF-STRUCT-LENGTH-FIELDS')),
+                    size_of_union_length_fields=self._parse_int_node(variant_elem.find('SIZE-OF-UNION-LENGTH-FIELDS')),
                     tlv_data_id_definition_refs=list(self.child_string_nodes(
                         variant_elem.find('TLV-DAT-ID-DEFINITION-REFS'),
                     )),
-                    implements_legacy_string_serialization=self.parse_boolean_node(
+                    implements_legacy_string_serialization=self._parse_boolean_node(
                         variant_elem.find('IMPLEMENTS-SOMEIP-STRING-HANDLING'),
                     ),
                     **common_args,
@@ -216,19 +216,19 @@ class SignalParser(ElementParser):
     def _parse_end_to_end_transformation_props(self, xml_elem: Element) -> EndToEndTransformationISignalPropsVariants | None:
         def variants():
             for variant_elem in variants_elem.findall('END-TO-END-TRANSFORMATION-I-SIGNAL-PROPS-CONDITIONAL'):
-                transformer_ref = self.parse_text_node(variant_elem.find('TRANSFORMER-REF'))
+                transformer_ref = self._parse_text_node(variant_elem.find('TRANSFORMER-REF'))
                 if transformer_ref is None:
                     self.log_missing_required(variant_elem, 'TRANSFORMER-REF')
                     continue
                 common_args = self.parse_common_tags(variant_elem)
                 yield EndToEndTransformationISignalProps(
                     transformer_ref=transformer_ref,
-                    cs_error_reaction=self.parse_text_node(variant_elem.find('CS-ERROR-REACTION')),
-                    data_ids=self.parse_element_list(variant_elem.find('DATA-IDS'), self.parse_int_node),
-                    data_length=self.parse_int_node(variant_elem.find('DATA-LENGTH')),
-                    max_data_length=self.parse_int_node(variant_elem.find('MAX-DATA-LENGTH')),
-                    min_data_length=self.parse_int_node(variant_elem.find('MIN-DATA-LENGTH')),
-                    source_id=self.parse_int_node(variant_elem.find('SOURCE-ID')),
+                    cs_error_reaction=self._parse_text_node(variant_elem.find('CS-ERROR-REACTION')),
+                    data_ids=self.parse_element_list(variant_elem.find('DATA-IDS'), self._parse_int_node),
+                    data_length=self._parse_int_node(variant_elem.find('DATA-LENGTH')),
+                    max_data_length=self._parse_int_node(variant_elem.find('MAX-DATA-LENGTH')),
+                    min_data_length=self._parse_int_node(variant_elem.find('MIN-DATA-LENGTH')),
+                    source_id=self._parse_int_node(variant_elem.find('SOURCE-ID')),
                     **common_args,
                 )
 
@@ -241,14 +241,14 @@ class SignalParser(ElementParser):
     def _parse_user_defined_transformation_props(self, xml_elem: Element) -> UserDefinedTransformationISignalPropsVariants | None:
         def variants():
             for variant_elem in variants_elem.findall('USER-DEFINED-TRANSFORMATION-I-SIGNAL-PROPS-CONDITIONAL'):
-                transformer_ref = self.parse_text_node(variant_elem.find('TRANSFORMER-REF'))
+                transformer_ref = self._parse_text_node(variant_elem.find('TRANSFORMER-REF'))
                 if transformer_ref is None:
                     self.log_missing_required(variant_elem, 'TRANSFORMER-REF')
                     continue
                 common_args = self.parse_common_tags(variant_elem)
                 yield UserDefinedTransformationISignalProps(
                     transformer_ref=transformer_ref,
-                    cs_error_reaction=self.parse_text_node(variant_elem.find('CS-ERROR-REACTION')),
+                    cs_error_reaction=self._parse_text_node(variant_elem.find('CS-ERROR-REACTION')),
                     **common_args,
                 )
 

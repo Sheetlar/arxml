@@ -10,7 +10,7 @@ import copy
 from typing import Mapping, Iterable, TYPE_CHECKING
 
 from autosar.model.ar_object import ArObject
-from autosar.model.base import AdminData, InvalidInitValueRef, InvalidDataTypeRef
+from autosar.model.base import OldAdminData, InvalidInitValueRef, InvalidDataTypeRef
 from autosar.model.builder import ValueBuilder
 from autosar.model.constant import Constant, Value, ValueAR4
 from autosar.model.element import Element
@@ -47,7 +47,7 @@ class Port(Element):
             com_spec=None,
             auto_create_com_spec: bool = True,
             parent: ComponentType | None = None,
-            admin_data: AdminData | None = None,
+            admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data)
         self.com_spec: list[ComSpec] = []
