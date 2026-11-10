@@ -15,7 +15,7 @@ from autosar.extractor.data import Signal, DataType, Unit
 from autosar.extractor.system.extractor_base import AbstractExtractor, ArxmlExtractionError
 from autosar.model.compu import CompuScaleRationalFormula, CompuScaleConstantContents
 from autosar.model.datatype import SwBaseType, CompuMethod, Unit as ArUnit
-from autosar.model.signal import ISignal, SystemSignal, ISignalGroup, SystemSignalGroup
+from autosar.model.communication.signal import ISignal, SystemSignal, ISignalGroup
 
 
 class SignalExtractionModule(AbstractExtractor, ABC):

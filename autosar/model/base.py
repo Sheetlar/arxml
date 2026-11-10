@@ -1,8 +1,7 @@
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass
-from typing import Iterable, TYPE_CHECKING, TypeVar, Any
+from enum import StrEnum
+from typing import Iterable, TYPE_CHECKING, Any
 from xml.etree.ElementTree import Element
 
 from autosar.model.admin_data import AdminData
@@ -65,6 +64,8 @@ class Referrable(ArObjectWithParent):
 
 
 class Identifiable(Referrable):
+    _valid_categories: type[StrEnum]
+
     def __init__(
             self,
             admin_data: AdminData | None = None,
@@ -84,9 +85,23 @@ class Identifiable(Referrable):
         self.uuid = uuid
         self.annotation = annotation
         self.introduction = introduction
+        self._validate_category()
+
+    def _validate_category(self):
+        if not hasattr(self, '_valid_categories'):
+            return
+        if self.category is None:
+            self._logger.warning(f'Category of {self.__class__.__name__} "{self.name}" is not set')
+            return
+        try:
+            self.category = self._valid_categories(self.category)
+        except ValueError:
+            self._logger.warning(f'Category of {self.__class__.__name__} "{self.name}" is not valid: {self.category}')
 
 
 class Describable(ArObject):
+    _valid_categories: type[StrEnum]
+
     def __init__(
             self,
             admin_data: AdminData | None = None,
@@ -100,6 +115,18 @@ class Describable(ArObject):
         self.category = category
         self.desc = desc
         self.introduction = introduction
+        self._validate_category()
+
+    def _validate_category(self):
+        if not hasattr(self, '_valid_categories'):
+            return
+        if self.category is None:
+            self._logger.warning(f'Category of {self.__class__.__name__} "{self.name}" is not set')
+            return
+        try:
+            self.category = self._valid_categories(self.category)
+        except ValueError:
+            self._logger.warning(f'Category of {self.__class__.__name__} "{self.name}" is not valid: {self.category}')
 
 
 class OldAdminData(ArObject):
@@ -184,20 +211,6 @@ class SpecialData(ArObject):
         super().__init__(*args, **kwargs)
         self.text = text
         self.gid = gid
-
-
-class Describable(ArObject):
-    def __init__(
-            self,
-            desc: str | None = None,
-            category: str | None = None,
-            admin_data: OldAdminData | None = None,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.desc = desc
-        self.category = category
-        self.admin_data = admin_data
 
 
 def split_ref(ref: str):
@@ -304,7 +317,7 @@ def parse_version_string(version_string: str):
         return int(result.group(1)), int(result.group(2)), int(result.group(3))
 
 
-def find_unique_name_in_list(element_list: list[ArElement], base_name: str):
+def find_unique_name_in_list(element_list: list['ArElement'], base_name: str):
     """
     Attempts to find a unique name in the list of objects based on baseName.
     This function can modify names in gived list.
@@ -442,39 +455,6 @@ class SymbolProps:
     def __init__(self, name: str | None = None, symbol: str | None = None):
         self.name = name
         self.symbol = symbol
-
-
-class AbstractValueSpecification(ArObject):
-    def __init__(
-            self,
-            short_label: str | None = None,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.short_label = short_label
-
-
-class NumericalValueSpecification(AbstractValueSpecification):
-    def __init__(
-            self,
-            value: int | float | list[int | float] | None = None,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.value = value
-
-
-class TextValueSpecification(AbstractValueSpecification):
-    def __init__(
-            self,
-            value: str | None = None,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.value = value
-
-
-ValueSpecification = TypeVar('ValueSpecification', bound=AbstractValueSpecification)
 
 
 @dataclass

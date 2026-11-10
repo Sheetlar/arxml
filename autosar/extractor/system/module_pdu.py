@@ -16,7 +16,7 @@ from autosar.extractor.transport import (
 from autosar.misc import not_none, dict_sorted_by_keys
 from autosar.model.ar_object import MaybeArObject
 from autosar.model.enums import ContainerIPduHeaderTypeEnum, ByteOrderEnum
-from autosar.model.pdu import (
+from autosar.model.communication.pdu import (
     ISignalIPdu,
     ContainerIPdu,
     ContainedIPduProps,

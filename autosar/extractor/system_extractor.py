@@ -11,10 +11,11 @@ from autosar.model.communication.ethernet import ApplicationEndpoint, NetworkEnd
 from autosar.extractor.common import Event, SomeIpFeature
 from autosar.extractor.data_type_extractor import ExtractedDataType
 from autosar.misc import HasLogger
-from autosar.model.pdu import SoConIPduIdentifier, ISignalIPdu, GeneralPurposeIPdu
+from autosar.model.communication.pdu import ISignalIPdu, GeneralPurposeIPdu
+from autosar.model.communication.some_ip import SoConIPduIdentifier
 from autosar.model.portinterface import Operation, Trigger
 from autosar.model.service_instance_collection import ServiceInstanceCollectionSet, ProvidedServiceInstance, EventHandler
-from autosar.model.signal import SystemSignal, ISignal
+from autosar.model.communication.signal import SystemSignal, ISignal
 from autosar.model.some_ip_tp import SomeIpConfig, SomeIpConnection
 from autosar.model.system import (
     System,

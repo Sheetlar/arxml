@@ -38,9 +38,26 @@ class RxAcceptContainedIPduEnum(ArEnum):
     ACCEPT_CONFIGURED = auto()
 
 
+class PduCollectionSemanticsEnum(ArEnum):
+    LAST_IS_BEST = auto()
+    QUEUED = auto()
+
+
 class ContainedIPduCollectionSemanticsEnum(ArEnum):
     LAST_IS_BEST = auto()
     QUEUED = auto()
+
+
+class DiagPduType(ArEnum):
+    DIAG_REQUEST = auto()
+    DIAG_RESPONSE = auto()
+
+
+class SecuredPduHeaderEnum(ArEnum):
+    NO_HEADER = auto()
+    SECURED_PDU_HEADER_08_BIT = auto()
+    SECURED_PDU_HEADER_16_BIT = auto()
+    SECURED_PDU_HEADER_32_BIT = auto()
 
 
 class PduCollectionTriggerEnum(ArEnum):
@@ -218,3 +235,8 @@ class EthernetCouplingPortSchedulerEnum(ArEnum):
 class EthernetCouplingPortPreemptionEnum(ArEnum):
     EXPRESS = auto()
     PREEMPTABLE = auto()
+
+
+class CryptoServiceKeyGenerationEnum(ArEnum):
+    KEY_DERIVATION = auto()
+    KEY_STORAGE = auto()

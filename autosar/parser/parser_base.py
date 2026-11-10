@@ -16,15 +16,13 @@ from autosar.model.base import (
     SwDataDefPropsVariants,
     SwPointerTargetProps,
     SymbolProps,
-    ValueSpecification,
-    NumericalValueSpecification,
-    TextValueSpecification,
     DataFilter,
     Limit,
     IntLimit,
     FloatLimit,
     LangStr,
 )
+from autosar.model.value_spec import NumericalValueSpecification, TextValueSpecification, ValueSpecification
 from autosar.model.element import DataElement
 from autosar.model.enums import SomeEnum, IntervalTypeEnum
 from autosar.model.languages_enum import LEnum

@@ -2,9 +2,10 @@ from typing import Callable
 from xml.etree.ElementTree import Element
 
 from autosar.model.ar_object import ArObject
-from autosar.model.base import SwDataDefPropsVariants, ValueSpecification
+from autosar.model.base import SwDataDefPropsVariants
+from autosar.model.value_spec import ValueSpecification
 from autosar.parser.parser_base import ElementParser
-from autosar.model.signal import (
+from autosar.model.communication.signal import (
     SystemSignal,
     SystemSignalGroup,
     ISignal,

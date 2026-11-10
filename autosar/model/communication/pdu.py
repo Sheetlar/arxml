@@ -1,8 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import auto
 from typing import Iterable
 
+from autosar.misc import RawStrEnum
 from autosar.model.ar_object import ArObject
-from autosar.model.base import Describable, DataFilter
+from autosar.model.base import Describable, DataFilter, Identifiable
 from autosar.model.element import Element
 from autosar.model.enums import (
     ByteOrderEnum,
@@ -10,31 +12,34 @@ from autosar.model.enums import (
     ContainerIPduHeaderTypeEnum,
     RxAcceptContainedIPduEnum,
     ContainedIPduCollectionSemanticsEnum,
+    DiagPduType,
+    SecuredPduHeaderEnum,
     PduCollectionTriggerEnum,
     TransferPropertyEnum,
     TriggerMode,
+    CommunicationDirectionType,
 )
 
 
-@dataclass
+@dataclass(repr=False)
 class TimeRangeTypeTolerance(ArObject):
     pass
 
 
-@dataclass
+@dataclass(repr=False)
 class AbsoluteTolerance(TimeRangeTypeTolerance):
     absolute: float
 
 
-@dataclass
+@dataclass(repr=False)
 class RelativeTolerance(TimeRangeTypeTolerance):
     relative: int
 
 
-@dataclass
+@dataclass(repr=False)
 class TimeRangeType(ArObject):
     value: float
-    tolerance: TimeRangeTypeTolerance
+    tolerance: TimeRangeTypeTolerance | None = None
 
 
 class CyclicTiming(Describable):
@@ -61,97 +66,86 @@ class EventControlledTiming(Describable):
         self.repetition_period = repetition_period
 
 
-@dataclass
+@dataclass(repr=False)
 class TransmissionModeTiming(ArObject):
     cyclic_timing: CyclicTiming | None = None
     event_controlled_timing: EventControlledTiming | None = None
 
 
-@dataclass
+@dataclass(repr=False)
 class TransmissionModeCondition(ArObject):
     data_filter: DataFilter
     i_signal_in_i_pdu_ref: str
 
 
-@dataclass
+@dataclass(repr=False)
 class ModeDrivenTransmissionModeCondition(ArObject):
     mode_declaration_refs: list[str]
 
 
-@dataclass
+@dataclass(repr=False)
 class TransmissionModeDeclaration(ArObject):
-    mode_driven_false_conditions: list[ModeDrivenTransmissionModeCondition] = None
-    mode_driven_true_conditions: list[ModeDrivenTransmissionModeCondition] = None
-    transmission_mode_conditions: list[TransmissionModeCondition] = None
+    mode_driven_false_conditions: list[ModeDrivenTransmissionModeCondition] = field(default_factory=list)
+    mode_driven_true_conditions: list[ModeDrivenTransmissionModeCondition] = field(default_factory=list)
+    transmission_mode_conditions: list[TransmissionModeCondition] = field(default_factory=list)
     transmission_mode_false_timing: TransmissionModeTiming | None = None
     transmission_mode_true_timing: TransmissionModeTiming | None = None
 
-    def __post_init__(self):
-        if self.mode_driven_false_conditions is None:
-            self.mode_driven_false_conditions = []
-        if self.mode_driven_true_conditions is None:
-            self.mode_driven_true_conditions = []
-        if self.transmission_mode_conditions is None:
-            self.transmission_mode_conditions = []
 
-
-@dataclass
+@dataclass(repr=False)
 class SecureCommunicationProps(ArObject):
-    authentication_retries: int
     data_id: int
     auth_data_freshness_length: int | None = None
     auth_data_freshness_start_position: int | None = None
-    authentication_build_attempts: int | None = None
     freshness_value_id: int | None = None
+    secondary_freshness_value_id: int | None = None
+    authentication_build_attempts: int | None = None
+    authentication_retries: int | None = None
     message_link_length: int | None = None
     message_link_position: int | None = None
-    secondary_freshness_value_id: int | None = None
     secured_area_length: int | None = None
     secured_area_offset: int | None = None
 
 
-@dataclass
+@dataclass(repr=False)
 class ContainedIPduProps(ArObject):
     collection_semantics: ContainedIPduCollectionSemanticsEnum
     contained_pdu_triggering_ref: str | None = None
     header_id_long_header: int | None = None
     header_id_short_header: int | None = None
-    offset: int | None = None
+    j1939_requestable: bool | None = None
+    offset: int = 0
     priority: int | None = None
     timeout: float | None = None
     trigger: PduCollectionTriggerEnum | None = None
     update_indication_bit_position: int | None = None
 
-    def __post_init__(self):
-        if self.offset is None:
-            self.offset = 0
 
-
-@dataclass
+@dataclass(repr=False)
 class SegmentPosition(ArObject):
     segment_byte_order: ByteOrderEnum
     segment_length: int
     segment_position: int
 
 
-@dataclass
+@dataclass(repr=False)
 class DynamicPartAlternative(ArObject):
     i_pdu_ref: str
     initial_dynamic_part: bool
     selector_field_code: int
 
 
-@dataclass
+@dataclass(repr=False)
 class MultiplexedPart(ArObject):
     segment_positions: list[SegmentPosition]
 
 
-@dataclass
+@dataclass(repr=False)
 class DynamicPart(MultiplexedPart):
-    dynamic_part_alternatives: list[DynamicPartAlternative]
+    dynamic_part_alternatives: list[DynamicPartAlternative] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(repr=False)
 class StaticPart(MultiplexedPart):
     i_pdu_ref: str
 
@@ -168,33 +162,45 @@ class IPduTiming(Describable):
         self.transmission_mode_declaration = transmission_mode_declaration
 
 
-class ISignalToIPduMapping(Element):
+class ISignalToIPduMapping(Identifiable):
     def __init__(
             self,
             i_signal_ref: str | None = None,
             i_signal_group_ref: str | None = None,
             packing_byte_order: ByteOrderEnum | None = None,
-            start_position: int | None = None,
             transfer_property: TransferPropertyEnum | None = None,
+            start_position: int = 0,
             update_indication_bit_position: int | None = None,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        if start_position is None:
-            start_position = 0
         self.i_signal_ref = i_signal_ref
         self.i_signal_group_ref = i_signal_group_ref
         self.packing_byte_order = packing_byte_order
-        self.start_position = start_position
         self.transfer_property = transfer_property
+        self.start_position = start_position
         self.update_indication_bit_position = update_indication_bit_position
+
+
+class GeneralPurposePduCategory(RawStrEnum):
+    SD = auto()
+    GLOBAL_TIME = auto()
+    DoIP = auto()
+
+
+class GeneralPurposeIPduCategory(RawStrEnum):
+    XCP = auto()
+    SOMEIP_SEGMENTED_IPDU = auto()
+    DLT = auto()
+    IDS = auto()
+    VDP = auto()
 
 
 # Abstract
 class Pdu(Element):
     def __init__(
             self,
-            length: int | None = None,
+            length: int,
             has_dynamic_length: bool | None = None,
             *args, **kwargs,
     ):
@@ -204,10 +210,10 @@ class Pdu(Element):
 
 
 class GeneralPurposePdu(Pdu):
-    pass
+    _valid_categories = GeneralPurposePduCategory
 
 
-class NMPdu(Pdu):
+class NmPdu(Pdu):
     def __init__(
             self,
             nm_data_information: bool | None = None,
@@ -251,31 +257,27 @@ class IPdu(Pdu):
 class ContainerIPdu(IPdu):
     def __init__(
             self,
-            contained_i_pdu_triggering_props: list[ContainedIPduProps] | None = None,
-            contained_pdu_triggering_refs: list[str] | None = None,
+            header_type: ContainerIPduHeaderTypeEnum | None = None,
+            rx_accept_contained_i_pdu: RxAcceptContainedIPduEnum | None = None,
+            contained_i_pdu_triggering_props: Iterable[ContainedIPduProps] | None = None,
+            contained_pdu_triggering_refs: Iterable[str] | None = None,
             container_timeout: float | None = None,
             container_trigger: ContainerIPduTriggerEnum | None = None,
-            header_type: ContainerIPduHeaderTypeEnum | None = None,
             minimum_rx_container_queue_size: int | None = None,
             minimum_tx_container_queue_size: int | None = None,
-            rx_accept_contained_i_pdu: RxAcceptContainedIPduEnum | None = None,
             threshold_size: int | None = None,
             unused_bit_pattern: int | None = None,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        if contained_i_pdu_triggering_props is None:
-            contained_i_pdu_triggering_props = []
-        if contained_pdu_triggering_refs is None:
-            contained_pdu_triggering_refs = []
-        self.contained_i_pdu_triggering_props = contained_i_pdu_triggering_props
-        self.contained_pdu_triggering_refs = contained_pdu_triggering_refs
+        self.header_type = header_type
+        self.rx_accept_contained_i_pdu = rx_accept_contained_i_pdu
+        self.contained_i_pdu_triggering_props = self.eval_children(contained_i_pdu_triggering_props)
+        self.contained_pdu_triggering_refs = self.eval_children(contained_pdu_triggering_refs)
         self.container_timeout = container_timeout
         self.container_trigger = container_trigger
-        self.header_type = header_type
         self.minimum_rx_container_queue_size = minimum_rx_container_queue_size
         self.minimum_tx_container_queue_size = minimum_tx_container_queue_size
-        self.rx_accept_contained_i_pdu = rx_accept_contained_i_pdu
         self.threshold_size = threshold_size
         self.unused_bit_pattern = unused_bit_pattern
 
@@ -283,7 +285,7 @@ class ContainerIPdu(IPdu):
 class DcmIPdu(IPdu):
     def __init__(
             self,
-            diag_pdu_type: str,
+            diag_pdu_type: DiagPduType,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -291,23 +293,21 @@ class DcmIPdu(IPdu):
 
 
 class GeneralPurposeIPdu(IPdu):
-    pass
+    _valid_categories = GeneralPurposeIPduCategory
 
 
 class ISignalIPdu(IPdu):
     def __init__(
             self,
-            unused_bit_pattern: int,
-            i_pdu_timing_specifications: list[IPduTiming] | None = None,
             i_signal_to_pdu_mappings: Iterable[ISignalToIPduMapping] | None = None,
+            i_pdu_timing_specifications: Iterable[IPduTiming] | None = None,
+            unused_bit_pattern: int | None = None,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        if i_pdu_timing_specifications is None:
-            i_pdu_timing_specifications = []
-        self.unused_bit_pattern = unused_bit_pattern
-        self.i_pdu_timing_specifications = i_pdu_timing_specifications
         self.i_signal_to_pdu_mappings = self._set_parent(i_signal_to_pdu_mappings)
+        self.i_pdu_timing_specifications = self.eval_children(i_pdu_timing_specifications)
+        self.unused_bit_pattern = unused_bit_pattern
 
     @property
     def _findable_children(self) -> Iterable[ArObject]:
@@ -324,32 +324,36 @@ class J1939DcmIPdu(IPdu):
         self.diagnostic_message_type = diagnostic_message_type
 
 
+class J1939ProtectedIPdu(IPdu):
+    def __init__(
+            self,
+            payload_refs: Iterable[str] | None = None,
+            srvt: float | None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.payload_refs = payload_refs
+        self.srvt = srvt
+
+
 class MultiplexedIPdu(IPdu):
     def __init__(
             self,
             selector_field_byte_order: ByteOrderEnum | None = None,
-            selector_field_length: int | None = None,
-            selector_field_start_position: int | None = None,
-            dynamic_parts: list[DynamicPart] | None = None,
-            static_parts: list[StaticPart] | None = None,
+            selector_field_length: int = 0,
+            selector_field_start_position: int = 0,
+            dynamic_parts: Iterable[DynamicPart] | None = None,
+            static_parts: Iterable[StaticPart] | None = None,
             trigger_mode: TriggerMode | None = None,
             unused_bit_pattern: int | None = None,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        if selector_field_length is None:
-            selector_field_length = 0
-        if selector_field_start_position is None:
-            selector_field_start_position = 0
-        if dynamic_parts is None:
-            dynamic_parts = []
-        if static_parts is None:
-            static_parts = []
         self.selector_field_byte_order = selector_field_byte_order
         self.selector_field_length = selector_field_length
         self.selector_field_start_position = selector_field_start_position
-        self.dynamic_parts = dynamic_parts
-        self.static_parts = static_parts
+        self.dynamic_parts = self.eval_children(dynamic_parts)
+        self.static_parts = self.eval_children(static_parts)
         self.trigger_mode = trigger_mode
         self.unused_bit_pattern = unused_bit_pattern
 
@@ -365,9 +369,9 @@ class SecuredIPdu(IPdu):
             secure_communication_props: SecureCommunicationProps,
             authentication_props_ref: str | None = None,
             freshness_props_ref: str | None = None,
-            use_as_cryptographic_i_pdu: bool | None = None,
             dynamic_runtime_length_handling: bool | None = None,
-            use_secured_pdu_header: str | None = None,
+            use_as_cryptographic_i_pdu: bool | None = None,
+            use_secured_pdu_header: SecuredPduHeaderEnum | None = None,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -375,8 +379,8 @@ class SecuredIPdu(IPdu):
         self.secure_communication_props = secure_communication_props
         self.authentication_props_ref = authentication_props_ref
         self.freshness_props_ref = freshness_props_ref
-        self.use_as_cryptographic_i_pdu = use_as_cryptographic_i_pdu
         self.dynamic_runtime_length_handling = dynamic_runtime_length_handling
+        self.use_as_cryptographic_i_pdu = use_as_cryptographic_i_pdu
         self.use_secured_pdu_header = use_secured_pdu_header
 
 
@@ -393,48 +397,38 @@ class UserDefinedIPdu(IPdu):
 class ISignalIPduGroup(Element):
     def __init__(
             self,
-            communication_direction: str,
-            communication_mode: str,
-            contained_i_signal_i_pdu_group_refs: list[str] | None = None,
-            i_signal_i_pdu_refs: list[str] | None = None,
-            nm_pdu_refs: list[str] | None = None,
+            communication_direction: CommunicationDirectionType,
+            communication_mode: str | None = None,
+            contained_i_signal_i_pdu_group_refs: Iterable[str] | None = None,
+            i_signal_i_pdu_refs: Iterable[str] | None = None,
+            nm_pdu_refs: Iterable[str] | None = None,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        if contained_i_signal_i_pdu_group_refs is None:
-            contained_i_signal_i_pdu_group_refs = []
-        if i_signal_i_pdu_refs is None:
-            i_signal_i_pdu_refs = []
-        if nm_pdu_refs is None:
-            nm_pdu_refs = []
         self.communication_direction = communication_direction
         self.communication_mode = communication_mode
-        self.contained_i_signal_i_pdu_group_refs = contained_i_signal_i_pdu_group_refs
-        self.i_signal_i_pdu_refs = i_signal_i_pdu_refs
-        self.nm_pdu_refs = nm_pdu_refs
+        self.contained_i_signal_i_pdu_group_refs = self.eval_children(contained_i_signal_i_pdu_group_refs)
+        self.i_signal_i_pdu_refs = self.eval_children(i_signal_i_pdu_refs)
+        self.nm_pdu_refs = self.eval_children(nm_pdu_refs)
 
 
-class SoConIPduIdentifier(Element):
+class PdurIPduGroup(Element):
     def __init__(
             self,
-            header_id: int | None = None,
-            pdu_triggering_ref: str | None = None,
+            communication_mode: str | None = None,
+            i_pdu_refs: Iterable[str] | None = None,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.header_id = header_id
-        self.pdu_triggering_ref = pdu_triggering_ref
+        self.communication_mode = communication_mode
+        self.i_pdu_refs = self.eval_children(i_pdu_refs)
 
 
-class SocketConnectionIPduIdentifierSet(Element):
+class GeneralPurposeConnection(Element):
     def __init__(
             self,
-            i_pdu_identifiers: Iterable[SoConIPduIdentifier] | None = None,
+            pdu_triggering_refs: Iterable[str] | None = None,
             *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.i_pdu_identifiers = self._set_parent(i_pdu_identifiers)
-
-    @property
-    def _findable_children(self) -> Iterable[ArObject]:
-        yield from self.i_pdu_identifiers
+        self.pdu_triggering_refs = self.eval_children(pdu_triggering_refs)

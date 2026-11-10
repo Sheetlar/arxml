@@ -384,6 +384,8 @@ class SystemCategory(RawStrEnum):
 
 
 class System(Element):
+    _valid_categories = SystemCategory
+
     def __init__(
             self,
             client_id_definition_set_refs: Iterable[str] | None = None,
@@ -413,16 +415,6 @@ class System(Element):
         self.sw_cluster_refs = self.eval_children(sw_cluster_refs)
         self.system_com_spec_definition_refs = self.eval_children(system_com_spec_definition_refs)
         self.system_version = system_version
-        self._validate_category()
-
-    def _validate_category(self):
-        if self.category is None:
-            self._logger.warning(f'Category of the system {self.name} is not set')
-            return
-        try:
-            self.category = SystemCategory(self.category)
-        except ValueError:
-            self._logger.warning(f'Category of the system {self.name} is not valid: {self.category}')
 
     @property
     def _findable_children(self) -> Iterable[ArObject]:
