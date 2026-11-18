@@ -1,6 +1,5 @@
 from xml.etree.ElementTree import Element
 
-from autosar.model.enums import TcpRoleEnum, UdpChecksumCalculationEnum
 from autosar.model.communication.ethernet import (
     SoAdConfig,
     SocketAddress,
@@ -11,18 +10,18 @@ from autosar.model.communication.ethernet import (
     TcpTp,
     TpPort,
 )
+from autosar.model.enums import TcpRoleEnum, UdpChecksumCalculationEnum
 from autosar.parser.identifiable import IdentifiableParser
 from autosar.parser.parser_base import (
     handler,
     multiple_with_check,
     single_subclass_aggr,
-    BasicParserWithParent,
-    BasicParserWithoutParent,
+    BasicParser,
     ParserSelector, ref_variation,
 )
 
 
-class TpPortParser(BasicParserWithoutParent[TpPort]):
+class TpPortParser(BasicParser[TpPort]):
     _returned_type = TpPort
 
     @handler('PORT-NUMBER')
@@ -34,7 +33,7 @@ class TpPortParser(BasicParserWithoutParent[TpPort]):
         return self._parse_boolean_node(xml_element) or False
 
 
-class UdpTpParser(BasicParserWithoutParent[UdpTp]):
+class UdpTpParser(BasicParser[UdpTp]):
     _returned_type = UdpTp
 
     @handler('UDP-TP-PORT', required=True)
@@ -46,7 +45,7 @@ class UdpTpParser(BasicParserWithoutParent[UdpTp]):
         return port
 
 
-class TcpTpParser(BasicParserWithoutParent[TcpTp]):
+class TcpTpParser(BasicParser[TcpTp]):
     _returned_type = TcpTp
 
     @handler('TCP-TP-PORT', required=True)
@@ -204,7 +203,7 @@ class SocketAddressParser(IdentifiableParser[SocketAddress]):
         return self._parse_enum_node(xml_element, UdpChecksumCalculationEnum)
 
 
-class SoAdConfigParser(BasicParserWithParent[SoAdConfig]):
+class SoAdConfigParser(BasicParser[SoAdConfig]):
     _returned_type = SoAdConfig
 
     @handler('SOCKET-ADDRESSES', 'SOCKET-ADDRESSS')

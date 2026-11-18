@@ -22,14 +22,14 @@ from autosar.parser.parser_base import (
     multiple_with_check,
     eval_children,
     single_subclass_aggr,
-    BasicParserWithoutParent,
+    BasicParser,
     ParserSelector,
 )
 
 T = TypeVar('T', bound=TimeRangeTypeTolerance)
 
 
-class AbsoluteToleranceParser(BasicParserWithoutParent[AbsoluteTolerance]):
+class AbsoluteToleranceParser(BasicParser[AbsoluteTolerance]):
     _returned_type = AbsoluteTolerance
 
     @handler('ABSOLUTE', required=True)
@@ -39,7 +39,7 @@ class AbsoluteToleranceParser(BasicParserWithoutParent[AbsoluteTolerance]):
         return t
 
 
-class RelativeToleranceParser(BasicParserWithoutParent[RelativeTolerance]):
+class RelativeToleranceParser(BasicParser[RelativeTolerance]):
     _returned_type = RelativeTolerance
 
     @handler('RELATIVE', required=True)
@@ -56,7 +56,7 @@ class TimeRangeTypeToleranceParserSelector(ParserSelector[T]):
     }
 
 
-class TimeRangeTypeParser(BasicParserWithoutParent[TimeRangeType]):
+class TimeRangeTypeParser(BasicParser[TimeRangeType]):
     _returned_type = TimeRangeType
 
     @handler('VALUE', required=True)
@@ -103,7 +103,7 @@ class EventControlledTimingParser(DescribableParser[EventControlledTiming]):
         return parser.parse_element(xml_element)
 
 
-class TransmissionModeTimingParser(BasicParserWithoutParent[TransmissionModeTiming]):
+class TransmissionModeTimingParser(BasicParser[TransmissionModeTiming]):
     _returned_type = TransmissionModeTiming
 
     @handler('CYCLIC-TIMING')
@@ -118,7 +118,7 @@ class TransmissionModeTimingParser(BasicParserWithoutParent[TransmissionModeTimi
 
 
 class ModeDrivenTransmissionModeConditionParser(
-    BasicParserWithoutParent[ModeDrivenTransmissionModeCondition]
+    BasicParser[ModeDrivenTransmissionModeCondition]
 ):
     _returned_type = ModeDrivenTransmissionModeCondition
 
@@ -129,7 +129,7 @@ class ModeDrivenTransmissionModeConditionParser(
         return self._parse_text_node(xml_element)
 
 
-class TransmissionModeConditionParser(BasicParserWithoutParent[TransmissionModeCondition]):
+class TransmissionModeConditionParser(BasicParser[TransmissionModeCondition]):
     _returned_type = TransmissionModeCondition
 
     @handler('DATA-FILTER', required=True)
@@ -147,7 +147,7 @@ class TransmissionModeConditionParser(BasicParserWithoutParent[TransmissionModeC
 
 
 class TransmissionModeDeclarationParser(
-    BasicParserWithoutParent[TransmissionModeDeclaration]
+    BasicParser[TransmissionModeDeclaration]
 ):
     _returned_type = TransmissionModeDeclaration
 

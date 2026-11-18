@@ -20,7 +20,7 @@ class PduToFrameMappingParser(IdentifiableParser[PduToFrameMapping]):
         return ref
 
     @handler('PACKING-BYTE-ORDER', required=True)
-    def _parse_packing_byte_order(self, xml_element: Element) -> ByteOrderEnum | None:
+    def _parse_packing_byte_order(self, xml_element: Element) -> ByteOrderEnum:
         if (pack := self._parse_enum_node(xml_element, ByteOrderEnum)) is None:
             raise ValueError
         return pack

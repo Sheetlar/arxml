@@ -31,7 +31,7 @@ from autosar.parser.identifiable import IdentifiableParser
 from autosar.parser.parser_base import (
     handler,
     multiple_with_check,
-    BasicParserWithParent,
+    BasicParser,
     PropertySetParser,
     ParserSelector,
 )
@@ -40,14 +40,14 @@ CC = TypeVar('CC', bound=CommunicationController)
 CCC = TypeVar('CCC', bound=CommunicationControllerContent)
 
 
-class CommunicationControllerContentParser(BasicParserWithParent[CCC]):
+class CommunicationControllerContentParser(BasicParser[CCC]):
     @handler('WAKE-UP-BY-CONTROLLER-SUPPORTED')
     def _parse_wake_up_by_controller_supported(self, xml_element: Element) -> bool | None:
         return self._parse_boolean_node(xml_element)
 
 
 class CanCommunicationControllerContentParser(
-    BasicParserWithParent[CanCommunicationControllerContent]
+    CommunicationControllerContentParser[CanCommunicationControllerContent]
 ):
     _returned_type = CanCommunicationControllerContent
 
@@ -58,7 +58,7 @@ class CanCommunicationControllerContentParser(
 
 
 class EthernetCommunicationControllerContentParser(
-    BasicParserWithParent[EthernetCommunicationControllerContent]
+    CommunicationControllerContentParser[EthernetCommunicationControllerContent]
 ):
     _returned_type = EthernetCommunicationControllerContent
 
@@ -98,25 +98,25 @@ class EthernetCommunicationControllerContentParser(
 
 
 class FlexrayCommunicationControllerContentParser(
-    BasicParserWithParent[FlexrayCommunicationControllerContent]
+    CommunicationControllerContentParser[FlexrayCommunicationControllerContent]
 ):
     _returned_type = FlexrayCommunicationControllerContent
 
 
 class LinMasterContentParser(
-    BasicParserWithParent[LinMasterContent]
+    CommunicationControllerContentParser[LinMasterContent]
 ):
     _returned_type = LinMasterContent
 
 
 class LinSlaveContentParser(
-    BasicParserWithParent[LinSlaveContent]
+    CommunicationControllerContentParser[LinSlaveContent]
 ):
     _returned_type = LinSlaveContent
 
 
 class UserDefinedCommunicationControllerContentParser(
-    BasicParserWithParent[UserDefinedCommunicationControllerContent]
+    CommunicationControllerContentParser[UserDefinedCommunicationControllerContent]
 ):
     _returned_type = UserDefinedCommunicationControllerContent
 

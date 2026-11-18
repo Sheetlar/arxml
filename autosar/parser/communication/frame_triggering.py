@@ -11,7 +11,7 @@ from autosar.parser.parser_base import (
     multiple_with_check,
     ref_variation,
     ParserSelector,
-    BasicParserWithoutParent,
+    BasicParser,
 )
 
 FT = TypeVar('FT', bound=FrameTriggering)
@@ -36,7 +36,7 @@ class FrameTriggeringParser(IdentifiableParser[FT]):
         return self._parse_text_node(xml_element)
 
 
-class RxIdentifierRangeParser(BasicParserWithoutParent[RxIdentifierRange]):
+class RxIdentifierRangeParser(BasicParser[RxIdentifierRange]):
     _returned_type = RxIdentifierRange
 
     @handler('LOWER-CAN-ID', required=True)

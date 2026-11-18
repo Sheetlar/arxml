@@ -2,10 +2,10 @@ from xml.etree.ElementTree import Element
 
 from autosar.model.communication.communication_cluster import TriggerIPduSendCondition, PduTriggering
 from autosar.parser.identifiable import IdentifiableParser
-from autosar.parser.parser_base import BasicParserWithoutParent, handler, eval_children, multiple_with_check, ref_variation
+from autosar.parser.parser_base import BasicParser, handler, eval_children, multiple_with_check, ref_variation
 
 
-class TriggerIPduSendConditionParser(BasicParserWithoutParent[TriggerIPduSendCondition]):
+class TriggerIPduSendConditionParser(BasicParser[TriggerIPduSendCondition]):
     _returned_type = TriggerIPduSendCondition
 
     @handler('MODE-DECLARATION-REFS')

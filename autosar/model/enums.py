@@ -240,3 +240,74 @@ class EthernetCouplingPortPreemptionEnum(ArEnum):
 class CryptoServiceKeyGenerationEnum(ArEnum):
     KEY_DERIVATION = auto()
     KEY_STORAGE = auto()
+
+
+class DataTypePolicyEnum(ArEnum):
+    LEGACY = auto()
+    NETWORK_REPRESENTATION_FROM_COM_SPEC = auto()
+    OVERRIDE = auto()
+    TRANSFORMING_I_SIGNAL = auto()
+    DDS_SIGNAL = auto()
+    DDS_SERVICE = auto()
+
+
+class ISignalTypeEnum(ArEnum):
+    ARRAY = auto()
+    PRIMITIVE = auto()
+
+
+class HandleOutOfRangeEnum(ArEnum):
+    DEFAULT = auto()
+    EXTERNAL_REPLACEMENT = auto()
+    IGNORE = auto()
+    INVALID = auto()
+    NONE = auto()
+    SATURATE = auto()
+
+
+class CSTransformerErrorReactionEnum(ArEnum):
+    APPLICATION_ONLY = auto()
+    AUTONOMOUS = auto()
+
+
+class SomeIpMessageTypeEnum(ArEnum):
+    NOTIFICATION = auto()
+    REQUEST = auto()
+    REQUEST_NO_RETURN = auto()
+    RESPONSE = auto()
+
+
+class SomeIpTransformerSessionHandlingEnum(ArEnum):
+    SESSION_HANDLING_ACTIVE = auto()
+    SESSION_HANDLING_INACTIVE = auto()
+
+
+class DataTransformationKindEnum(ArEnum):
+    ASYMMETRIC_FROM_BYTE_ARRAY = auto()
+    ASYMMETRIC_TO_BYTE_ARRAY = auto()
+    SYMMETRIC = auto()
+
+
+class TransformerClassEnum(ArEnum):
+    CUSTOM = auto()
+    SAFETY = auto()
+    SECURITY = auto()
+    SERIALIZER = auto()
+
+
+class DataIdModeEnum(ArEnum):
+    ALL_16_BIT = auto()
+    ALTERNATING_8_BIT = auto()
+    LOWER_12_BIT = auto()
+    LOWER_8_BIT = auto()
+
+
+class EndToEndProfileBehaviorEnum(ArEnum):
+    PRE_R_4_2 = 'PRE--R-4--2'
+    R_4_2 = 'R-4--2'
+
+
+class AutoCollectEnum(ArEnum):
+    REF_ALL = auto()
+    REF_NONE = auto()
+    REF_NON_STANDARD = auto()

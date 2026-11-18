@@ -18,11 +18,12 @@ from autosar.parser.communication.signal_triggering import ISignalTriggeringPars
 from autosar.parser.identifiable import IdentifiableParser
 from autosar.parser.parser_base import (
     handler,
+    not_implemented_handler,
     multiple,
     multiple_with_check,
     ref_variation,
-    BasicParserWithParent,
-    PropertySetParser, not_implemented_handler,
+    BasicParser,
+    PropertySetParser,
 )
 
 CC = TypeVar('CC', bound=CommunicationCluster)
@@ -85,7 +86,7 @@ class EthernetPhysicalChannelParser(
         return parser.parse_element(xml_element)
 
 
-class CommunicationClusterContentParser(BasicParserWithParent[CCC], Generic[CCC, PC]):
+class CommunicationClusterContentParser(BasicParser[CCC], Generic[CCC, PC]):
     _phys_channel_parser: type[PhysicalChannelParser[PC]]
     _phys_channel_tag: str
 

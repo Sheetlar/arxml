@@ -2,7 +2,8 @@ import copy
 from typing import Iterable
 
 from autosar.model.ar_object import ArObject
-from autosar.model.base import OldAdminData, DataConstraintError, SwDataDefProps, SwPointerTargetProps, SymbolProps, InvalidDataTypeRef
+from autosar.model.base import OldAdminData, DataConstraintError, SymbolProps, InvalidDataTypeRef
+from autosar.model.sw_def_props import SwDataDefPropsContent, SwPointerTargetProps
 from autosar.model.compu import CompuScale
 from autosar.model.element import Element
 
@@ -598,7 +599,7 @@ class DataConstraint(Element):
 class ImplementationDataTypeBase:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.variant_props: list[SwDataDefProps | SwPointerTargetProps] = []
+        self.variant_props: list[SwDataDefPropsContent | SwPointerTargetProps] = []
 
     def get_type_reference(self):
         """
@@ -639,7 +640,7 @@ class ImplementationDataType(Element, ImplementationDataTypeBase):
     def __init__(
             self,
             name: str,
-            variant_props: SwDataDefProps | SwPointerTargetProps | Iterable[SwDataDefProps | SwPointerTargetProps] | None = None,
+            variant_props: SwDataDefPropsContent | SwPointerTargetProps | Iterable[SwDataDefPropsContent | SwPointerTargetProps] | None = None,
             dynamic_array_size_profile: str | None = None,
             type_emitter: str | None = None,
             category: str = 'VALUE',
@@ -651,11 +652,11 @@ class ImplementationDataType(Element, ImplementationDataTypeBase):
         self.type_emitter = type_emitter
         self.sub_elements: list[ImplementationDataTypeElement] = []
         self.symbol_props: SymbolProps | None = None
-        if isinstance(variant_props, (SwDataDefProps, SwPointerTargetProps)):
+        if isinstance(variant_props, (SwDataDefPropsContent, SwPointerTargetProps)):
             self.variant_props.append(variant_props)
         elif isinstance(variant_props, Iterable):
             for elem in variant_props:
-                if isinstance(elem, (SwDataDefProps, SwPointerTargetProps)):
+                if isinstance(elem, (SwDataDefPropsContent, SwPointerTargetProps)):
                     self.variant_props.append(elem)
                 else:
                     raise ValueError('Invalid type: ', type(elem))
@@ -718,7 +719,7 @@ class ImplementationDataTypeElement(Element, ImplementationDataTypeBase):
             category: str | None = None,
             array_size: int | str | None = None,
             array_size_semantics: str | None = None,
-            variant_props: SwDataDefProps | SwPointerTargetProps | Iterable[SwDataDefProps | SwPointerTargetProps] | None = None,
+            variant_props: SwDataDefPropsContent | SwPointerTargetProps | Iterable[SwDataDefPropsContent | SwPointerTargetProps] | None = None,
             parent: ArObject | None = None,
             admin_data: OldAdminData | None = None,
     ):
@@ -732,11 +733,11 @@ class ImplementationDataTypeElement(Element, ImplementationDataTypeBase):
         else:
             self.array_size_semantics = None
         if variant_props is not None:
-            if isinstance(variant_props, (SwDataDefProps, SwPointerTargetProps)):
+            if isinstance(variant_props, (SwDataDefPropsContent, SwPointerTargetProps)):
                 self.variant_props.append(variant_props)
             elif isinstance(variant_props, Iterable):
                 for elem in variant_props:
-                    if isinstance(elem, (SwDataDefProps, SwPointerTargetProps)):
+                    if isinstance(elem, (SwDataDefPropsContent, SwPointerTargetProps)):
                         self.variant_props.append(elem)
                     else:
                         raise ValueError('Invalid type: ', type(elem))
@@ -762,15 +763,15 @@ class ApplicationDataType(Element):
     def __init__(
             self,
             name: str,
-            variant_props: SwDataDefProps | Iterable[SwDataDefProps] | None = None,
+            variant_props: SwDataDefPropsContent | Iterable[SwDataDefPropsContent] | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
             admin_data: OldAdminData | None = None,
     ):
         super().__init__(name, parent, admin_data, category)
-        self.variant_props: list[SwDataDefProps] = []
+        self.variant_props: list[SwDataDefPropsContent] = []
         if variant_props is not None:
-            if isinstance(variant_props, SwDataDefProps):
+            if isinstance(variant_props, SwDataDefPropsContent):
                 self.variant_props.append(variant_props)
             else:
                 self.variant_props = list(variant_props)
@@ -809,7 +810,7 @@ class ApplicationPrimitiveDataType(ApplicationDataType):
     def __init__(
             self,
             name: str,
-            variant_props: SwDataDefProps | Iterable[SwDataDefProps] | None = None,
+            variant_props: SwDataDefPropsContent | Iterable[SwDataDefPropsContent] | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
             admin_data: OldAdminData | None = None,
@@ -833,7 +834,7 @@ class ApplicationArrayDataType(ApplicationDataType):
             self,
             name: str,
             element: 'ApplicationArrayElement | None',
-            variant_props: SwDataDefProps | Iterable[SwDataDefProps] | None = None,
+            variant_props: SwDataDefPropsContent | Iterable[SwDataDefPropsContent] | None = None,
             category: str | None = 'ARRAY',
             parent: ArObject | None = None,
             admin_data: OldAdminData | None = None,
@@ -897,7 +898,7 @@ class ApplicationRecordDataType(ApplicationDataType):
             self,
             name: str,
             elements: 'list[ApplicationRecordElement] | None' = None,
-            variant_props: SwDataDefProps | Iterable[SwDataDefProps] | None = None,
+            variant_props: SwDataDefPropsContent | Iterable[SwDataDefPropsContent] | None = None,
             category: str | None = None,
             parent: ArObject | None = None,
             admin_data: OldAdminData | None = None,
@@ -1078,7 +1079,7 @@ class BufferComputation(ArObject):
         self.denominator = denominator
 
 
-class BufferProperties(ArObject):
+class BufferProperties(ArObject):  # TODO: Reimplemented - to be removed
     def __init__(
             self,
             buffer_computation: BufferComputation | None = None,

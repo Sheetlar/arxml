@@ -19,12 +19,12 @@ from autosar.parser.parser_base import (
     multiple_with_check,
     multiple,
     eval_children,
-    BasicParserWithoutParent,
+    BasicParser,
     ParserSelector,
 )
 
 
-class IPv4ConfigurationParser(BasicParserWithoutParent[IPv4Configuration]):
+class IPv4ConfigurationParser(BasicParser[IPv4Configuration]):
     _returned_type = IPv4Configuration
 
     @handler('ASSIGNMENT-PRIORITY')
@@ -62,7 +62,7 @@ class IPv4ConfigurationParser(BasicParserWithoutParent[IPv4Configuration]):
         return self._parse_int_node(xml_element)
 
 
-class IPv6ConfigurationParser(BasicParserWithoutParent[IPv6Configuration]):
+class IPv6ConfigurationParser(BasicParser[IPv6Configuration]):
     _returned_type = IPv6Configuration
 
     @handler('ASSIGNMENT-PRIORITY')
@@ -104,7 +104,7 @@ class IPv6ConfigurationParser(BasicParserWithoutParent[IPv6Configuration]):
         return self._parse_enum_node(xml_element, Ipv6AddressSourceEnum)
 
 
-class MacMulticastConfigurationParser(BasicParserWithoutParent[MacMulticastConfiguration]):
+class MacMulticastConfigurationParser(BasicParser[MacMulticastConfiguration]):
     _returned_type = MacMulticastConfiguration
 
     @handler('MAC-MULTICAST-GROUP-REF', required=True)

@@ -576,7 +576,7 @@ class DataTypeUnitsParser(ElementParser):
         return Unit(name, display_name, factor, offset, parent)
 
 
-class BufferPropertiesParser(ElementParser):
+class BufferPropertiesParser(ElementParser):  # TODO: Never used
     def get_supported_tags(self):
         return ['BUFFER-PROPERTIES']
 

@@ -1,7 +1,8 @@
 from typing import Iterable
 
 from autosar.model.compu import CompuScaleConstantContents, CompuConstTextContent
-from autosar.model.transformation import TransformationTechnology, EndToEndTransformationDescription
+from autosar.model.transformation.sets import TransformationTechnology
+from autosar.model.transformation.e2e import EndToEndTransformationDescription
 from autosar.model.datatype import (
     ApplicationDataType,
     ApplicationPrimitiveDataType,

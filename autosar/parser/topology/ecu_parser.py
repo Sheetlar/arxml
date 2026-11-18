@@ -20,7 +20,7 @@ from autosar.parser.parser_base import (
     multiple_with_check,
     multiple,
     ref_variation,
-    BasicParserWithoutParent,
+    BasicParser,
 )
 from autosar.parser.topology.connectors import CommunicationConnectorParserSelector
 from autosar.parser.topology.controllers import CommunicationControllerParserSelector
@@ -36,7 +36,7 @@ class EcuPartitionParser(IdentifiableParser[EcuPartition]):
         return self._parse_boolean_node(xml_element)
 
 
-class ClientIdRangeParser(BasicParserWithoutParent[ClientIdRange]):
+class ClientIdRangeParser(BasicParser[ClientIdRange]):
     _returned_type = ClientIdRange
 
     @handler('LOWER-LIMIT', required=True)
@@ -161,7 +161,7 @@ class EcuInstanceParser(IdentifiableParser[EcuInstance]):
     def _parse_tcp_ip_props(self, xml_element: Element) -> str | None:
         return self._parse_text_node(xml_element)
 
-    @handler('V-2X-SUPPORTED', param='v2x_supported')
+    @handler('V-2-X-SUPPORTED', param='v2x_supported')
     def _parse_v2x_supported(self, xml_element: Element) -> str | None:
         return self._parse_text_node(xml_element)
 

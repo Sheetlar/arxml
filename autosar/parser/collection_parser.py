@@ -1,45 +1,45 @@
 from xml.etree.ElementTree import Element
 
-from autosar.model.ar_object import ArObject
 from autosar.model.collection import Collection
-from autosar.parser.parser_base import ElementParser
+from autosar.model.enums import AutoCollectEnum
+from autosar.model.instance_ref import AnyInstanceRef
+from autosar.parser.identifiable import IdentifiableParser
+from autosar.parser.instance_ref_parser import AnyInstRefParser
+from autosar.parser.parser_base import handler, multiple_with_check
 
 
-class CollectionParser(ElementParser):
-    def get_supported_tags(self):
-        return ['COLLECTION']
+class CollectionParser(IdentifiableParser[Collection]):
+    _returned_type = Collection
 
-    def parse_element(self, xml_element: Element, parent: ArObject | None = None) -> Collection | None:
-        if xml_element.tag == 'COLLECTION':
-            return self._parse_collection(xml_element, parent)
-        return None
+    @handler('AUTO-COLLECT')
+    def _parse_auto_collect(self, xml_element: Element) -> AutoCollectEnum | None:
+        return self._parse_enum_node(xml_element, AutoCollectEnum)
 
-    def _parse_collection(self, xml_elem: Element, parent: ArObject | None) -> Collection | None:
-        role = None
-        refs = []
-        for child_elem in xml_elem.findall('./*'):
-            match child_elem.tag:
-                case tag if tag in self.common_tags:
-                    pass
-                case 'ELEMENT-ROLE':
-                    role = self._parse_text_node(child_elem)
-                case 'ELEMENT-REFS':
-                    for sub_elem in child_elem.findall('./*'):
-                        if sub_elem.tag != 'ELEMENT-REF':
-                            self._logger.error(f'Unexpected tag for {child_elem.tag}: {sub_elem.tag}')
-                        ref = self._parse_text_node(sub_elem)
-                        if ref is not None:
-                            refs.append(ref)
-                case _:
-                    self._logger.warning(f'Unexpected tag for {xml_elem.tag}: {child_elem.tag}')
-        common_args = self.parse_common_tags(xml_elem)
-        if common_args['name'] is None:
-            self._logger.warning(f'Cannot find <SHORT-NAME> in {xml_elem.tag}, skipping')
-            return None
-        collection = Collection(
-            element_role=role,
-            element_refs=refs,
-            parent=parent,
-            **common_args,
-        )
-        return collection
+    @handler('COLLECTION-SEMANTICS')
+    def _parse_collection_semantics(self, xml_element: Element) -> str | None:
+        return self._parse_text_node(xml_element)
+
+    @handler('ELEMENT-ROLE')
+    def _parse_element_role(self, xml_element: Element) -> str | None:
+        return self._parse_text_node(xml_element)
+
+    @handler('ELEMENT-REFS')
+    @multiple_with_check
+    def _parse_element(self, xml_element: Element) -> str | None:
+        return self._parse_text_node(xml_element)
+
+    @handler('SOURCE-ELEMENT-REFS')
+    @multiple_with_check
+    def _parse_source_element(self, xml_element: Element) -> str | None:
+        return self._parse_text_node(xml_element)
+
+    @handler('COLLECTED-INSTANCE-IREF', param='collected_instance')
+    def _parse_collected_instance(self, xml_element: Element) -> AnyInstanceRef | None:
+        parser = AnyInstRefParser()
+        return parser.parse_element(xml_element)
+
+    @handler('SOURCE-INSTANCE-IREFS', param='source_instances')
+    @multiple_with_check
+    def _parse_source_instance(self, xml_element: Element) -> AnyInstanceRef | None:
+        parser = AnyInstRefParser()
+        return parser.parse_element(xml_element)

@@ -53,7 +53,7 @@ class CompuParser(BaseParser):
                     desc, _ = self.parse_desc_direct(child_elem)
                 case 'COMPU-INVERSE-VALUE':
                     inverse = self.parse_compu_const(xml_elem)
-                case 'A-2L-DISPLAY-TEXT':
+                case 'A-2-L-DISPLAY-TEXT':
                     a2l = self._parse_text_node(child_elem)
                 case _:
                     self.log_unexpected(xml_elem, child_elem)

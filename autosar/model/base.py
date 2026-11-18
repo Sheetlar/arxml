@@ -6,7 +6,6 @@ from xml.etree.ElementTree import Element
 
 from autosar.model.admin_data import AdminData
 from autosar.model.ar_object import ArObject, ArObjectWithParent
-from autosar.model.atp_variation import Variants
 from autosar.model.enums import IntervalTypeEnum, DataFilterTypeEnum
 from autosar.model.languages_enum import LEnum
 
@@ -343,103 +342,6 @@ def find_unique_name_in_list(element_list: list['ArElement'], base_name: str):
         return '_'.join([base_name, str(highest_index + 1)])
     else:
         return base_name
-
-
-class SwDataDefProps(ArObject):
-    @staticmethod
-    def tag(*_):
-        return 'SW-DATA-DEF-PROPS-CONDITIONAL'
-
-    def __init__(
-            self,
-            base_type_ref: str | None = None,
-            implementation_type_ref: str | None = None,
-            sw_address_method_ref: str | None = None,
-            sw_calibration_access: str | None = None,
-            sw_impl_policy: str | None = None,
-            sw_pointer_target_props: 'SwPointerTargetProps | None' = None,
-            sw_record_layout_ref: str | None = None,
-            compu_method_ref: str | None = None,
-            data_constraint_ref: str | None = None,
-            unit_ref: str | None = None,
-            parent: ArObject | None = None,
-            *args, **kwargs,  # TODO: More params
-    ):
-        super().__init__(*args, **kwargs)
-        self.base_type_ref = base_type_ref
-        self.sw_calibration_access = sw_calibration_access
-        self.sw_address_method_ref = sw_address_method_ref
-        self.sw_record_layout_ref = sw_record_layout_ref
-        self.compu_method_ref = compu_method_ref
-        self.data_constraint_ref = data_constraint_ref
-        self.implementation_type_ref = implementation_type_ref
-        self.sw_pointer_target_props = sw_pointer_target_props
-        self.unit_ref = unit_ref
-        self._sw_impl_policy = sw_impl_policy
-        self.parent = parent
-
-    @property
-    def sw_impl_policy(self):
-        return self._sw_impl_policy
-
-    @sw_impl_policy.setter
-    def sw_impl_policy(self, value: str):
-        if value is None:
-            self._sw_impl_policy = None
-        else:
-            uc_value = value.upper()
-            enum_values = ["CONST", "FIXED", "MEASUREMENT-POINT", "QUEUED", "STANDARD"]
-            if uc_value in enum_values:
-                self._sw_impl_policy = uc_value
-            else:
-                raise ValueError(f'invalid swImplPolicy value: {value}')
-
-    def has_any_prop(self):
-        """
-        Returns True if any internal attribute is not None, else False.
-        The check excludes the parent attribute.
-        """
-        retval = False
-        attr_names = [
-            'base_type_ref',
-            'sw_calibration_access',
-            'sw_address_method_ref',
-            'compu_method_ref',
-            'data_constraint_ref',
-            'implementation_type_ref',
-            'sw_pointer_target_props',
-            'unit_ref',
-            'sw_impl_policy'
-        ]
-        for name in attr_names:
-            if getattr(self, name) is not None:
-                retval = True
-                break
-        return retval
-
-
-class SwDataDefPropsVariants(Variants[SwDataDefProps]):
-    pass
-
-
-class SwPointerTargetProps:
-    """
-    (AUTOSAR 4)
-    Implements <SW-POINTER-TARGET-PROPS>
-    """
-
-    @staticmethod
-    def tag(*_):
-        return 'SW-POINTER-TARGET-PROPS'
-
-    def __init__(self, target_category: str | None = None, variants: SwDataDefProps | Iterable | None = None):
-        self.target_category = target_category
-        if variants is None:
-            self.variants = []
-        elif isinstance(variants, SwDataDefProps):
-            self.variants = [variants]
-        else:
-            self.variants = list(variants)
 
 
 class SymbolProps:

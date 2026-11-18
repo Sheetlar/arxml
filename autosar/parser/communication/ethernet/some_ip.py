@@ -14,7 +14,7 @@ from autosar.parser.parser_base import (
     eval_children,
     ref_variation,
     single_subclass_aggr,
-    BasicParserWithoutParent,
+    BasicParser,
     ParserSelector,
 )
 

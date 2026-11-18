@@ -1,5 +1,4 @@
-from dataclasses import dataclass, field
-from typing import TypeVar
+from typing import TypeVar, Iterable
 
 from autosar.model.ar_object import ArObject
 from autosar.model.element import Element
@@ -19,71 +18,134 @@ class AbstractRuleBasedValueSpecification(AbstractValueSpecification):
     """Abstract"""
 
 
-@dataclass(repr=False)
 class ApplicationRuleBasedValueSpecification(AbstractRuleBasedValueSpecification):
-    category: str
-    sw_axis_cont: list[object] = field(default_factory=list)  # TODO: Implement
-    sw_value_cont: object | None = None  # TODO: Implement
+    def __init__(
+            self,
+            category: str,
+            sw_axis_cont: Iterable[object] | None = None,  # TODO: Implement
+            sw_value_cont: object | None = None,  # TODO: Implement
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.category = category
+        self.sw_axis_cont = self.eval_children(sw_axis_cont)
+        self.sw_value_cont = sw_value_cont
 
 
-@dataclass(repr=False)
 class CompositeRuleBasedValueSpecification(AbstractRuleBasedValueSpecification):
-    rule: str
-    argument: object  # TODO: Implement
-    compoundPrimitiveArgument: list[object] = field(default_factory=list)  # TODO: Implement
-    maxSizeToFill: int | None = None
+    def __init__(
+            self,
+            rule: str,
+            argument: object,  # TODO: Implement
+            compound_primitive_argument: Iterable[object] | None = None,  # TODO: Implement
+            max_size_to_fill: int | None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.rule = rule
+        self.argument = argument
+        self.compound_primitive_argument = self.eval_children(compound_primitive_argument)
+        self.max_size_to_fill = max_size_to_fill
 
 
-@dataclass(repr=False)
 class NumericalRuleBasedValueSpecification(AbstractRuleBasedValueSpecification):
-    rule_based_values: object  # TODO: Implement
+    def __init__(
+            self,
+            rule_based_values: object,  # TODO: Implement
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.rule_based_values = rule_based_values
 
 
-@dataclass(repr=False)
 class ApplicationValueSpecification(AbstractValueSpecification):
-    category: str
-    sw_axis_cont: list[object] = field(default_factory=list)  # TODO: Implement
-    sw_value_cont: object | None = None  # TODO: Implement
+    def __init__(
+            self,
+            category: str,
+            sw_axis_cont: Iterable[object] | None = None,  # TODO: Implement
+            sw_value_cont: object | None = None,  # TODO: Implement
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.category = category
+        self.sw_axis_cont = self.eval_children(sw_axis_cont)
+        self.sw_value_cont = sw_value_cont
 
 
 class CompositeValueSpecification(AbstractValueSpecification):
     """Abstract"""
 
 
-@dataclass(repr=False)
 class ArrayValueSpecification(CompositeValueSpecification):
-    elements: list['ValueSpecification'] = field(default_factory=list)  # type: ignore
-    intended_partial_initialization_count: int | None = None
+    def __init__(
+            self,
+            elements: Iterable['ValueSpecification'] | None = None,  # type: ignore
+            intended_partial_initialization_count: int | None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.elements = self.eval_children(elements)
+        self.intended_partial_initialization_count = intended_partial_initialization_count
 
 
-@dataclass(repr=False)
 class RecordValueSpecification(CompositeValueSpecification):
-    fields: list['ValueSpecification'] = field(default_factory=list)  # type: ignore
+    def __init__(
+            self,
+            fields: Iterable['ValueSpecification'] | None = None,  # type: ignore
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.fields = self.eval_children(fields)
 
 
-@dataclass(repr=False)
 class ConstantReference(AbstractValueSpecification):
-    constant_ref: str
+    def __init__(
+            self,
+            constant_ref: str,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.constant_ref = constant_ref
 
 
-@dataclass(repr=False)
 class NotAvailableValueSpecification(AbstractValueSpecification):
-    default_pattern: int | None = None
+    def __init__(
+            self,
+            default_pattern: int | None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.default_pattern = default_pattern
 
 
-@dataclass(repr=False)
 class NumericalValueSpecification(AbstractValueSpecification):
-    value: int | float
+    def __init__(
+            self,
+            value: int | float,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.value = value
 
 
-@dataclass(repr=False)
 class ReferenceValueSpecification(AbstractValueSpecification):
-    reference_value_ref: str
+    def __init__(
+            self,
+            reference_value_ref: str,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.reference_value_ref = reference_value_ref
 
 
-@dataclass(repr=False)
 class TextValueSpecification(AbstractValueSpecification):
-    value: str
+    def __init__(
+            self,
+            value: str,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.value = value
 
 
 ValueSpecification = TypeVar('ValueSpecification', bound=AbstractValueSpecification)

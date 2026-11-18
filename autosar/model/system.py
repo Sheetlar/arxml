@@ -7,80 +7,12 @@ from autosar.model.ar_object import ArObject
 from autosar.model.base import Identifiable
 from autosar.model.element import Element
 from autosar.model.enums import ByteOrderEnum, TlsVersionEnum, MappingDirectionEnum
-
-
-class AtpInstanceRef(ArObject):
-    pass
-
-
-class ComponentInSystemInstanceRef(AtpInstanceRef):
-    def __init__(
-            self,
-            target_component_ref: str,
-            context_composition_ref: str | None = None,
-            context_component_refs: Iterable[str] | None = None,
-            base_ref: str | None = None,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.target_component_ref = target_component_ref
-        self.context_composition_ref = context_composition_ref
-        self.context_component_refs = self.eval_children(context_component_refs)
-        self.base_ref = base_ref
-
-
-class OperationInSystemInstanceRef(AtpInstanceRef):
-    def __init__(
-            self,
-            context_port_ref: str,
-            target_operation_ref: str,
-            context_composition_ref: str | None = None,
-            context_component_refs: Iterable[str] | None = None,
-            base_ref: str | None = None,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.context_port_ref = context_port_ref
-        self.target_operation_ref = target_operation_ref
-        self.context_composition_ref = context_composition_ref
-        self.context_component_refs = self.eval_children(context_component_refs)
-        self.base_ref = base_ref
-
-
-class VariableDataPrototypeInSystemInstanceRef(AtpInstanceRef):
-    def __init__(
-            self,
-            context_port_ref: str,
-            target_data_prototype_ref: str | None = None,
-            context_composition_ref: str | None = None,
-            context_component_refs: Iterable[str] | None = None,
-            base_ref: str | None = None,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.context_port_ref = context_port_ref
-        self.target_data_prototype_ref = target_data_prototype_ref
-        self.context_composition_ref = context_composition_ref
-        self.context_component_refs = self.eval_children(context_component_refs)
-        self.base_ref = base_ref
-
-
-class TriggerInSystemInstanceRef(AtpInstanceRef):
-    def __init__(
-            self,
-            context_port_ref: str,
-            target_trigger_ref: str,
-            context_composition_ref: str | None = None,
-            context_component_refs: Iterable[str] | None = None,
-            base_ref: str | None = None,
-            *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.context_port_ref = context_port_ref
-        self.target_trigger_ref = target_trigger_ref
-        self.context_composition_ref = context_composition_ref
-        self.context_component_refs = self.eval_children(context_component_refs)
-        self.base_ref = base_ref
+from autosar.model.instance_ref import (
+    ComponentInSystemInstanceRef,
+    OperationInSystemInstanceRef,
+    VariableDataPrototypeInSystemInstanceRef,
+    TriggerInSystemInstanceRef,
+)
 
 
 @dataclass

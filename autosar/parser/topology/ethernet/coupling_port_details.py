@@ -16,8 +16,7 @@ from autosar.parser.parser_base import (
     multiple_with_check,
     multiple,
     eval_children,
-    BasicParserWithParent,
-    BasicParserWithoutParent,
+    BasicParser,
 )
 from autosar.parser.topology.ethernet.coupling_port_structural_element import CouplingPortStructuralElementParserSelector
 
@@ -55,7 +54,7 @@ class CouplingPortTrafficClassAssignmentParser(
         return self._parse_int_node(xml_element)
 
 
-class GlobalTimeCouplingPortPropsParser(BasicParserWithoutParent[GlobalTimeCouplingPortProps]):
+class GlobalTimeCouplingPortPropsParser(BasicParser[GlobalTimeCouplingPortProps]):
     _returned_type = GlobalTimeCouplingPortProps
 
     @handler('PROPAGATION-DELAY', required=True)
@@ -65,7 +64,7 @@ class GlobalTimeCouplingPortPropsParser(BasicParserWithoutParent[GlobalTimeCoupl
         return delay
 
 
-class CouplingPortRatePolicyParser(BasicParserWithoutParent[CouplingPortRatePolicy]):
+class CouplingPortRatePolicyParser(BasicParser[CouplingPortRatePolicy]):
     _returned_type = CouplingPortRatePolicy
 
     @handler('DATA-LENGTH')
@@ -92,7 +91,7 @@ class CouplingPortRatePolicyParser(BasicParserWithoutParent[CouplingPortRatePoli
 
 
 class EthernetVlanTranslationTableParser(
-    BasicParserWithoutParent[EthernetVlanTranslationTable]
+    BasicParser[EthernetVlanTranslationTable]
 ):
     _returned_type = EthernetVlanTranslationTable
 
@@ -107,7 +106,7 @@ class EthernetVlanTranslationTableParser(
         return self._parse_int_node(xml_element)
 
 
-class CouplingPortDetailsParser(BasicParserWithParent[CouplingPortDetails]):
+class CouplingPortDetailsParser(BasicParser[CouplingPortDetails]):
     _returned_type = CouplingPortDetails
 
     @handler('COUPLING-PORT-STRUCTURAL-ELEMENTS')

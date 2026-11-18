@@ -1,7 +1,8 @@
 from typing import Any
 
 from autosar.model.ar_object import ArObject
-from autosar.model.base import OldAdminData, SwDataDefProps, create_admin_data, Identifiable
+from autosar.model.base import OldAdminData, create_admin_data, Identifiable
+from autosar.model.sw_def_props import SwDataDefPropsContent
 
 
 class Element(Identifiable):
@@ -97,8 +98,8 @@ class DataElement(Element):
             else:
                 raise ValueError(f'Invalid swImplPolicy value: {value}')
 
-    def set_props(self, props: SwDataDefProps):
-        if isinstance(props, SwDataDefProps):
+    def set_props(self, props: SwDataDefPropsContent):
+        if isinstance(props, SwDataDefPropsContent):
             self.sw_calibration_access = props.sw_calibration_access
             self.sw_address_method_ref = props.sw_address_method_ref
             self.sw_impl_policy = props.sw_impl_policy

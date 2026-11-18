@@ -35,12 +35,24 @@ from autosar.parser.communication.secure_comm import (
     CryptoServiceKeyParser,
     CryptoServiceQueueParser,
 )
+from autosar.parser.communication.signal import (
+    ISignalParser,
+    ISignalGroupParser,
+    SystemSignalParser,
+    SystemSignalGroupParser,
+)
+from autosar.parser.collection_parser import CollectionParser
 from autosar.parser.parser_base import ParserSelector
 from autosar.parser.system.system_parser import SystemParser
 from autosar.parser.topology.clusters import EthernetClusterParser, CanClusterParser
 from autosar.parser.topology.ecu_parser import EcuInstanceParser
 from autosar.parser.topology.gateway import GatewayParser
 from autosar.parser.topology.tcp_ip_props import EthTcpIpPropsParser
+from autosar.parser.transformation import (
+    DataTransformationSetParser,
+    TransformationPropsSetParser,
+    TlvDataIdDefinitionSetParser,
+)
 from autosar.parser.value_spec_parser import ConstantSpecificationParser
 
 E = TypeVar('E', bound=ArElement)
@@ -70,7 +82,7 @@ class ElementParserSelector(ParserSelector[E]):
         'GENERAL-PURPOSE-I-PDU': GeneralPurposeIPduParser,
         'I-SIGNAL-I-PDU': ISignalIPduParser,
         'J-1939-DCM-I-PDU': J1939DcmIPduParser,
-        'J-1939--I-PDU': J1939ProtectedIPduParser,
+        'J-1939-I-PDU': J1939ProtectedIPduParser,
         'MULTIPLEXED-I-PDU': MultiplexedIPduParser,
         'N-PDU': NPduParser,
         'SECURED-I-PDU': SecuredIPduParser,
@@ -78,9 +90,17 @@ class ElementParserSelector(ParserSelector[E]):
         'I-SIGNAL-I-PDU-GROUP': ISignalIPduGroupParser,
         'PDUR-I-PDU-GROUP': PdurIPduGroupParser,
         'SOCKET-CONNECTION-IPDU-IDENTIFIER-SET': SocketConnectionIPduIdentifierSetParser,
+        'I-SIGNAL': ISignalParser,
+        'I-SIGNAL-GROUP': ISignalGroupParser,
+        'SYSTEM-SIGNAL': SystemSignalParser,
+        'SYSTEM-SIGNAL-GROUP': SystemSignalGroupParser,
         'SECURE-COMMUNICATION-PROPS-SET-PARSER': SecureCommunicationPropsSetParser,
         'CRYPTO-SERVICE-PRIMITIVE-PARSER': CryptoServicePrimitiveParser,
         'CRYPTO-SERVICE-KEY-PARSER': CryptoServiceKeyParser,
         'CRYPTO-SERVICE-QUEUE-PARSER': CryptoServiceQueueParser,
         'CONSTANT-SPECIFICATION': ConstantSpecificationParser,
+        'DATA-TRANSFORMATION-SET': DataTransformationSetParser,
+        'TRANSFORMATION-PROPS-SET': TransformationPropsSetParser,
+        'TLV-DATA-ID-DEFINITION-SET': TlvDataIdDefinitionSetParser,
+        'COLLECTION': CollectionParser,
     }

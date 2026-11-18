@@ -5,8 +5,8 @@ from autosar.model.system import (
     AnyCryptoServiceMapping,
     AnyDataMapping,
     SwcToEcuMapping,
-    ComponentInSystemInstanceRef,
 )
+from autosar.model.instance_ref import ComponentInSystemInstanceRef
 from autosar.parser.identifiable import IdentifiableParser
 from autosar.parser.instance_ref_parser import ComponentInSystemInstRefParser
 from autosar.parser.parser_base import handler, not_implemented_handler, multiple, multiple_with_check, eval_children

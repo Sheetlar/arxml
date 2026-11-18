@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import TypeAlias
 
-from autosar.model.transformation import TransformationTechnology
+from autosar.model.transformation.sets import TransformationTechnology
 from autosar.model.communication.signal import SystemSignal
 
 Event: TypeAlias = tuple[SystemSignal, tuple[TransformationTechnology, ...], int]

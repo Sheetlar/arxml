@@ -12,7 +12,7 @@ from autosar.model.topology.can import (
 )
 from autosar.parser.parser_base import (
     handler,
-    BasicParserWithoutParent,
+    BasicParser,
     ParserSelector,
 )
 
@@ -20,7 +20,7 @@ A = TypeVar('A', bound=AbstractCanCommunicationControllerAttributes)
 
 
 class CanControllerFdConfigurationParser(
-    BasicParserWithoutParent[CanControllerFdConfiguration]
+    BasicParser[CanControllerFdConfiguration]
 ):
     _returned_type = CanControllerFdConfiguration
 
@@ -54,7 +54,7 @@ class CanControllerFdConfigurationParser(
 
 
 class CanControllerFdConfigurationRequirementsParser(
-    BasicParserWithoutParent[CanControllerFdConfigurationRequirements]
+    BasicParser[CanControllerFdConfigurationRequirements]
 ):
     _returned_type = CanControllerFdConfigurationRequirements
 
@@ -100,7 +100,7 @@ class CanControllerFdConfigurationRequirementsParser(
 
 
 class CanControllerXlConfigurationParser(
-    BasicParserWithoutParent[CanControllerXlConfiguration]
+    BasicParser[CanControllerXlConfiguration]
 ):
     _returned_type = CanControllerXlConfiguration
 
@@ -158,7 +158,7 @@ class CanControllerXlConfigurationParser(
 
 
 class CanControllerXlConfigurationRequirementsParser(
-    BasicParserWithoutParent[CanControllerXlConfigurationRequirements]
+    BasicParser[CanControllerXlConfigurationRequirements]
 ):
     _returned_type = CanControllerXlConfigurationRequirements
 
@@ -227,7 +227,7 @@ class CanControllerXlConfigurationRequirementsParser(
         return self._parse_float_node(xml_element)
 
 
-class AbstractCanCommunicationControllerAttributesParser(BasicParserWithoutParent[A]):
+class AbstractCanCommunicationControllerAttributesParser(BasicParser[A]):
     @handler('CAN-CONTROLLER-FD-ATTRIBUTES')
     def _parse_(self, xml_element: Element) -> CanControllerFdConfiguration | None:
         parser = CanControllerFdConfigurationParser()

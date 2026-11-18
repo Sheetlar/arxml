@@ -2,10 +2,10 @@ from xml.etree.ElementTree import Element
 
 from autosar.model.base import DataFilter
 from autosar.model.enums import DataFilterTypeEnum
-from autosar.parser.parser_base import handler, BasicParserWithoutParent
+from autosar.parser.parser_base import handler, BasicParser
 
 
-class DataFilterParser(BasicParserWithoutParent[DataFilter]):
+class DataFilterParser(BasicParser[DataFilter]):
     _returned_type = DataFilter
 
     @handler('DATA-FILTER-TYPE')

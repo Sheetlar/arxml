@@ -24,13 +24,13 @@ from autosar.parser.parser_base import (
     handler,
     multiple_with_check,
     ref_variation,
-    BasicParserWithoutParent,
+    BasicParser,
 )
 from autosar.parser.topology.ethernet.coupling_port_details import CouplingPortDetailsParser
 from autosar.parser.topology.ethernet.vlan import VlanMembershipParser, MacAddressVlanMembershipParser
 
 
-class MacSecLocalKayPropsParser(BasicParserWithoutParent[MacSecLocalKayProps]):
+class MacSecLocalKayPropsParser(BasicParser[MacSecLocalKayProps]):
     _returned_type = MacSecLocalKayProps
 
     @handler('DESTINATION-MAC-ADDRESS')
@@ -59,7 +59,7 @@ class MacSecLocalKayPropsParser(BasicParserWithoutParent[MacSecLocalKayProps]):
         return self._parse_text_node(xml_element)
 
 
-class MacSecPropsParser(BasicParserWithoutParent[MacSecProps]):
+class MacSecPropsParser(BasicParser[MacSecProps]):
     _returned_type = MacSecProps
 
     @handler('AUTO-START')
@@ -84,7 +84,7 @@ class MacSecPropsParser(BasicParserWithoutParent[MacSecProps]):
         return self._parse_float_node(xml_element)
 
 
-class PlcaPropsParser(BasicParserWithoutParent[PlcaProps]):
+class PlcaPropsParser(BasicParser[PlcaProps]):
     _returned_type = PlcaProps
 
     @handler('PLCA-LOCAL-NODE-ID')
@@ -174,14 +174,14 @@ class CouplingPortParser(IdentifiableParser[CouplingPort]):
         return self._parse_text_node(xml_element)
 
 
-class CouplingPortConnectionParser(BasicParserWithoutParent[CouplingPortConnection]):
+class CouplingPortConnectionParser(BasicParser[CouplingPortConnection]):
     _returned_type = CouplingPortConnection
 
-    @handler('FIRST-PORT-REF')
+    @handler('FIRST-PORT-REF', required=True)  # TODO: Is this really required?
     def _parse_first_port(self, xml_element: Element) -> str | None:
         return self._parse_text_node(xml_element)
 
-    @handler('SECOND-PORT-REF')
+    @handler('SECOND-PORT-REF', required=True)  # TODO: Is this really required?
     def _parse_second_port(self, xml_element: Element) -> str | None:
         return self._parse_text_node(xml_element)
 

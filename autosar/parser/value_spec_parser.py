@@ -16,12 +16,12 @@ from autosar.parser.parser_base import (
     handler,
     multiple,
     single_subclass_aggr,
-    BasicParserWithoutParent,
+    BasicParser,
     ParserSelector,
 )
 
 
-class ValueSpecificationParser(BasicParserWithoutParent[ValueSpecification]):
+class ValueSpecificationParser(BasicParser[ValueSpecification]):
     @handler('SHORT-LABEL')
     def _parse_short_label(self, xml_element: Element) -> str | None:
         return self._parse_text_node(xml_element)

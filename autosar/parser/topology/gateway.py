@@ -15,11 +15,11 @@ from autosar.parser.parser_base import (
     not_implemented_handler,
     multiple_with_check,
     eval_children,
-    BasicParserWithoutParent,
+    BasicParser,
 )
 
 
-class DefaultValueElementParser(BasicParserWithoutParent[DefaultValueElement]):
+class DefaultValueElementParser(BasicParser[DefaultValueElement]):
     _returned_type = DefaultValueElement
 
     @handler('ELEMENT-BYTE-VALUE', required=True)
@@ -35,7 +35,7 @@ class DefaultValueElementParser(BasicParserWithoutParent[DefaultValueElement]):
         return position
 
 
-class PduMappingDefaultValueParser(BasicParserWithoutParent[PduMappingDefaultValue]):
+class PduMappingDefaultValueParser(BasicParser[PduMappingDefaultValue]):
     _returned_type = PduMappingDefaultValue
 
     @handler('DEFAULT-VALUE-ELEMENTS', required=True)
@@ -46,7 +46,7 @@ class PduMappingDefaultValueParser(BasicParserWithoutParent[PduMappingDefaultVal
         return parser.parse_element(xml_element)
 
 
-class TargetIPduRefParser(BasicParserWithoutParent[TargetIPduRef]):
+class TargetIPduRefParser(BasicParser[TargetIPduRef]):
     _returned_type = TargetIPduRef
 
     @handler('TARGET-I-PDU-REF', required=True)
@@ -61,7 +61,7 @@ class TargetIPduRefParser(BasicParserWithoutParent[TargetIPduRef]):
         return parser.parse_element(xml_element)
 
 
-class FrameMappingParser(BasicParserWithoutParent[FrameMapping]):
+class FrameMappingParser(BasicParser[FrameMapping]):
     _returned_type = FrameMapping
 
     @handler('SOURCE-FRAME-REF', required=True)
@@ -81,7 +81,7 @@ class FrameMappingParser(BasicParserWithoutParent[FrameMapping]):
         ...
 
 
-class IPduMappingParser(BasicParserWithoutParent[IPduMapping]):
+class IPduMappingParser(BasicParser[IPduMapping]):
     _returned_type = IPduMapping
 
     @handler('SOURCE-I-PDU-REF', required=True)
@@ -110,7 +110,7 @@ class IPduMappingParser(BasicParserWithoutParent[IPduMapping]):
         ...
 
 
-class ISignalMappingParser(BasicParserWithoutParent[ISignalMapping]):
+class ISignalMappingParser(BasicParser[ISignalMapping]):
     _returned_type = ISignalMapping
 
     @handler('SOURCE-SIGNAL-REF', required=True)

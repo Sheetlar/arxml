@@ -49,7 +49,7 @@ from autosar.parser.parser_base import (
     multiple_with_check,
     eval_children,
     ref_variation,
-    BasicParserWithoutParent,
+    BasicParser,
 )
 
 MP = TypeVar('MP', bound=MultiplexedPart)
@@ -85,7 +85,7 @@ class ISignalToIPduMappingParser(IdentifiableParser[ISignalToIPduMapping]):
         return self._parse_int_node(xml_element)
 
 
-class SecureCommunicationPropsParser(BasicParserWithoutParent[SecureCommunicationProps]):
+class SecureCommunicationPropsParser(BasicParser[SecureCommunicationProps]):
     _returned_type = SecureCommunicationProps
 
     @handler('DATA-ID', required=True)
@@ -135,11 +135,11 @@ class SecureCommunicationPropsParser(BasicParserWithoutParent[SecureCommunicatio
         return self._parse_int_node(xml_element)
 
 
-class ContainedIPduPropsParser(BasicParserWithoutParent[ContainedIPduProps]):
+class ContainedIPduPropsParser(BasicParser[ContainedIPduProps]):
     _returned_type = ContainedIPduProps
 
     @handler('COLLECTION-SEMANTICS', required=True)
-    def _parse_collection_semantics(self, xml_element: Element) -> ContainedIPduCollectionSemanticsEnum | None:
+    def _parse_collection_semantics(self, xml_element: Element) -> ContainedIPduCollectionSemanticsEnum:
         if (cs := self._parse_enum_node(xml_element, ContainedIPduCollectionSemanticsEnum)) is None:
             raise ValueError
         return cs
@@ -156,7 +156,7 @@ class ContainedIPduPropsParser(BasicParserWithoutParent[ContainedIPduProps]):
     def _parse_header_id_short_header(self, xml_element: Element) -> int | None:
         return self._parse_int_node(xml_element)
 
-    @handler('J-1939REQUESTABLE')
+    @handler('J-1939-REQUESTABLE')
     def _parse_j1939_requestable(self, xml_element: Element) -> bool | None:
         return self._parse_boolean_node(xml_element)
 
@@ -181,11 +181,11 @@ class ContainedIPduPropsParser(BasicParserWithoutParent[ContainedIPduProps]):
         return self._parse_int_node(xml_element)
 
 
-class SegmentPositionParser(BasicParserWithoutParent[SegmentPosition]):
+class SegmentPositionParser(BasicParser[SegmentPosition]):
     _returned_type = SegmentPosition
 
     @handler('SEGMENT-BYTE-ORDER', required=True)
-    def _parse_segment_byte_order(self, xml_element: Element) -> ByteOrderEnum | None:
+    def _parse_segment_byte_order(self, xml_element: Element) -> ByteOrderEnum:
         if (bo := self._parse_enum_node(xml_element, ByteOrderEnum)) is None:
             raise ValueError
         return bo
@@ -203,7 +203,7 @@ class SegmentPositionParser(BasicParserWithoutParent[SegmentPosition]):
         return pos
 
 
-class DynamicPartAlternativeParser(BasicParserWithoutParent[DynamicPartAlternative]):
+class DynamicPartAlternativeParser(BasicParser[DynamicPartAlternative]):
     _returned_type = DynamicPartAlternative
 
     @handler('I-PDU-REF', required=True)
@@ -225,7 +225,7 @@ class DynamicPartAlternativeParser(BasicParserWithoutParent[DynamicPartAlternati
         return code
 
 
-class MultiplexedPartParser(BasicParserWithoutParent[MP]):
+class MultiplexedPartParser(BasicParser[MP]):
     @handler('SEGMENT-POSITIONS', required=True)
     @eval_children
     @multiple_with_check
@@ -312,13 +312,13 @@ class ContainerIPduParser(IPduParser[ContainerIPdu]):
     _returned_type = ContainerIPdu
 
     @handler('HEADER-TYPE', required=True)
-    def _parse_header_type(self, xml_element: Element) -> ContainerIPduHeaderTypeEnum | None:
+    def _parse_header_type(self, xml_element: Element) -> ContainerIPduHeaderTypeEnum:
         if (header := self._parse_enum_node(xml_element, ContainerIPduHeaderTypeEnum)) is None:
             raise ValueError
         return header
 
     @handler('RX-ACCEPT-CONTAINED-I-PDU', required=True)
-    def _parse_rx_accept_contained_i_pdu(self, xml_element: Element) -> RxAcceptContainedIPduEnum | None:
+    def _parse_rx_accept_contained_i_pdu(self, xml_element: Element) -> RxAcceptContainedIPduEnum:
         if (accept := self._parse_enum_node(xml_element, RxAcceptContainedIPduEnum)) is None:
             raise ValueError
         return accept
@@ -363,7 +363,7 @@ class DcmIPduParser(IPduParser[DcmIPdu]):
     _returned_type = DcmIPdu
 
     @handler('DIAG-PDU-TYPE', required=True)
-    def _parse_diag_pdu_type(self, xml_element: Element) -> DiagPduType | None:
+    def _parse_diag_pdu_type(self, xml_element: Element) -> DiagPduType:
         if (t := self._parse_enum_node(xml_element, DiagPduType)) is None:
             raise ValueError
         return t
@@ -377,13 +377,13 @@ class ISignalIPduParser(IPduParser[ISignalIPdu]):
     _returned_type = ISignalIPdu
 
     @handler('I-SIGNAL-TO-PDU-MAPPINGS')
-    @multiple_with_check
+    @multiple_with_check(expected_name='I-SIGNAL-TO-I-PDU-MAPPING')
     def _parse_i_signal_to_pdu_mapping(self, xml_element: Element) -> ISignalToIPduMapping | None:
         parser = ISignalToIPduMappingParser()
         return parser.parse_element(xml_element)
 
     @handler('I-PDU-TIMING-SPECIFICATIONS')
-    @multiple_with_check
+    @multiple_with_check(expected_name='I-PDU-TIMING')
     def _parse_i_pdu_timing_specification(self, xml_element: Element) -> IPduTiming | None:
         parser = IPduTimingParser()
         return parser.parse_element(xml_element)
@@ -503,7 +503,7 @@ class ISignalIPduGroupParser(IdentifiableParser[ISignalIPduGroup]):
     _returned_type = ISignalIPduGroup
 
     @handler('COMMUNICATION-DIRECTION', required=True)
-    def _parse_communication_direction(self, xml_element: Element) -> CommunicationDirectionType | None:
+    def _parse_communication_direction(self, xml_element: Element) -> CommunicationDirectionType:
         if (cd := self._parse_enum_node(xml_element, CommunicationDirectionType)) is None:
             raise ValueError
         return cd

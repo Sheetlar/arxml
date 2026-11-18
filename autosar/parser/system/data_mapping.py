@@ -8,19 +8,32 @@ from autosar.model.system import (
     SenderReceiverToSignalGroupMapping,
     SenderReceiverToSignalMapping,
     TriggerToSignalMapping,
+    AnySenderRecCompositeTypeMapping,
+    TextTableMapping,
+)
+from autosar.model.instance_ref import (
     OperationInSystemInstanceRef,
     VariableDataPrototypeInSystemInstanceRef,
     TriggerInSystemInstanceRef,
-    AnySenderRecCompositeTypeMapping, TextTableMapping,
 )
-from autosar.parser.instance_ref_parser import OperationInSystemInstRefParser, VariableDataPrototypeInSystemInstRefParser, TriggerInSystemInstRefParser
-from autosar.parser.parser_base import ParserSelector, BasicParserWithoutParent, not_implemented_handler, handler, single_subclass_aggr
+from autosar.parser.instance_ref_parser import (
+    OperationInSystemInstRefParser,
+    VariableDataPrototypeInSystemInstRefParser,
+    TriggerInSystemInstRefParser,
+)
+from autosar.parser.parser_base import (
+    handler,
+    not_implemented_handler,
+    single_subclass_aggr,
+    BasicParser,
+    ParserSelector,
+)
 from autosar.parser.system.type_mapping import SenderRecCompositeTypeMappingParserSelector, TextTableMappingParser
 
 DM = TypeVar('DM', bound=DataMapping)
 
 
-class DataMappingParser(BasicParserWithoutParent[DM]):
+class DataMappingParser(BasicParser[DM]):
     @not_implemented_handler('INTRODUCTION')
     def _parse_introduction(self, xml_element: Element):
         ...

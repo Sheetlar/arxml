@@ -12,9 +12,6 @@ from autosar.model.base import (
     OldAdminData,
     SpecialDataGroup,
     SpecialData,
-    SwDataDefProps,
-    SwDataDefPropsVariants,
-    SwPointerTargetProps,
     SymbolProps,
     DataFilter,
     Limit,
@@ -22,6 +19,7 @@ from autosar.model.base import (
     FloatLimit,
     LangStr,
 )
+from autosar.model.sw_def_props import SwDataDefPropsContent, SwDataDefProps, SwPointerTargetProps
 from autosar.model.value_spec import NumericalValueSpecification, TextValueSpecification, ValueSpecification
 from autosar.model.element import DataElement
 from autosar.model.enums import SomeEnum, IntervalTypeEnum
@@ -328,7 +326,7 @@ class BaseParser(HasLogger):
             return None
         return value
 
-    def parse_sw_data_def_props(self, xml_root: Element, parent: ArObject | None = None) -> SwDataDefPropsVariants | None:
+    def parse_sw_data_def_props(self, xml_root: Element, parent: ArObject | None = None) -> SwDataDefProps | None:
         variants_elem = xml_root.find('SW-DATA-DEF-PROPS-VARIANTS')
         if variants_elem is None:
             return None
@@ -342,13 +340,13 @@ class BaseParser(HasLogger):
             variants.append(variant)
         if len(variants) == 0:
             return None
-        return SwDataDefPropsVariants(variants)
+        return SwDataDefProps(variants)
 
     def _parse_single_sw_data_def_props(
             self,
             xml_root,
             parent: ArObject | None = None,
-    ) -> SwDataDefProps:
+    ) -> SwDataDefPropsContent:
         assert (xml_root.tag == 'SW-DATA-DEF-PROPS-CONDITIONAL')
         base_type_ref = None
         implementation_type_ref = None
@@ -395,7 +393,7 @@ class BaseParser(HasLogger):
                 pass  # implement later
             else:
                 self.log_unexpected(xml_root, xml_item)
-        variant = SwDataDefProps(
+        variant = SwDataDefPropsContent(
             base_type_ref,
             implementation_type_ref,
             sw_address_method_ref,
@@ -889,19 +887,7 @@ class ParserSelector(BetterParser, Generic[C]):
         return self._parser.parse_element(xml_element, parent)
 
 
-class BasicParserWithParent(BetterParser, Generic[C]):
-    _returned_type: type[C]
-
-    def parse_element(self, xml_element: Element | None, parent: MaybeArObject = None) -> C | None:
-        if xml_element is None:
-            return None
-        kwargs = self._scan_element(xml_element)
-        if kwargs is None:
-            return None
-        return self._returned_type(**kwargs, parent=parent)
-
-
-class BasicParserWithoutParent(BetterParser, Generic[C]):
+class BasicParser(BetterParser, Generic[C]):
     _returned_type: type[C]
 
     def parse_element(self, xml_element: Element | None, parent: MaybeArObject = None) -> C | None:
@@ -913,8 +899,8 @@ class BasicParserWithoutParent(BetterParser, Generic[C]):
         return self._returned_type(**kwargs)
 
 
-class PropertySetParser(BasicParserWithParent[C], Generic[C, V]):
-    _variant_parser_type: type[BasicParserWithParent[V] | BasicParserWithoutParent[V]]
+class PropertySetParser(BasicParser[C], Generic[C, V]):
+    _variant_parser_type: type[BasicParser[V]]
     _tag: str
 
     @classmethod

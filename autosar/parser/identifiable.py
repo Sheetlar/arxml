@@ -8,8 +8,7 @@ from autosar.parser.parser_base import (
     handler,
     multiple_with_check,
     not_implemented_handler,
-    BasicParserWithParent,
-    BasicParserWithoutParent,
+    BasicParser,
 )
 
 
@@ -18,7 +17,7 @@ ID = TypeVar('ID', bound=Identifiable)
 D = TypeVar('D', bound=Describable)
 
 
-class ReferrableParser(BasicParserWithParent[R]):
+class ReferrableParser(BasicParser[R]):
     @handler('SHORT-NAME', param='name', required=True)
     def _parse_name(self, xml_element: Element) -> str:
         name = self._parse_text_node(xml_element)
@@ -76,7 +75,7 @@ class IdentifiableParser(ReferrableParser[ID]):
         ...
 
 
-class DescribableParser(BasicParserWithoutParent[D]):
+class DescribableParser(BasicParser[D]):
     _valid_categories: set[str] | None = None
 
     @handler('ADMIN-DATA')

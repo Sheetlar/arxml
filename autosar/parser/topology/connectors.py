@@ -22,7 +22,7 @@ from autosar.parser.parser_base import (
     multiple,
     ref_variation,
     ParserSelector,
-    BasicParserWithoutParent,
+    BasicParser,
 )
 
 CP = TypeVar('CP', bound=CommConnectorPort)
@@ -95,7 +95,7 @@ class CommPortParserSelector(ParserSelector[CP]):
     }
 
 
-class LinConfigurableFrameParser(BasicParserWithoutParent[LinConfigurableFrame]):
+class LinConfigurableFrameParser(BasicParser[LinConfigurableFrame]):
     _returned_type = LinConfigurableFrame
 
     @handler('FRAME-REF', required=True)
@@ -110,7 +110,7 @@ class LinConfigurableFrameParser(BasicParserWithoutParent[LinConfigurableFrame])
         return self._parse_int_node(xml_element)
 
 
-class LinOrderedConfigurableFrameParser(BasicParserWithoutParent[LinOrderedConfigurableFrame]):
+class LinOrderedConfigurableFrameParser(BasicParser[LinOrderedConfigurableFrame]):
     _returned_type = LinOrderedConfigurableFrame
 
     @handler('FRAME-REF', required=True)

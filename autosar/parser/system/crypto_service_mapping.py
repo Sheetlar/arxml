@@ -12,7 +12,7 @@ from autosar.model.system import (
 from autosar.parser.identifiable import IdentifiableParser
 from autosar.parser.parser_base import (
     ParserSelector,
-    BasicParserWithoutParent,
+    BasicParser,
     handler,
     multiple_with_check,
 )
@@ -28,7 +28,7 @@ class TlsCryptoCipherSuitePropsParser(IdentifiableParser[TlsCryptoCipherSuitePro
         return self._parse_boolean_node(xml_element)
 
 
-class TlsPskIdentityParser(BasicParserWithoutParent[TlsPskIdentity]):
+class TlsPskIdentityParser(BasicParser[TlsPskIdentity]):
     _returned_type = TlsPskIdentity
 
     @handler('PSK-IDENTITY')

@@ -4,15 +4,15 @@ from xml.etree.ElementTree import Element
 from autosar.misc import not_none
 from autosar.model.admin_data import AdminData, SpecialDataGroup, SpecialData, NumericalSpecialData, MultiLanguagePlainText
 from autosar.model.languages_enum import LEnum
-from autosar.parser.parser_base import BasicParserWithoutParent, handler, not_implemented_handler, multiple_with_check, skip_return
+from autosar.parser.parser_base import BasicParser, handler, not_implemented_handler, multiple_with_check, skip_return
 
 
-class SpecialDataGroupParser(BasicParserWithoutParent[SpecialDataGroup]):
+class SpecialDataGroupParser(BasicParser[SpecialDataGroup]):
     _returned_type = SpecialDataGroup
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._sdg_contents: list[SpecialData | NumericalSpecialData | str] = []
+        self._sdg_contents: list[SpecialData | NumericalSpecialData | SpecialDataGroup | str] = []
 
     def _parse_attributes(self, xml_element: Element) -> dict[str, Any]:
         try:
@@ -64,16 +64,19 @@ class SpecialDataGroupParser(BasicParserWithoutParent[SpecialDataGroup]):
     def _parse_caption(self, xml_element: Element):
         ...
 
-    @not_implemented_handler('SDGS', 'SDG')
+    @handler('SDG')
+    @skip_return
     def _parse_sdg(self, xml_element: Element):
-        ...
+        sdg_parser = SpecialDataGroupParser()
+        if (sdg := sdg_parser.parse_element(xml_element)) is not None:
+            self._sdg_contents.append(sdg)
 
     @not_implemented_handler('SDXFS', 'SDXF')
     def _parse_sdxf(self, xml_element: Element):
         ...
 
 
-class AdminDataParser(BasicParserWithoutParent):
+class AdminDataParser(BasicParser):
     _returned_type = AdminData
 
     @handler('SDGS')

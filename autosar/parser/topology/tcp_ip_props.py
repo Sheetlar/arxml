@@ -2,10 +2,10 @@ from xml.etree.ElementTree import Element
 
 from autosar.model.topology.tcp_ip_props import UdpProps, TcpProps, EthTcpIpProps
 from autosar.parser.identifiable import IdentifiableParser
-from autosar.parser.parser_base import handler, BasicParserWithoutParent
+from autosar.parser.parser_base import handler, BasicParser
 
 
-class TcpPropsParser(BasicParserWithoutParent[TcpProps]):
+class TcpPropsParser(BasicParser[TcpProps]):
     _returned_type = TcpProps
 
     @handler('TCP-CONGESTION-AVOIDANCE-ENABLED')
@@ -81,7 +81,7 @@ class TcpPropsParser(BasicParserWithoutParent[TcpProps]):
         return self._parse_int_node(xml_element)
 
 
-class UdpPropsParser(BasicParserWithoutParent[UdpProps]):
+class UdpPropsParser(BasicParser[UdpProps]):
     _returned_type = UdpProps
 
     @handler('TCP-TTL')

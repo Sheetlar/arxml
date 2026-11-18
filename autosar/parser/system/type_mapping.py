@@ -11,10 +11,10 @@ from autosar.model.system import (
     SenderRecArrayElementMapping,
     SenderRecRecordElementMapping,
 )
-from autosar.parser.parser_base import ParserSelector, BasicParserWithoutParent, handler, multiple_with_check, single_subclass_aggr, eval_children
+from autosar.parser.parser_base import ParserSelector, BasicParser, handler, multiple_with_check, single_subclass_aggr, eval_children
 
 
-class TextTableValuePairParser(BasicParserWithoutParent[TextTableValuePair]):
+class TextTableValuePairParser(BasicParser[TextTableValuePair]):
     _returned_type = TextTableValuePair
 
     @handler('FIRST-VALUE', required=True)
@@ -32,7 +32,7 @@ class TextTableValuePairParser(BasicParserWithoutParent[TextTableValuePair]):
         return value
 
 
-class TextTableMappingParser(BasicParserWithoutParent[TextTableMapping]):
+class TextTableMappingParser(BasicParser[TextTableMapping]):
     returned_type = TextTableMapping
 
     @handler('IDENTICAL-MAPPING', required=True)
@@ -65,7 +65,7 @@ class TextTableMappingParser(BasicParserWithoutParent[TextTableMapping]):
         return parser.parse_element(xml_element)
 
 
-class IndexedArrayElementParser(BasicParserWithoutParent[IndexedArrayElement]):
+class IndexedArrayElementParser(BasicParser[IndexedArrayElement]):
     _returned_type = IndexedArrayElement
 
     @handler('INDEX', required=True)
@@ -84,7 +84,7 @@ class IndexedArrayElementParser(BasicParserWithoutParent[IndexedArrayElement]):
         return self._parse_text_node(xml_element)
 
 
-class SenderRecArrayElementMappingParser(BasicParserWithoutParent[SenderRecArrayElementMapping]):
+class SenderRecArrayElementMappingParser(BasicParser[SenderRecArrayElementMapping]):
     _returned_type = SenderRecArrayElementMapping
 
     @handler('INDEXED-ARRAY-ELEMENT', required=True)
@@ -106,7 +106,7 @@ class SenderRecArrayElementMappingParser(BasicParserWithoutParent[SenderRecArray
         return parser.parse_element(xml_element)
 
 
-class SenderRecRecordElementMappingParser(BasicParserWithoutParent[SenderRecRecordElementMapping]):
+class SenderRecRecordElementMappingParser(BasicParser[SenderRecRecordElementMapping]):
     _returned_type = SenderRecRecordElementMapping
 
     @handler('APPLICATION-RECORD-ELEMENT-REF')
@@ -138,7 +138,7 @@ class SenderRecRecordElementMappingParser(BasicParserWithoutParent[SenderRecReco
         return parser.parse_element(xml_element)
 
 
-class SenderRecArrayTypeMappingParser(BasicParserWithoutParent[SenderRecArrayTypeMapping]):
+class SenderRecArrayTypeMappingParser(BasicParser[SenderRecArrayTypeMapping]):
     _returned_type = SenderRecArrayTypeMapping
 
     @handler('ARRAY-ELEMENT-MAPPINGS')
@@ -159,7 +159,7 @@ class SenderRecArrayTypeMappingParser(BasicParserWithoutParent[SenderRecArrayTyp
         return parser.parse_element(xml_element)
 
 
-class SenderRecRecordTypeMappingParser(BasicParserWithoutParent[SenderRecRecordTypeMapping]):
+class SenderRecRecordTypeMappingParser(BasicParser[SenderRecRecordTypeMapping]):
     _returned_type = SenderRecRecordTypeMapping
 
     @handler('RECORD-ELEMENT-MAPPINGS')

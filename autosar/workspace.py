@@ -10,7 +10,6 @@ from autosar.model.base import (
 from autosar.model.package import Package
 from autosar.model.system import System
 from autosar.parser.behavior_parser import BehaviorParser
-from autosar.parser.collection_parser import CollectionParser
 from autosar.parser.component_parser import ComponentTypeParser
 from autosar.parser.constant_parser import ConstantParser
 from autosar.parser.datatype_parser import DataTypeParser, DataTypeSemanticsParser, DataTypeUnitsParser
@@ -18,11 +17,9 @@ from autosar.parser.mode_parser import ModeDeclarationParser
 from autosar.parser.package_parser import PackageParser
 from autosar.parser.portinterface_parser import PortInterfacePackageParser, SoftwareAddressMethodParser
 from autosar.parser.service_instance_collection_parser import ServiceInstanceCollectionParser
-from autosar.parser.signal_parser import SignalParser
 from autosar.parser.some_ip_tp_parser import SomeIpTpParser
 from autosar.parser.swc_implementation_parser import SwcImplementationParser
 from autosar.parser.tp_parser import TransportProtocolParser
-from autosar.parser.transformation_parser import TransformationParser
 
 
 class WorkspaceProfile:
@@ -219,16 +216,16 @@ class Workspace(ArObject):
         parser.register_element_parser(ComponentTypeParser(self.version))
         parser.register_element_parser(BehaviorParser(self.version))
         # parser.register_element_parser(SystemParser(self.version))
-        parser.register_element_parser(SignalParser(self.version))
+        # parser.register_element_parser(SignalParser(self.version))
         parser.register_element_parser(SwcImplementationParser(self.version))
         parser.register_element_parser(ServiceInstanceCollectionParser(self.version))
         # parser.register_element_parser(CanClusterParser(self.version))
         # parser.register_element_parser(EthernetClusterParser(self.version))
-        parser.register_element_parser(TransformationParser(self.version))
+        # parser.register_element_parser(TransformationParser(self.version))
         # parser.register_element_parser(PduParser(self.version))
         # parser.register_element_parser(SoConSetParser(self.version))
         # parser.register_element_parser(EcuParser(self.version))
-        parser.register_element_parser(CollectionParser(self.version))
+        # parser.register_element_parser(CollectionParser(self.version))
         parser.register_element_parser(SomeIpTpParser(self.version))
         parser.register_element_parser(TransportProtocolParser(self.version))
         # parser.register_element_parser(FrameParser(self.version))

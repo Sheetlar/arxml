@@ -14,7 +14,7 @@ from autosar.parser.identifiable import IdentifiableParser, DescribableParser
 from autosar.parser.parser_base import (
     handler,
     multiple_with_check,
-    BasicParserWithoutParent,
+    BasicParser,
 )
 
 
@@ -76,7 +76,7 @@ class Ipv6DhcpServerConfigurationParser(DescribableParser[Ipv6DhcpServerConfigur
         return self._parse_float_node(xml_element)
 
 
-class DhcpServerConfigurationParser(BasicParserWithoutParent[DhcpServerConfiguration]):
+class DhcpServerConfigurationParser(BasicParser[DhcpServerConfiguration]):
     _returned_type = DhcpServerConfiguration
 
     @handler('IPV-4-DHCP-SERVER-CONFIGURATION', param='ipv4_dhcp_server_configuration')
@@ -90,7 +90,7 @@ class DhcpServerConfigurationParser(BasicParserWithoutParent[DhcpServerConfigura
         return parser.parse_element(xml_element)
 
 
-class VlanMembershipParser(BasicParserWithoutParent[VlanMembership]):
+class VlanMembershipParser(BasicParser[VlanMembership]):
     _returned_type = VlanMembership
 
     @handler('VLAN-REF', required=True)
