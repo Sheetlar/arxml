@@ -2,6 +2,7 @@ from typing import TypeAlias
 from xml.etree.ElementTree import Element
 
 from autosar.model.base import Limit
+from autosar.model.communication.do_ip import DoIpConfig
 from autosar.model.gateway import Gateway
 from autosar.model.topology.abstract import (
     AnyCommunicationController,
@@ -13,6 +14,7 @@ from autosar.model.topology.ecu import (
     EcuPartition,
 )
 from autosar.model.topology.tcp_ip_props import EthTcpIpProps
+from autosar.parser.communication.do_ip import DoIpConfigParser
 from autosar.parser.identifiable import IdentifiableParser
 from autosar.parser.parser_base import (
     handler,
@@ -173,9 +175,10 @@ class EcuInstanceParser(IdentifiableParser[EcuInstance]):
     def _parse_dlt_config(self, xml_element: Element):
         ...
 
-    @not_implemented_handler('DO-IP-CONFIG')  # param='doip_config'
-    def _parse_doip_config(self, xml_element: Element):
-        ...
+    @handler('DO-IP-CONFIG')
+    def _parse_do_ip_config(self, xml_element: Element) -> DoIpConfig | None:
+        parser = DoIpConfigParser()
+        return parser.parse_element(xml_element)
 
     @not_implemented_handler('J-1939-NODE')  # param='j1939_node'
     def _parse_j1939_node(self, xml_element: Element):

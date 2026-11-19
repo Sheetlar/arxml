@@ -177,15 +177,15 @@ class CouplingPortParser(IdentifiableParser[CouplingPort]):
 class CouplingPortConnectionParser(BasicParser[CouplingPortConnection]):
     _returned_type = CouplingPortConnection
 
-    @handler('FIRST-PORT-REF', required=True)  # TODO: Is this really required?
+    @handler('FIRST-PORT-REF')
     def _parse_first_port(self, xml_element: Element) -> str | None:
         return self._parse_text_node(xml_element)
 
-    @handler('SECOND-PORT-REF', required=True)  # TODO: Is this really required?
+    @handler('SECOND-PORT-REF')
     def _parse_second_port(self, xml_element: Element) -> str | None:
         return self._parse_text_node(xml_element)
 
-    @handler('NODE-PORT', param='node_port_refs')
+    @handler('NODE-PORTS', param='node_port_refs')
     @ref_variation(element_name='COUPLING-PORT')
     def _parse_node_port(self, xml_element: Element) -> str | None:
         return self._parse_text_node(xml_element)

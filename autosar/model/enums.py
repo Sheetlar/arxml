@@ -311,3 +311,21 @@ class AutoCollectEnum(ArEnum):
     REF_ALL = auto()
     REF_NONE = auto()
     REF_NON_STANDARD = auto()
+
+
+class CanTpChannelModeType(ArEnum):
+    FULL_DUPLEX_MODE = auto()
+    HALF_DUPLEX_MODE = auto()
+
+
+class CanTpAddressingFormatType(ArEnum):
+    EXTENDED = auto()
+    MIXED = auto()
+    MIXED_29_BIT = auto()
+    NORMALFIXED = auto()
+    STANDARD = auto()
+
+
+class NetworkTargetAddressType(ArEnum):
+    FUNCTIONAL = auto()
+    PHYSICAL = auto()

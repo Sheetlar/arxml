@@ -3,6 +3,7 @@ from typing import Iterable
 
 from autosar.model.ar_object import ArObject
 from autosar.model.base import Limit, Identifiable
+from autosar.model.communication.do_ip import DoIpConfig
 from autosar.model.element import Element
 from autosar.model.topology.abstract import AnyCommunicationConnector, AnyCommunicationController
 
@@ -52,7 +53,7 @@ class EcuInstance(Element):
             v2x_supported: str | None = None,
             wake_up_over_bus_supported: bool | None = None,
             dlt_config: None = None,  # TODO: Implement
-            doip_config: None = None,  # TODO: Implement
+            do_ip_config: DoIpConfig | None = None,
             j1939_node: None = None,  # TODO: Implement
             *args, **kwargs,
     ):
@@ -83,7 +84,7 @@ class EcuInstance(Element):
         self.v2x_supported = v2x_supported
         self.wake_up_over_bus_supported = wake_up_over_bus_supported
         self.dlt_config = dlt_config
-        self.doip_config = doip_config
+        self.do_ip_config = self._set_parent_single(do_ip_config)
         self.j1939_node = j1939_node
 
     @property
@@ -91,3 +92,7 @@ class EcuInstance(Element):
         yield from self.comm_controllers
         yield from self.connectors
         yield from self.partitions
+        if (cfg := self.do_ip_config) is not None:
+            yield from cfg.doip_interfaces
+            if cfg.logic_address is not None:
+                yield cfg.logic_address

@@ -79,6 +79,11 @@ class ArObject(HasLogger, HasRepr, ABC):
             sub_element.parent = parent
         return children
 
+    def _set_parent_single(self, child: T) -> T:
+        if child is not None:
+            child.parent = self
+        return child
+
     def _repr_value_format(self, attr_value: Any) -> str:
         if isinstance(attr_value, (list, dict, tuple)):
             return f'{{{attr_value.__class__.__name__}: {len(attr_value)}}}'

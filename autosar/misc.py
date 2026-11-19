@@ -142,6 +142,10 @@ def not_none(value: Any) -> bool:
     return value is not None
 
 
+def filter_none(vals: Iterable[Any | None]) -> Iterable[Any]:
+    return (v for v in vals if v is not None)
+
+
 def dict_sorted_by_keys(
         mapping: Mapping[Tk, Tv] | Iterable[tuple[Tk, Tv]],
 ) -> dict[Tk, Tv]:

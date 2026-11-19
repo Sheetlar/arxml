@@ -138,12 +138,12 @@ class CouplingPortTrafficClassAssignment(Referrable):
         self.priorities = self.eval_children(priorities)
 
 
-@dataclass
+@dataclass(repr=False)
 class GlobalTimeCouplingPortProps(ArObject):
     propagation_delay: float
 
 
-@dataclass
+@dataclass(repr=False)
 class CouplingPortRatePolicy(ArObject):
     data_length: int | None = None
     policy_action: CouplingPortRatePolicyActionEnum | None = None
@@ -152,7 +152,7 @@ class CouplingPortRatePolicy(ArObject):
     v_lan_refs: list[str] | None = None
 
 
-@dataclass
+@dataclass(repr=False)
 class EthernetVlanTranslationTable(ArObject):
     translated_vlan_id: int
     ingress_vlan_id: int | None = None
@@ -230,13 +230,13 @@ class Ipv6DhcpServerConfiguration(Describable):
         self.default_lease_time = default_lease_time
 
 
-@dataclass
+@dataclass(repr=False)
 class DhcpServerConfiguration(ArObject):
     ipv4_dhcp_server_configuration: Ipv4DhcpServerConfiguration | None = None
     ipv6_dhcp_server_configuration: Ipv6DhcpServerConfiguration | None = None
 
 
-@dataclass
+@dataclass(repr=False)
 class VlanMembership(ArObject):
     vlan_ref: str
     default_priority: int
@@ -244,7 +244,7 @@ class VlanMembership(ArObject):
     send_activity: EthernetSwitchVlanEgressTaggingEnum | None = None
 
 
-@dataclass
+@dataclass(repr=False)
 class MacSecLocalKayProps(ArObject):
     destination_mac_address: str | None = None
     global_kay_props_ref: str | None = None
@@ -254,7 +254,7 @@ class MacSecLocalKayProps(ArObject):
     source_mac_address: str | None = None
 
 
-@dataclass
+@dataclass(repr=False)
 class MacSecProps(ArObject):
     auto_start: bool | None = None
     mac_sec_kay_config: MacSecLocalKayProps | None = None
@@ -263,7 +263,7 @@ class MacSecProps(ArObject):
     sak_rekey_time_span: float | None = None
 
 
-@dataclass
+@dataclass(repr=False)
 class PlcaProps(ArObject):
     plca_local_node_id: int | None = None
     plca_max_burst_count: int | None = None
@@ -331,10 +331,10 @@ class CouplingPort(Identifiable):
             yield from self.coupling_port_details.ethernet_traffic_class_assignments
 
 
-@dataclass
+@dataclass(repr=False)
 class CouplingPortConnection(ArObject):
-    first_port_ref: str
-    second_port_ref: str
+    first_port_ref: str | None = None
+    second_port_ref: str | None = None
     node_port_refs: list[str] | None = None
     plca_local_node_count: int | None = None
     plca_transmit_opportunity_timer: int | None = None
