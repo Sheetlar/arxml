@@ -3,11 +3,16 @@ from typing import TypeVar
 from autosar.model.element import Element as ArElement
 from autosar.parser.communication.can_tp import CanTpConfigParser
 from autosar.parser.communication.do_ip import DoIpTpConfigParser
-from autosar.parser.communication.ethernet.some_ip import (
+from autosar.parser.communication.ethernet import (
     SocketConnectionIPduIdentifierSetParser,
+    ServiceInstanceCollectionSetParser,
+    EthTpConfigParser,
     SomeIpTpConfigParser,
+    SomeIpSdClientServiceInstanceConfigParser,
+    SomeIpSdServerServiceInstanceConfigParser,
+    SomeIpSdClientEventGroupTimingConfigParser,
+    SomeIpSdServerEventGroupTimingConfigParser,
 )
-from autosar.parser.communication.ethernet.tp import EthTpConfigParser
 from autosar.parser.communication.frame import (
     CanFrameParser,
     GenericEthernetFrameParser,
@@ -98,6 +103,11 @@ class ElementParserSelector(ParserSelector[E]):
         'PDUR-I-PDU-GROUP': PdurIPduGroupParser,
         'GENERAL-PURPOSE-CONNECTION': GeneralPurposeConnectionParser,
         'SOCKET-CONNECTION-IPDU-IDENTIFIER-SET': SocketConnectionIPduIdentifierSetParser,
+        'SERVICE-INSTANCE-COLLECTION-SET': ServiceInstanceCollectionSetParser,
+        'SOMEIP-SD-CLIENT-SERVICE-INSTANCE-CONFIG': SomeIpSdClientServiceInstanceConfigParser,
+        'SOMEIP-SD-SERVER-SERVICE-INSTANCE-CONFIG': SomeIpSdServerServiceInstanceConfigParser,
+        'SOMEIP-SD-CLIENT-EVENT-GROUP-TIMING-CONFIG': SomeIpSdClientEventGroupTimingConfigParser,
+        'SOMEIP-SD-SERVER-EVENT-GROUP-TIMING-CONFIG': SomeIpSdServerEventGroupTimingConfigParser,
         'I-SIGNAL': ISignalParser,
         'I-SIGNAL-GROUP': ISignalGroupParser,
         'SYSTEM-SIGNAL': SystemSignalParser,

@@ -1,15 +1,13 @@
 from xml.etree.ElementTree import Element
 
-from autosar.model.communication.ethernet import (
-    SoAdConfig,
-    SocketAddress,
-    StaticSocketConnection,
+from autosar.model.communication.ethernet.endpoint import (
     ApplicationEndpoint,
     AnyTcpUdpConfig,
     UdpTp,
     TcpTp,
     TpPort,
 )
+from autosar.model.communication.ethernet.socket import StaticSocketConnection, SocketAddress, SoAdConfig
 from autosar.model.enums import TcpRoleEnum, UdpChecksumCalculationEnum
 from autosar.parser.identifiable import IdentifiableParser
 from autosar.parser.parser_base import (

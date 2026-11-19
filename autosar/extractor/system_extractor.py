@@ -6,14 +6,14 @@ from autosar.model.base import OldAdminData
 from autosar.model.transformation.sets import TransformationTechnology
 from autosar.model.topology.ecu import EcuInstance
 from autosar.model.element import DataElement
-from autosar.model.communication.ethernet import ApplicationEndpoint, NetworkEndpoint
+from autosar.model.communication.ethernet.endpoint import ApplicationEndpoint, NetworkEndpoint
 from autosar.extractor.common import Event, SomeIpFeature
 from autosar.extractor.data_type_extractor import ExtractedDataType
 from autosar.misc import HasLogger
 from autosar.model.communication.pdu import ISignalIPdu, GeneralPurposeIPdu, PduTriggering
-from autosar.model.communication.some_ip import SoConIPduIdentifier, SomeIpTpConnection, SomeIpTpConfig
+from autosar.model.communication.ethernet.some_ip import SoConIPduIdentifier, SomeIpTpConnection, SomeIpTpConfig, EventHandler
 from autosar.model.portinterface import Operation, Trigger
-from autosar.model.service_instance_collection import ServiceInstanceCollectionSet, ProvidedServiceInstance, EventHandler
+from autosar.model.communication.ethernet.service_instance import ServiceInstanceCollectionSet, ProvidedServiceInstance
 from autosar.model.communication.signal import SystemSignal, ISignal
 from autosar.model.system import (
     System,

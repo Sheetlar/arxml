@@ -229,22 +229,22 @@ class CanControllerXlConfigurationRequirementsParser(
 
 class AbstractCanCommunicationControllerAttributesParser(BasicParser[A]):
     @handler('CAN-CONTROLLER-FD-ATTRIBUTES')
-    def _parse_(self, xml_element: Element) -> CanControllerFdConfiguration | None:
+    def _parse_can_controller_fd_attributes(self, xml_element: Element) -> CanControllerFdConfiguration | None:
         parser = CanControllerFdConfigurationParser()
         return parser.parse_element(xml_element)
 
     @handler('CAN-CONTROLLER-FD-REQUIREMENTS')
-    def _parse_(self, xml_element: Element) -> CanControllerFdConfigurationRequirements | None:
+    def _parse_can_controller_fd_requirements(self, xml_element: Element) -> CanControllerFdConfigurationRequirements | None:
         parser = CanControllerFdConfigurationRequirementsParser()
         return parser.parse_element(xml_element)
 
     @handler('CAN-CONTROLLER-XL-ATTRIBUTES')
-    def _parse_(self, xml_element: Element) -> CanControllerXlConfiguration | None:
+    def _parse_can_controller_xl_attributes(self, xml_element: Element) -> CanControllerXlConfiguration | None:
         parser = CanControllerXlConfigurationParser()
         return parser.parse_element(xml_element)
 
     @handler('CAN-CONTROLLER-XL-REQUIREMENTS')
-    def _parse_(self, xml_element: Element) -> CanControllerXlConfigurationRequirements | None:
+    def _parse_can_controller_xl_requirements(self, xml_element: Element) -> CanControllerXlConfigurationRequirements | None:
         parser = CanControllerXlConfigurationRequirementsParser()
         return parser.parse_element(xml_element)
 

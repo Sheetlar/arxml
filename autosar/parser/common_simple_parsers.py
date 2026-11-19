@@ -1,6 +1,6 @@
 from xml.etree.ElementTree import Element
 
-from autosar.model.base import DataFilter
+from autosar.model.base import DataFilter, TagWithOptionalValue
 from autosar.model.enums import DataFilterTypeEnum
 from autosar.parser.parser_base import handler, BasicParser
 
@@ -34,4 +34,22 @@ class DataFilterParser(BasicParser[DataFilter]):
 
     @handler('X')
     def _parse_x(self, xml_element: Element) -> int | None:
+        return self._parse_int_node(xml_element)
+
+
+class TagWithOptionalValueParser(BasicParser[TagWithOptionalValue]):
+    _returned_type = TagWithOptionalValue
+
+    @handler('KEY', required=True)
+    def _parse_key(self, xml_element: Element) -> str:
+        if (key := self._parse_text_node(xml_element)) is None:
+            raise ValueError
+        return key
+
+    @handler('VALUE')
+    def _parse_value(self, xml_element: Element) -> str:
+        return self._parse_text_node(xml_element) or ''
+
+    @handler('SEQUENCE-OFFSET')
+    def _parse_sequence_offset(self, xml_element: Element) -> int | None:
         return self._parse_int_node(xml_element)

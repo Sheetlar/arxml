@@ -16,7 +16,8 @@ from autosar.model.enums import (
     EthernetCouplingPortPreemptionEnum,
     EthernetCouplingPortSchedulerEnum,
 )
-from autosar.model.communication.ethernet import NetworkEndpoint, SoAdConfig
+from autosar.model.communication.ethernet.endpoint import NetworkEndpoint
+from autosar.model.communication.ethernet.socket import SoAdConfig
 from autosar.model.topology.abstract import (
     CommunicationControllerContent,
     CommunicationController,

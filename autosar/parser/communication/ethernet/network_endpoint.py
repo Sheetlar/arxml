@@ -5,7 +5,7 @@ from autosar.model.enums import (
     Ipv4AddressSourceEnum,
     Ipv6AddressSourceEnum,
 )
-from autosar.model.communication.ethernet import (
+from autosar.model.communication.ethernet.endpoint import (
     AnyNetworkEndpointAddress,
     IPv4Configuration,
     IPv6Configuration,

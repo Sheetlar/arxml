@@ -237,6 +237,18 @@ class EthernetCouplingPortPreemptionEnum(ArEnum):
     PREEMPTABLE = auto()
 
 
+class EventGroupControlTypeEnum(ArEnum):
+    ACTIVATION_AND_TRIGGER_UNICAST = auto()
+    ACTIVATION_MULTICAST = auto()
+    ACTIVATION_UNICAST = auto()
+    TRIGGER_UNICAST = auto()
+
+
+class ServiceVersionAcceptanceKindEnum(ArEnum):
+    EXACT_OR_ANY_MINOR_VERSION = auto()
+    MINIMUM_MINOR_VERSION = auto()
+
+
 class CryptoServiceKeyGenerationEnum(ArEnum):
     KEY_DERIVATION = auto()
     KEY_STORAGE = auto()

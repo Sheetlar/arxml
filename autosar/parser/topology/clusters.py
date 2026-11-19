@@ -3,7 +3,8 @@ from xml.etree.ElementTree import Element
 
 from autosar.model.communication.pdu import PduTriggering
 from autosar.model.communication.signal import ISignalTriggering
-from autosar.model.communication.ethernet import NetworkEndpoint, SoAdConfig
+from autosar.model.communication.ethernet.endpoint import NetworkEndpoint
+from autosar.model.communication.ethernet.socket import SoAdConfig
 from autosar.model.topology.abstract import (
     PhysicalChannel,
     CommunicationClusterContent,

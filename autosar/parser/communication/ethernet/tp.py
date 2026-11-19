@@ -1,6 +1,6 @@
 from xml.etree.ElementTree import Element
 
-from autosar.model.communication.ethernet import EthTpConnection, EthTpConfig
+from autosar.model.communication.ethernet.frame_tp import EthTpConnection, EthTpConfig
 from autosar.parser.communication.tp_base import TpConnectionParser, TpConfigParser
 from autosar.parser.parser_base import handler, multiple_with_check
 

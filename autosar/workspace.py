@@ -16,7 +16,6 @@ from autosar.parser.datatype_parser import DataTypeParser, DataTypeSemanticsPars
 from autosar.parser.mode_parser import ModeDeclarationParser
 from autosar.parser.package_parser import PackageParser
 from autosar.parser.portinterface_parser import PortInterfacePackageParser, SoftwareAddressMethodParser
-from autosar.parser.service_instance_collection_parser import ServiceInstanceCollectionParser
 from autosar.parser.swc_implementation_parser import SwcImplementationParser
 
 
@@ -216,7 +215,7 @@ class Workspace(ArObject):
         # parser.register_element_parser(SystemParser(self.version))
         # parser.register_element_parser(SignalParser(self.version))
         parser.register_element_parser(SwcImplementationParser(self.version))
-        parser.register_element_parser(ServiceInstanceCollectionParser(self.version))
+        # parser.register_element_parser(ServiceInstanceCollectionParser(self.version))
         # parser.register_element_parser(CanClusterParser(self.version))
         # parser.register_element_parser(EthernetClusterParser(self.version))
         # parser.register_element_parser(TransformationParser(self.version))

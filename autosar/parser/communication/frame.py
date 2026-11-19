@@ -1,7 +1,7 @@
 from xml.etree.ElementTree import Element
 
 from autosar.model.communication.can import CanFrame
-from autosar.model.communication.ethernet import GenericEthernetFrame, Ieee1722TpFrame, UserDefinedEthernetFrame
+from autosar.model.communication.ethernet.frame_tp import GenericEthernetFrame, Ieee1722TpFrame, UserDefinedEthernetFrame
 from autosar.model.communication.flexray import FlexrayFrame
 from autosar.model.communication.frame import AnyFrame, PduToFrameMapping
 from autosar.model.communication.lin import LinEventTriggeredFrame, LinSporadicFrame, LinUnconditionalFrame

@@ -31,7 +31,7 @@ class LangStr(str):
     language: LEnum | None = None
 
 
-@dataclass
+@dataclass(repr=False)
 class ShortNameFragment(ArObject):
     fragment: str
     role: str
@@ -359,7 +359,7 @@ class SymbolProps:
         self.symbol = symbol
 
 
-@dataclass
+@dataclass(repr=False)
 class DataFilter(ArObject):
     data_filter_type: DataFilterTypeEnum | None = None
     mask: int | None = None
@@ -368,6 +368,13 @@ class DataFilter(ArObject):
     offset: int | None = None
     period: int | None = None
     x: int | None = None
+
+
+@dataclass(repr=False)
+class TagWithOptionalValue(ArObject):
+    key: str
+    value: str | None = None
+    sequence_offset: int | None = None
 
 
 # Exceptions

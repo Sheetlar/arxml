@@ -62,13 +62,13 @@ class SecureCommunicationPropsSetParser(
 
     @handler('AUTHENTICATION-PROPSS', param='authentication_props')
     @multiple_with_check(expected_name='SECURE-COMMUNICATION-AUTHENTICATION-PROPS')
-    def _parse_(self, xml_element: Element) -> SecureCommunicationAuthenticationProps | None:
+    def _parse_authentication_props(self, xml_element: Element) -> SecureCommunicationAuthenticationProps | None:
         parser = SecureCommunicationAuthenticationPropsParser()
         return parser.parse_element(xml_element)
 
     @handler('FRESHNESS-PROPSS', param='freshness_props')
     @multiple_with_check(expected_name='SECURE-COMMUNICATION-FRESHNESS-PROPS')
-    def _parse_(self, xml_element: Element) -> SecureCommunicationFreshnessProps | None:
+    def _parse_freshness_props(self, xml_element: Element) -> SecureCommunicationFreshnessProps | None:
         parser = SecureCommunicationFreshnessPropsParser()
         return parser.parse_element(xml_element)
 
