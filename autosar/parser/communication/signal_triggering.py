@@ -1,6 +1,6 @@
 from xml.etree.ElementTree import Element
 
-from autosar.model.communication.communication_cluster import ISignalTriggering
+from autosar.model.communication.signal import ISignalTriggering
 from autosar.parser.identifiable import IdentifiableParser
 from autosar.parser.parser_base import handler, multiple_with_check
 

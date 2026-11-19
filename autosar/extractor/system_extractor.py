@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from autosar.model.base import OldAdminData
-from autosar.model.communication.communication_cluster import PduTriggering
 from autosar.model.transformation.sets import TransformationTechnology
 from autosar.model.topology.ecu import EcuInstance
 from autosar.model.element import DataElement
@@ -11,7 +10,7 @@ from autosar.model.communication.ethernet import ApplicationEndpoint, NetworkEnd
 from autosar.extractor.common import Event, SomeIpFeature
 from autosar.extractor.data_type_extractor import ExtractedDataType
 from autosar.misc import HasLogger
-from autosar.model.communication.pdu import ISignalIPdu, GeneralPurposeIPdu
+from autosar.model.communication.pdu import ISignalIPdu, GeneralPurposeIPdu, PduTriggering
 from autosar.model.communication.some_ip import SoConIPduIdentifier
 from autosar.model.portinterface import Operation, Trigger
 from autosar.model.service_instance_collection import ServiceInstanceCollectionSet, ProvidedServiceInstance, EventHandler

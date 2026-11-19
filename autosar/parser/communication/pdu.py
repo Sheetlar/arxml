@@ -28,6 +28,7 @@ from autosar.model.communication.pdu import (
     ContainedIPduProps,
     ISignalIPduGroup,
     PdurIPduGroup,
+    GeneralPurposeConnection,
 )
 from autosar.model.enums import (
     ContainerIPduTriggerEnum,
@@ -538,4 +539,13 @@ class PdurIPduGroupParser(IdentifiableParser[PdurIPduGroup]):
     @handler('I-PDUS', param='nm_pdu_refs')
     @ref_variation(element_name='PDU-TRIGGERING')
     def _parse_i_pdu(self, xml_element: Element) -> str | None:
+        return self._parse_text_node(xml_element)
+
+
+class GeneralPurposeConnectionParser(IdentifiableParser[GeneralPurposeConnection]):
+    _returned_type = GeneralPurposeConnection
+
+    @handler('PDU-TRIGGERING-REFS')
+    @multiple_with_check
+    def _parse_pdu_triggering(self, xml_element: Element) -> str | None:
         return self._parse_text_node(xml_element)

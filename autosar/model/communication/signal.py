@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from autosar.model.ar_object import ArObject
+from autosar.model.base import Identifiable
 from autosar.model.element import Element
 from autosar.model.enums import DataTypePolicyEnum, ISignalTypeEnum, HandleOutOfRangeEnum
 from autosar.model.sw_def_props import SwDataDefProps
@@ -82,3 +83,17 @@ class ISignalGroup(Element):
         self.i_signal_refs = self.eval_children(i_signal_refs)
         self.com_based_signal_group_transformation_refs = self.eval_children(com_based_sg_transform_refs)
         self.transformation_i_signal_props = self.eval_children(transformation_i_signal_props)
+
+
+class ISignalTriggering(Identifiable):
+    def __init__(
+            self,
+            i_signal_ref: str | None = None,
+            i_signal_group_ref: str | None = None,
+            i_signal_port_refs: Iterable[str] | None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.i_signal_ref = i_signal_ref
+        self.i_signal_group_ref = i_signal_group_ref
+        self.i_signal_port_refs = self.eval_children(i_signal_port_refs)

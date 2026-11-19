@@ -3,10 +3,16 @@ from typing import TypeVar, Iterable, Generic
 from autosar.model.ar_object import ArObject, ArObjectWithParent
 from autosar.model.atp_variation import PropertySet
 from autosar.model.base import Identifiable, DataFilter
-from autosar.model.communication.communication_cluster import ISignalTriggering, PduTriggering
 from autosar.model.communication.frame import FrameTriggering
+from autosar.model.communication.pdu import PduTriggering
+from autosar.model.communication.signal import ISignalTriggering
 from autosar.model.element import Element
-from autosar.model.enums import CommunicationDirectionType, PncGatewayTypeEnum, IPduSignalProcessingEnum, HandleInvalidEnum
+from autosar.model.enums import (
+    CommunicationDirectionType,
+    PncGatewayTypeEnum,
+    IPduSignalProcessingEnum,
+    HandleInvalidEnum,
+)
 
 
 class CommConnectorPort(Identifiable):

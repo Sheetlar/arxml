@@ -1,14 +1,23 @@
 from typing import TypeVar, Generic
 from xml.etree.ElementTree import Element
 
-from autosar.model.communication.communication_cluster import (
-    ISignalTriggering,
-    PduTriggering,
-)
+from autosar.model.communication.pdu import PduTriggering
+from autosar.model.communication.signal import ISignalTriggering
 from autosar.model.communication.ethernet import NetworkEndpoint, SoAdConfig
-from autosar.model.topology.abstract import PhysicalChannel, CommunicationClusterContent, CommunicationCluster
+from autosar.model.topology.abstract import (
+    PhysicalChannel,
+    CommunicationClusterContent,
+    CommunicationCluster,
+)
 from autosar.model.topology.can import CanPhysicalChannel, CanClusterContent, CanCluster
-from autosar.model.topology.ethernet import EthernetPhysicalChannel, VlanConfig, EthernetClusterContent, CouplingPortConnection, MacMulticastGroup, EthernetCluster
+from autosar.model.topology.ethernet import (
+    VlanConfig,
+    CouplingPortConnection,
+    MacMulticastGroup,
+    EthernetPhysicalChannel,
+    EthernetClusterContent,
+    EthernetCluster,
+)
 from autosar.parser.communication.ethernet import NetworkEndpointParser, SoAdConfigParser
 from autosar.parser.topology.ethernet.coupling_port import CouplingPortConnectionParser
 from autosar.parser.topology.ethernet.vlan import MacMulticastGroupParser, VlanConfigParser

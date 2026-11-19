@@ -169,31 +169,31 @@ class CanTpConfigParser(TpConfigParser[CanTpConfig]):
     _returned_type = CanTpConfig
 
     @handler('TP-ADDRESSES', 'TP-ADDRESSS')
-    @multiple_with_check(expected_name='TP-ADDRESS')
+    @multiple_with_check(expected_name='CAN-TP-ADDRESS')
     def _parse_tp_address(self, xml_element: Element) -> CanTpAddress | None:
         parser = CanTpAddressParser()
         return parser.parse_element(xml_element)
 
     @handler('TP-CHANNELS')
-    @multiple_with_check
+    @multiple_with_check(expected_name='CAN-TP-CHANNEL')
     def _parse_tp_channel(self, xml_element: Element) -> CanTpChannel | None:
         parser = CanTpChannelParser()
         return parser.parse_element(xml_element)
 
     @handler('TP-CONNECTIONS')
-    @multiple_with_check
+    @multiple_with_check(expected_name='CAN-TP-CONNECTION')
     def _parse_tp_connection(self, xml_element: Element) -> CanTpConnection | None:
         parser = CanTpConnectionParser()
         return parser.parse_element(xml_element)
 
     @handler('TP-ECUS')
-    @multiple_with_check
+    @multiple_with_check(expected_name='CAN-TP-ECU')
     def _parse_tp_ecu(self, xml_element: Element) -> CanTpEcu | None:
         parser = CanTpEcuParser()
         return parser.parse_element(xml_element)
 
     @handler('TP-NODES')
-    @multiple_with_check
+    @multiple_with_check(expected_name='CAN-TP-NODE')
     def _parse_tp_node(self, xml_element: Element) -> CanTpNode | None:
         parser = CanTpNodeParser()
         return parser.parse_element(xml_element)

@@ -1,6 +1,6 @@
 from xml.etree.ElementTree import Element
 
-from autosar.model.communication.communication_cluster import TriggerIPduSendCondition, PduTriggering
+from autosar.model.communication.pdu import TriggerIPduSendCondition, PduTriggering
 from autosar.parser.identifiable import IdentifiableParser
 from autosar.parser.parser_base import BasicParser, handler, eval_children, multiple_with_check, ref_variation
 

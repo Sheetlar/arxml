@@ -41,7 +41,7 @@ class Frame(Element):
 AnyFrame = TypeVar('AnyFrame', bound=Frame)
 
 
-class FrameTriggering(Element):
+class FrameTriggering(Identifiable):
     def __init__(
             self,
             frame_ref: str,

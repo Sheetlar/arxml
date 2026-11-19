@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import Iterable, TypeVar
 
+from autosar.misc import filter_none
 from autosar.model.ar_object import ArObject, ArObjectWithParent
 from autosar.model.base import Identifiable
 from autosar.model.communication.frame import Frame
+from autosar.model.communication.tp import TpConnection, TpConfig
 from autosar.model.enums import (
     Ipv4AddressSourceEnum,
     IpAddressKeepEnum,
@@ -213,3 +215,27 @@ class Ieee1722TpFrame(Frame):
 
 class UserDefinedEthernetFrame(Frame):
     pass
+
+
+class EthTpConnection(TpConnection):
+    def __init__(
+            self,
+            tp_sdu_refs: Iterable[str] | None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.tp_sdu_refs = self.eval_children(tp_sdu_refs)
+
+
+class EthTpConfig(TpConfig):
+    def __init__(
+            self,
+            tp_connections: Iterable[EthTpConnection] | None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.tp_connections = self._set_parent(tp_connections)
+
+    @property
+    def _findable_children(self) -> Iterable[ArObject]:
+        yield from filter_none(c.ident for c in self.tp_connections)

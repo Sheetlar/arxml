@@ -4,6 +4,7 @@ from autosar.model.element import Element as ArElement
 from autosar.parser.communication.can_tp import CanTpConfigParser
 from autosar.parser.communication.do_ip import DoIpTpConfigParser
 from autosar.parser.communication.ethernet.some_ip import SocketConnectionIPduIdentifierSetParser
+from autosar.parser.communication.ethernet.tp import EthTpConfigParser
 from autosar.parser.communication.frame import (
     CanFrameParser,
     GenericEthernetFrameParser,
@@ -30,6 +31,7 @@ from autosar.parser.communication.pdu import (
     UserDefinedIPduParser,
     ISignalIPduGroupParser,
     PdurIPduGroupParser,
+    GeneralPurposeConnectionParser,
 )
 from autosar.parser.communication.secure_comm import (
     SecureCommunicationPropsSetParser,
@@ -91,6 +93,7 @@ class ElementParserSelector(ParserSelector[E]):
         'USER-DEFINED-I-PDU': UserDefinedIPduParser,
         'I-SIGNAL-I-PDU-GROUP': ISignalIPduGroupParser,
         'PDUR-I-PDU-GROUP': PdurIPduGroupParser,
+        'GENERAL-PURPOSE-CONNECTION': GeneralPurposeConnectionParser,
         'SOCKET-CONNECTION-IPDU-IDENTIFIER-SET': SocketConnectionIPduIdentifierSetParser,
         'I-SIGNAL': ISignalParser,
         'I-SIGNAL-GROUP': ISignalGroupParser,
@@ -102,6 +105,7 @@ class ElementParserSelector(ParserSelector[E]):
         'CRYPTO-SERVICE-QUEUE-PARSER': CryptoServiceQueueParser,
         'CAN-TP-CONFIG': CanTpConfigParser,
         'DO-IP-TP-CONFIG': DoIpTpConfigParser,
+        'ETH-TP-CONFIG': EthTpConfigParser,
         'DATA-TRANSFORMATION-SET': DataTransformationSetParser,
         'TRANSFORMATION-PROPS-SET': TransformationPropsSetParser,
         'TLV-DATA-ID-DEFINITION-SET': TlvDataIdDefinitionSetParser,
