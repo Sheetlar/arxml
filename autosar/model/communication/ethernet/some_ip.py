@@ -214,3 +214,15 @@ class EventHandler(Identifiable):
     @property
     def _findable_children(self) -> Iterable[ArObject]:
         yield from self.pdu_activation_routing_groups
+
+
+class ConsumedProvidedServiceInstanceGroup(Element):
+    def __init__(
+            self,
+            consumed_service_instance_refs: Iterable[str] | None = None,  # V
+            provided_service_instance_refs: Iterable[str] | None = None,  # V
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.consumed_service_instance_refs = self.eval_children(consumed_service_instance_refs)
+        self.provided_service_instance_refs = self.eval_children(provided_service_instance_refs)

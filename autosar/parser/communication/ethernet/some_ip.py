@@ -16,6 +16,7 @@ from autosar.model.communication.ethernet.some_ip import (
     PduActivationRoutingGroup,
     ConsumedEventGroup,
     EventHandler,
+    ConsumedProvidedServiceInstanceGroup,
 )
 from autosar.model.enums import (
     PduCollectionSemanticsEnum,
@@ -321,4 +322,20 @@ class EventHandlerParser(IdentifiableParser[EventHandler]):
     @handler('SD-SERVER-EG-TIMING-CONFIGS', param='sd_server_eg_timing_config_refs')
     @ref_variation(element_name='SOMEIP-SD-SERVER-EVENT-GROUP-TIMING-CONFIG')
     def _parse_sd_server_eg_timing_config(self, xml_element: Element) -> str | None:
+        return self._parse_text_node(xml_element)
+
+
+class ConsumedProvidedServiceInstanceGroupParser(
+    IdentifiableParser[ConsumedProvidedServiceInstanceGroup]
+):
+    _returned_type = ConsumedProvidedServiceInstanceGroup
+
+    @handler('CONSUMED-SERVICE-INSTANCES', param='consumed_service_instance_refs')
+    @ref_variation
+    def _parse_consumed_service_instance(self, xml_element: Element) -> str | None:
+        return self._parse_text_node(xml_element)
+
+    @handler('PROVIDED-SERVICE-INSTANCES', param='provided_service_instance_refs')
+    @ref_variation
+    def _parse_provided_service_instance(self, xml_element: Element) -> str | None:
         return self._parse_text_node(xml_element)

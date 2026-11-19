@@ -3,7 +3,11 @@ from typing import Iterable
 from autosar.model.ar_object import ArObject
 from autosar.model.base import Identifiable
 from autosar.model.element import Element
-from autosar.model.enums import CryptoServiceKeyGenerationEnum
+from autosar.model.enums import (
+    CryptoServiceKeyGenerationEnum,
+    CryptoCertificateAlgorithmFamilyEnum,
+    CryptoCertificateFormatEnum,
+)
 from autosar.model.value_spec import ValueSpecification
 
 
@@ -92,3 +96,41 @@ class CryptoServiceQueue(Element):
     ):
         super().__init__(*args, **kwargs)
         self.queue_size = queue_size
+
+
+class CryptoEllipticCurveProps(Element):
+    def __init__(
+            self,
+            named_curve_id: int | None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.named_curve_id = named_curve_id
+
+
+class CryptoSignatureScheme(Element):
+    def __init__(
+            self,
+            signature_scheme_id: int | None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.signature_scheme_id = signature_scheme_id
+
+
+class CryptoServiceCertificate(Element):
+    def __init__(
+            self,
+            algorithm_family: CryptoCertificateAlgorithmFamilyEnum | None = None,
+            fmt: CryptoCertificateFormatEnum | None = None,
+            maximum_length: int | None = None,
+            next_higher_certificate_ref: str | None = None,
+            server_name_identification: str | None = None,
+            *args, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.algorithm_family = algorithm_family
+        self.format = fmt
+        self.maximum_length = maximum_length
+        self.next_higher_certificate_ref = next_higher_certificate_ref
+        self.server_name_identification = server_name_identification

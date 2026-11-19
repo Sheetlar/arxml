@@ -254,6 +254,16 @@ class CryptoServiceKeyGenerationEnum(ArEnum):
     KEY_STORAGE = auto()
 
 
+class CryptoCertificateAlgorithmFamilyEnum(ArEnum):
+    RSA = auto()
+    ECC = auto()
+
+
+class CryptoCertificateFormatEnum(ArEnum):
+    X_509 = auto()
+    CVC = auto()
+
+
 class DataTypePolicyEnum(ArEnum):
     LEGACY = auto()
     NETWORK_REPRESENTATION_FROM_COM_SPEC = auto()

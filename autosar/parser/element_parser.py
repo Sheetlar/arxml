@@ -1,6 +1,7 @@
 from typing import TypeVar
 
 from autosar.model.element import Element as ArElement
+from autosar.parser.collection_parser import CollectionParser
 from autosar.parser.communication.can_tp import CanTpConfigParser
 from autosar.parser.communication.do_ip import DoIpTpConfigParser
 from autosar.parser.communication.ethernet import (
@@ -12,6 +13,7 @@ from autosar.parser.communication.ethernet import (
     SomeIpSdServerServiceInstanceConfigParser,
     SomeIpSdClientEventGroupTimingConfigParser,
     SomeIpSdServerEventGroupTimingConfigParser,
+    ConsumedProvidedServiceInstanceGroupParser,
 )
 from autosar.parser.communication.frame import (
     CanFrameParser,
@@ -46,6 +48,9 @@ from autosar.parser.communication.secure_comm import (
     CryptoServicePrimitiveParser,
     CryptoServiceKeyParser,
     CryptoServiceQueueParser,
+    CryptoEllipticCurvePropsParser,
+    CryptoSignatureSchemeParser,
+    CryptoServiceCertificateParser,
 )
 from autosar.parser.communication.signal import (
     ISignalParser,
@@ -53,7 +58,6 @@ from autosar.parser.communication.signal import (
     SystemSignalParser,
     SystemSignalGroupParser,
 )
-from autosar.parser.collection_parser import CollectionParser
 from autosar.parser.parser_base import ParserSelector
 from autosar.parser.system.system_parser import SystemParser
 from autosar.parser.topology.clusters import EthernetClusterParser, CanClusterParser
@@ -108,6 +112,7 @@ class ElementParserSelector(ParserSelector[E]):
         'SOMEIP-SD-SERVER-SERVICE-INSTANCE-CONFIG': SomeIpSdServerServiceInstanceConfigParser,
         'SOMEIP-SD-CLIENT-EVENT-GROUP-TIMING-CONFIG': SomeIpSdClientEventGroupTimingConfigParser,
         'SOMEIP-SD-SERVER-EVENT-GROUP-TIMING-CONFIG': SomeIpSdServerEventGroupTimingConfigParser,
+        'CONSUMED-PROVIDED-SERVICE-INSTANCE-GROUP': ConsumedProvidedServiceInstanceGroupParser,
         'I-SIGNAL': ISignalParser,
         'I-SIGNAL-GROUP': ISignalGroupParser,
         'SYSTEM-SIGNAL': SystemSignalParser,
@@ -116,6 +121,9 @@ class ElementParserSelector(ParserSelector[E]):
         'CRYPTO-SERVICE-PRIMITIVE-PARSER': CryptoServicePrimitiveParser,
         'CRYPTO-SERVICE-KEY-PARSER': CryptoServiceKeyParser,
         'CRYPTO-SERVICE-QUEUE-PARSER': CryptoServiceQueueParser,
+        'CRYPTO-ELLIPTIC-CURVE-PROPS': CryptoEllipticCurvePropsParser,
+        'CRYPTO-SIGNATURE-SCHEME': CryptoSignatureSchemeParser,
+        'CRYPTO-SERVICE-CERTIFICATE': CryptoServiceCertificateParser,
         'CAN-TP-CONFIG': CanTpConfigParser,
         'DO-IP-TP-CONFIG': DoIpTpConfigParser,
         'ETH-TP-CONFIG': EthTpConfigParser,

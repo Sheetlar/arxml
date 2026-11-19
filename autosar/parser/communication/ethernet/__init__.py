@@ -8,5 +8,6 @@ from autosar.parser.communication.ethernet.some_ip import (
     SomeIpSdServerServiceInstanceConfigParser,
     SomeIpSdClientEventGroupTimingConfigParser,
     SomeIpSdServerEventGroupTimingConfigParser,
+    ConsumedProvidedServiceInstanceGroupParser,
 )
 from autosar.parser.communication.ethernet.tp import EthTpConfigParser

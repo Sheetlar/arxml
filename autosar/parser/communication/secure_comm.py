@@ -7,8 +7,15 @@ from autosar.model.communication.secure_comm import (
     CryptoServicePrimitive,
     CryptoServiceKey,
     CryptoServiceQueue,
+    CryptoEllipticCurveProps,
+    CryptoSignatureScheme,
+    CryptoServiceCertificate,
 )
-from autosar.model.enums import CryptoServiceKeyGenerationEnum
+from autosar.model.enums import (
+    CryptoServiceKeyGenerationEnum,
+    CryptoCertificateAlgorithmFamilyEnum,
+    CryptoCertificateFormatEnum,
+)
 from autosar.model.value_spec import ValueSpecification
 from autosar.parser.identifiable import IdentifiableParser
 from autosar.parser.parser_base import (
@@ -123,3 +130,43 @@ class CryptoServiceQueueParser(IdentifiableParser[CryptoServiceQueue]):
     @handler('QUEUE-SIZE')
     def _parse_queue_size(self, xml_element: Element) -> int | None:
         return self._parse_int_node(xml_element)
+
+
+class CryptoEllipticCurvePropsParser(IdentifiableParser[CryptoEllipticCurveProps]):
+    _returned_type = CryptoEllipticCurveProps
+
+    @handler('NAMED-CURVE-ID')
+    def _parse_named_curve_id(self, xml_element: Element) -> int | None:
+        return self._parse_int_node(xml_element)
+
+
+class CryptoSignatureSchemeParser(IdentifiableParser[CryptoSignatureScheme]):
+    _returned_type = CryptoSignatureScheme
+
+    @handler('SIGNATURE-SCHEME-ID')
+    def _parse_signature_scheme_id(self, xml_element: Element) -> int | None:
+        return self._parse_int_node(xml_element)
+
+
+class CryptoServiceCertificateParser(IdentifiableParser[CryptoServiceCertificate]):
+    _returned_type = CryptoServiceCertificate
+
+    @handler('ALGORITHM-FAMILY')
+    def _parse_algorithm_family(self, xml_element: Element) -> CryptoCertificateAlgorithmFamilyEnum | None:
+        return self._parse_enum_node(xml_element, CryptoCertificateAlgorithmFamilyEnum)
+
+    @handler('FORMAT', param='fmt')
+    def _parse_format(self, xml_element: Element) -> CryptoCertificateFormatEnum | None:
+        return self._parse_enum_node(xml_element, CryptoCertificateFormatEnum)
+
+    @handler('MAXIMUM-LENGTH')
+    def _parse_maximum_length(self, xml_element: Element) -> int | None:
+        return self._parse_int_node(xml_element)
+
+    @handler('NEXT-HIGHER-CERTIFICATE-REF')
+    def _parse_next_higher_certificate(self, xml_element: Element) -> str | None:
+        return self._parse_text_node(xml_element)
+
+    @handler('SERVER-NAME-IDENTIFICATION')
+    def _parse_server_name_identification(self, xml_element: Element) -> str | None:
+        return self._parse_text_node(xml_element)
