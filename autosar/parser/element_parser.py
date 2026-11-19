@@ -3,7 +3,10 @@ from typing import TypeVar
 from autosar.model.element import Element as ArElement
 from autosar.parser.communication.can_tp import CanTpConfigParser
 from autosar.parser.communication.do_ip import DoIpTpConfigParser
-from autosar.parser.communication.ethernet.some_ip import SocketConnectionIPduIdentifierSetParser
+from autosar.parser.communication.ethernet.some_ip import (
+    SocketConnectionIPduIdentifierSetParser,
+    SomeIpTpConfigParser,
+)
 from autosar.parser.communication.ethernet.tp import EthTpConfigParser
 from autosar.parser.communication.frame import (
     CanFrameParser,
@@ -106,6 +109,7 @@ class ElementParserSelector(ParserSelector[E]):
         'CAN-TP-CONFIG': CanTpConfigParser,
         'DO-IP-TP-CONFIG': DoIpTpConfigParser,
         'ETH-TP-CONFIG': EthTpConfigParser,
+        'SOMEIP-TP-CONFIG': SomeIpTpConfigParser,
         'DATA-TRANSFORMATION-SET': DataTransformationSetParser,
         'TRANSFORMATION-PROPS-SET': TransformationPropsSetParser,
         'TLV-DATA-ID-DEFINITION-SET': TlvDataIdDefinitionSetParser,

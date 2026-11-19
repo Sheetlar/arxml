@@ -11,11 +11,10 @@ from autosar.extractor.common import Event, SomeIpFeature
 from autosar.extractor.data_type_extractor import ExtractedDataType
 from autosar.misc import HasLogger
 from autosar.model.communication.pdu import ISignalIPdu, GeneralPurposeIPdu, PduTriggering
-from autosar.model.communication.some_ip import SoConIPduIdentifier
+from autosar.model.communication.some_ip import SoConIPduIdentifier, SomeIpTpConnection, SomeIpTpConfig
 from autosar.model.portinterface import Operation, Trigger
 from autosar.model.service_instance_collection import ServiceInstanceCollectionSet, ProvidedServiceInstance, EventHandler
 from autosar.model.communication.signal import SystemSignal, ISignal
-from autosar.model.some_ip_tp import SomeIpConfig, SomeIpConnection
 from autosar.model.system import (
     System,
     AnyDataMapping,
@@ -72,7 +71,7 @@ class SystemExtractor(HasLogger):
 
     def _get_transport_configs(self):
         self.transport_configs = tuple(itertools.chain.from_iterable(
-            map(lambda x: x.tp_connections, filter(lambda x: isinstance(x, SomeIpConfig), self.fibex_elements))
+            map(lambda x: x.tp_connections, filter(lambda x: isinstance(x, SomeIpTpConfig), self.fibex_elements))
         ))
         self.transport_mapping = {x.transport_pdu_ref: x for x in self.transport_configs}
 
@@ -147,7 +146,7 @@ class SystemExtractor(HasLogger):
         if isinstance(i_pdu, GeneralPurposeIPdu):
             if pdu_triggering.ref not in self.transport_mapping:
                 return None
-            transport_config: SomeIpConnection = self.transport_mapping[pdu_triggering.ref]
+            transport_config: SomeIpTpConnection = self.transport_mapping[pdu_triggering.ref]
             pdu_triggering: PduTriggering = self.ws.find(transport_config.tp_sdu_ref)
             i_pdu: ISignalIPdu | GeneralPurposeIPdu = self.ws.find(pdu_triggering.i_signal_ref)
         signal: ISignal = self.ws.find(i_pdu.i_signal_to_pdu_mappings[0].i_signal_ref)
