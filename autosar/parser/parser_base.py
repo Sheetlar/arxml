@@ -216,7 +216,11 @@ class BaseParser(HasLogger):
             return None
         return float(text_value.lower())
 
-    def _parse_number_node(self, xml_elem: Element | None) -> int | float | None:
+    def _parse_number_node(
+            self,
+            xml_elem: Element | None,
+            log: bool = True,
+    ) -> int | float | None:
         if xml_elem is None:
             return None
         try:
@@ -225,7 +229,8 @@ class BaseParser(HasLogger):
             try:
                 return self._parse_float_node(xml_elem)
             except ValueError:
-                self._logger.warning(f'Cannot parse numeric node {xml_elem.tag}: "{self._parse_text_node(xml_elem)}", value will be None')
+                if log:
+                    self._logger.warning(f'Cannot parse numeric node {xml_elem.tag}: "{self._parse_text_node(xml_elem)}", value will be None')
                 return None
 
     @staticmethod

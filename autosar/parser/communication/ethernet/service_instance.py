@@ -45,7 +45,7 @@ class AbstractServiceInstanceParser(IdentifiableParser[ServiceInstance]):
         return parser.parse_element(xml_element)
 
     @handler('METHOD-ACTIVATION-ROUTING-GROUPS')
-    @multiple_with_check
+    @multiple_with_check(expected_name='PDU-ACTIVATION-ROUTING-GROUP')
     def _parse_method_activation_routing_group(self, xml_element: Element) -> PduActivationRoutingGroup | None:
         parser = PduActivationRoutingGroupParser()
         return parser.parse_element(xml_element)
@@ -56,7 +56,7 @@ class ConsumedServiceInstanceParser(AbstractServiceInstanceParser[ConsumedServic
 
     @handler('MINOR-VERSION')
     def _parse_minor_version(self, xml_element: Element) -> int | float | None:
-        return self._parse_number_node(xml_element)
+        return self._parse_number_node(xml_element, log=False)
 
     @handler('SERVICE-IDENTIFIER')
     def _parse_service_identifier(self, xml_element: Element) -> int | None:

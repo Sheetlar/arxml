@@ -60,6 +60,7 @@ class SomeIpTpConnection(ArObject):
     tp_sdu_ref: str | None = None
     transport_pdu_ref: str | None = None
     tp_concurrent_processing_sdu_refs: list[str] = field(default_factory=list)
+    separation_time: float | None = None
 
 
 class SomeIpTpConfig(TpConfig):

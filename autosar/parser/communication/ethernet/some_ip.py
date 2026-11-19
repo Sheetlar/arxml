@@ -105,6 +105,10 @@ class SomeIpTpConnectionParser(BasicParser[SomeIpTpConnection]):
     def _parse_tp_concurrent_processing_sdu(self, xml_element: Element) -> str | None:
         return self._parse_text_node(xml_element)
 
+    @handler('SEPARATION-TIME')
+    def _parse_separation_time(self, xml_element: Element) -> float | None:
+        return self._parse_float_node(xml_element)
+
 
 class SomeIpTpConfigParser(TpConfigParser[SomeIpTpConfig]):
     _returned_type = SomeIpTpConfig
@@ -194,6 +198,10 @@ class SomeIpSdServerServiceInstanceConfigParser(
     def _parse_initial_offer_behavior(self, xml_element: Element) -> InitialSdDelayConfig | None:
         parser = InitialSdDelayConfigParser()
         return parser.parse_element(xml_element)
+
+    @handler('OFFER-CYCLIC-DELAY')
+    def _parse_offer_cyclic_delay(self, xml_element: Element) -> float | None:
+        return self._parse_float_node(xml_element)
 
     @handler('PRIORITY')
     def _parse_priority(self, xml_element: Element) -> int | None:
