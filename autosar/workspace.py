@@ -19,7 +19,6 @@ from autosar.parser.portinterface_parser import PortInterfacePackageParser, Soft
 from autosar.parser.service_instance_collection_parser import ServiceInstanceCollectionParser
 from autosar.parser.some_ip_tp_parser import SomeIpTpParser
 from autosar.parser.swc_implementation_parser import SwcImplementationParser
-from autosar.parser.tp_parser import TransportProtocolParser
 
 
 class WorkspaceProfile:
@@ -227,7 +226,7 @@ class Workspace(ArObject):
         # parser.register_element_parser(EcuParser(self.version))
         # parser.register_element_parser(CollectionParser(self.version))
         parser.register_element_parser(SomeIpTpParser(self.version))
-        parser.register_element_parser(TransportProtocolParser(self.version))
+        # parser.register_element_parser(TransportProtocolParser(self.version))
         # parser.register_element_parser(FrameParser(self.version))
 
 

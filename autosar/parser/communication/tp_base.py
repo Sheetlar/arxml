@@ -1,24 +1,14 @@
 from typing import TypeVar
 from xml.etree.ElementTree import Element
 
-from autosar.model.transport_protocol import (
+from autosar.model.communication.tp import (
     TpConnectionIdent,
     TpConnection,
     TpAddress,
     TpConfig,
 )
 from autosar.parser.identifiable import IdentifiableParser, ReferrableParser
-from autosar.parser.parser_base import (
-    handler,
-    not_implemented_handler,
-    multiple_with_check,
-    multiple,
-    eval_children,
-    ref_variation,
-    single_subclass_aggr,
-    BasicParser,
-    ParserSelector,
-)
+from autosar.parser.parser_base import handler, BasicParser
 
 TPC = TypeVar('TPC', bound=TpConnection)
 TPA = TypeVar('TPA', bound=TpAddress)

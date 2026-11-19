@@ -1,6 +1,8 @@
 from typing import TypeVar
 
 from autosar.model.element import Element as ArElement
+from autosar.parser.communication.can_tp import CanTpConfigParser
+from autosar.parser.communication.do_ip import DoIpTpConfigParser
 from autosar.parser.communication.ethernet.some_ip import SocketConnectionIPduIdentifierSetParser
 from autosar.parser.communication.frame import (
     CanFrameParser,
@@ -98,9 +100,11 @@ class ElementParserSelector(ParserSelector[E]):
         'CRYPTO-SERVICE-PRIMITIVE-PARSER': CryptoServicePrimitiveParser,
         'CRYPTO-SERVICE-KEY-PARSER': CryptoServiceKeyParser,
         'CRYPTO-SERVICE-QUEUE-PARSER': CryptoServiceQueueParser,
-        'CONSTANT-SPECIFICATION': ConstantSpecificationParser,
+        'CAN-TP-CONFIG': CanTpConfigParser,
+        'DO-IP-TP-CONFIG': DoIpTpConfigParser,
         'DATA-TRANSFORMATION-SET': DataTransformationSetParser,
         'TRANSFORMATION-PROPS-SET': TransformationPropsSetParser,
         'TLV-DATA-ID-DEFINITION-SET': TlvDataIdDefinitionSetParser,
         'COLLECTION': CollectionParser,
+        'CONSTANT-SPECIFICATION': ConstantSpecificationParser,
     }

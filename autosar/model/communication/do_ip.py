@@ -3,7 +3,7 @@ from typing import Iterable, TypeVar
 from autosar.misc import filter_none
 from autosar.model.ar_object import ArObject
 from autosar.model.base import Identifiable
-from autosar.model.transport_protocol import TpConnection, TpConfig
+from autosar.model.communication.tp import TpConnection, TpConfig
 
 
 class AbstractDoIpLogicAddressProps(Identifiable):
